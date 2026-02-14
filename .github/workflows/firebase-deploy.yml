@@ -15,3 +15,4 @@ jobs:
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_MN_NUTRIAPP }}'
           channelId: live
           projectId: mn-nutriapp
+# Trigger deploy manually
