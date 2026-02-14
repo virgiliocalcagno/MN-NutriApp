@@ -9,9 +9,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: npm ci && npm run build
-      - uses: FirebaseExtended/action-hosting-deploy@v0
+      - name: Install Functions Deps
+        run: cd functions && npm ci
+      - name: Deploy to Firebase
+        uses: w9jds/firebase-action@master
         with:
-          repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_MN_NUTRIAPP }}'
-          channelId: live
-          projectId: mn-nutriapp
+          args: deploy
+        env:
+          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_MN_NUTRIAPP }}
+          PROJECT_ID: mn-nutriapp
