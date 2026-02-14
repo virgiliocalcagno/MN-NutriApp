@@ -29,13 +29,16 @@ const ProfileView: React.FC = () => {
 
           let data;
           try {
-            // Try with default Firebase Key
-            data = await processPdfWithGemini(profile, base64, undefined, firebaseConfig.apiKey);
+            // Try with stored key first, then default Firebase Key
+            const activeKey = store.aiKey || firebaseConfig.apiKey;
+            data = await processPdfWithGemini(profile, base64, undefined, activeKey);
           } catch (firstError: any) {
             console.warn("Retrying with user key...");
             // If fails, ask for key
             const userKey = prompt("⚠️ La API Key de Firebase fue bloqueada o no es válida para Gemini.\n\nPor favor, ingresa una API KEY válida de Google AI Studio (aistudio.google.com):");
             if (userKey) {
+              // Save the new working key to store for future use
+              saveStore({ ...store, aiKey: userKey });
               data = await processPdfWithGemini(profile, base64, undefined, userKey);
             } else {
               throw firstError;
@@ -252,7 +255,7 @@ const ProfileView: React.FC = () => {
         </div>
 
         {/* Emergency Contact */}
-        <div className="pb-10">
+        <div className="pb-4">
           <h3 className="text-lg font-bold flex items-center gap-2 text-slate-800 mb-4">
             <span className="material-symbols-outlined text-red-500">contact_emergency</span>
             Contacto de Emergencia
@@ -272,6 +275,36 @@ const ProfileView: React.FC = () => {
                 <span className="material-symbols-outlined">call</span>
               </a>
             )}
+          </div>
+        </div>
+
+        {/* AI Settings */}
+        <div className="pb-10">
+          <h3 className="text-lg font-bold flex items-center gap-2 text-slate-800 mb-4">
+            <span className="material-symbols-outlined text-indigo-500">smart_toy</span>
+            Configuración de IA
+          </h3>
+          <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-5 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-sm font-bold text-slate-900">Motor de Análisis Gemini</p>
+                <p className="text-xs text-indigo-600 font-medium">
+                  {store.aiKey ? '✅ Clave Personal Activa' : '⚠️ Usando Clave de Sistema'}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  const newKey = prompt("Configura tu API Key de AI Studio:", store.aiKey || "");
+                  if (newKey !== null) saveStore({ ...store, aiKey: newKey });
+                }}
+                className="bg-white text-indigo-600 p-2 rounded-xl border border-indigo-200 shadow-sm active:scale-95 transition-all"
+              >
+                <span className="material-symbols-outlined">settings_input_component</span>
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-500 leading-relaxed">
+              La IA procesa tus PDF sin costo adicional usando tu propia clave. Puedes obtener una gratis en aistudio.google.com.
+            </p>
           </div>
         </div>
       </main>

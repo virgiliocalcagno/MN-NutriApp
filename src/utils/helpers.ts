@@ -194,14 +194,14 @@ export const syncPlanToPantry = (menu: Record<string, any>, currentItems: MealIt
 
                 const data = FOOD_DATA[key];
                 newItems.push({
+                    id: Date.now().toString() + '-' + key,
                     n: key.charAt(0).toUpperCase() + key.slice(1),
                     q: '1 Unidad',
                     lv: 4, // Default to Full so they are visible
                     cat: data.cat,
                     p: 'Gral',
-                    b: false,
-                    n_clean: key // hidden field for dedup? No need.
-                } as any);
+                    b: false
+                });
                 existingNames.add(key);
             }
         });

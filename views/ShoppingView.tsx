@@ -50,8 +50,8 @@ const ShoppingView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
             percentage: 0,
             status: 'DISPONIBLE',
             color: 'bg-green-500',
-            // @ts-ignore
-            b: false, p: 'Gral'
+            b: false,
+            p: 'Gral'
         };
 
         if (activeTab === 'shopping') {
@@ -75,7 +75,6 @@ const ShoppingView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
 
     const handleSync = () => {
         if (window.confirm("¿Sincronizar despensa con el plan nutricional? Esto agregará productos faltantes.")) {
-            // @ts-ignore
             const newItems = syncPlanToPantry(store.menu || {}, store.items);
             saveStore({ ...store, items: newItems });
             alert(`Se agregaron ${newItems.length - store.items.length} productos nuevos del plan.`);
@@ -140,8 +139,8 @@ const ShoppingView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
                     <button
                         onClick={() => setActiveTab('pantry')}
                         className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'pantry'
-                                ? 'bg-white text-blue-600 shadow-sm'
-                                : 'text-slate-500 hover:text-slate-700'
+                            ? 'bg-white text-blue-600 shadow-sm'
+                            : 'text-slate-500 hover:text-slate-700'
                             }`}
                     >
                         Despensa
@@ -149,8 +148,8 @@ const ShoppingView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
                     <button
                         onClick={() => setActiveTab('shopping')}
                         className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'shopping'
-                                ? 'bg-white text-blue-600 shadow-sm'
-                                : 'text-slate-500 hover:text-slate-700'
+                            ? 'bg-white text-blue-600 shadow-sm'
+                            : 'text-slate-500 hover:text-slate-700'
                             }`}
                     >
                         Lista de Compras

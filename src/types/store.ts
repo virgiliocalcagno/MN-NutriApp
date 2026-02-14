@@ -17,12 +17,17 @@ export interface Profile {
 }
 
 export interface MealItem {
+    id: string;
     n: string; // Name
     q: string; // Quantity
     lv: number; // Stock Level (1-4)
     cat: string; // Category
     p: string; // Purchase Category
     b: boolean; // Bought?
+    icon?: string;
+    status?: string;
+    color?: string;
+    percentage?: number;
 }
 
 export interface Exercise {
@@ -43,6 +48,7 @@ export interface Store {
     historial: string[];
     medals: { silver: number; gold: number };
     locks: { perfil: boolean; compras: boolean; existencia: boolean };
+    aiKey?: string;
 }
 
 export const initialStore: Store = {
@@ -60,5 +66,6 @@ export const initialStore: Store = {
     },
     historial: [],
     medals: { silver: 0, gold: 0 },
-    locks: { perfil: true, compras: true, existencia: true }
+    locks: { perfil: true, compras: true, existencia: true },
+    aiKey: 'AIzaSyDkfy9krTwpTQzYjisbsfaXUMZ_EJuQy3Y'
 };
