@@ -8,6 +8,7 @@ import TopNav from './components/TopNav';
 import ShoppingView from './views/ShoppingView';
 import LoginScreen from './src/components/LoginScreen';
 import { useStore } from './src/context/StoreContext';
+import BottomNav from './components/BottomNav';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>('home');
@@ -38,13 +39,16 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto bg-[#f8fafc] min-h-screen shadow-2xl relative flex flex-col overflow-hidden">
+    <div className="max-w-md mx-auto bg-[#f8fafc] h-screen shadow-2xl relative flex flex-col overflow-hidden">
       {currentView !== 'shopping' && (
         <TopNav currentView={currentView} setCurrentView={setCurrentView} />
       )}
-      <main className="flex-1 overflow-y-auto no-scrollbar">
+      <main className="flex-1 overflow-y-auto no-scrollbar pb-24">
         {renderView()}
       </main>
+      {currentView !== 'shopping' && (
+        <BottomNav currentView={currentView} setCurrentView={setCurrentView} />
+      )}
     </div>
   );
 };
