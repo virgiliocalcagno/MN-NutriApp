@@ -8,21 +8,72 @@ export interface AIResponse {
   compras: [string, string, number, string, string][];
 }
 
+// URL of the Cloud Function (Reliable fallback)
+const CLOUD_FUNCTION_URL = 'https://us-central1-mn-nutriapp.cloudfunctions.net/procesarNutricion';
+
 export const processPdfWithGemini = async (
   perfil: Partial<Profile>,
   pdfPlanBase64?: string,
   pdfEvalBase64?: string,
-  apiKey?: string // Kept for interface compatibility but optional now
+  apiKey?: string
 ): Promise<AIResponse> => {
-  try {
-    // We now use the Cloud Function endpoint for reliability
-    const FUNCTION_URL = 'https://procesarnutricion-us-central1-mn-nutriapp.cloudfunctions.net/procesarNutricion';
+  // Try direct Gemini first if key exists
+  if (apiKey && apiKey !== 'AIzaSyAF5rs3cJFs_E6S7ouibqs7B2fgVRDLzc0') {
+    try {
+      console.log("Intentando procesamiento directo con Gemini...");
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }, { apiVersion: 'v1' });
 
-    // Preparation: Remove data URL prefix if present
+      const p = perfil || {};
+      let promptText = `Actúa como procesador médico experto para MN-NutriApp. 
+                
+                CONTEXTO PACIENTE:
+                - Nombre Paciente: ${p.paciente || 'No especificado'}
+                - Médico Tratante: ${p.doctor || 'No especificado'}
+                
+                DATOS DISPONIBLES:
+                ${pdfPlanBase64 ? '- Se adjunta Plan Nutricional en PDF.' : '- NO hay PDF de plan.'}
+                ${pdfEvalBase64 ? '- Se adjunta Evaluación Médica en PDF.' : '- NO hay PDF de evaluación.'}
+
+                TAREAS:
+                1. EXTRAE Y RELLENA EL PERFIL: Analiza los documentos PDF y extrae REALMENTE: Nombre del Paciente, Doctor, Edad, Peso, Estatura, Cintura, Objetivos, Comorbilidades, Tipo de Sangre y Alergias.
+                2. MENÚ DE 7 DÍAS: Transcribe el menú para CADA DÍA encontrado en el PDF.
+                3. RUTINA DE EJERCICIOS DIARIA: Crea una rutina específica para CADA DÍA.
+                4. LISTA DE MERCADO DOMINICANA:
+                   - Convierte a Libras (Lb) o Onzas (Oz).
+                   - ESTRUCTURA JSON: ["Nombre", "Cantidad", NivelStock, "Categoría", "Pasillo"]
+
+                RESPONDE ÚNICAMENTE CON ESTE FORMATO JSON:
+                {
+                  "perfilAuto": { "paciente": "...", "doctor": "...", "edad": "...", "peso": "...", "estatura": "...", "cintura": "...", "sangre": "...", "alergias": "...", "objetivos": [], "comorbilidades": [] },
+                  "semana": { "LUNES": {"DESAYUNO": "...", "MERIENDA_AM": "...", "ALMUERZO": "...", "MERIENDA_PM": "...", "CENA": "..." }, ... },
+                  "ejercicios": { "LUNES": [ {"n": "🏋️ Ejercicio", "i": "3x12", "link": ""} ], ... },
+                  "compras": [ ["Nombre", "Cantidad", 1, "Categoría", "Pasillo"] ]
+                }`;
+
+      const parts: any[] = [{ text: promptText }];
+      if (pdfPlanBase64) parts.push({ inlineData: { mimeType: "application/pdf", data: pdfPlanBase64.replace(/^data:application\/pdf;base64,/, "") } });
+      if (pdfEvalBase64) parts.push({ inlineData: { mimeType: "application/pdf", data: pdfEvalBase64.replace(/^data:application\/pdf;base64,/, "") } });
+
+      const result = await model.generateContent(parts);
+      const responseText = result.response.text();
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) return JSON.parse(jsonMatch[0]) as AIResponse;
+
+      throw new Error("Formato de respuesta inválido");
+    } catch (e: any) {
+      console.warn("Procesamiento directo falló, intentando Fallback (Cloud Function)...", e.message);
+      // Fall through to Cloud Function
+    }
+  }
+
+  // Fallback / Default: Cloud Function (Robust)
+  try {
+    console.log("Usando procesamiento seguro (Cloud Function)...");
     const cleanPlan = pdfPlanBase64?.replace(/^data:application\/pdf;base64,/, "");
     const cleanEval = pdfEvalBase64?.replace(/^data:application\/pdf;base64,/, "");
 
-    const response = await fetch(FUNCTION_URL, {
+    const response = await fetch(CLOUD_FUNCTION_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -33,15 +84,14 @@ export const processPdfWithGemini = async (
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || `HTTP Error ${response.status}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Error Servidor (${response.status})`);
     }
 
-    const data = await response.json();
-    return data;
-
+    return await response.json();
   } catch (error: any) {
-    console.error("AI Analysis Error (Cloud Function):", error);
+    console.error("AI Critical Error:", error);
+    alert(`⚠️ Error de Análisis: ${error.message}`);
     throw error;
   }
 };

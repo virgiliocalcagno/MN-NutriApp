@@ -29,20 +29,12 @@ const ProfileView: React.FC = () => {
 
           let data;
           try {
-            // Try with stored key first, then default Firebase Key
+            // Internal fallback in ai.ts handles failure now
             const activeKey = store.aiKey || firebaseConfig.apiKey;
             data = await processPdfWithGemini(profile, base64, undefined, activeKey);
-          } catch (firstError: any) {
-            console.warn("Retrying with user key...");
-            // If fails, ask for key
-            const userKey = prompt("⚠️ La API Key de Firebase fue bloqueada o no es válida para Gemini.\n\nPor favor, ingresa una API KEY válida de Google AI Studio (aistudio.google.com):");
-            if (userKey) {
-              // Save the new working key to store for future use
-              saveStore({ ...store, aiKey: userKey });
-              data = await processPdfWithGemini(profile, base64, undefined, userKey);
-            } else {
-              throw firstError;
-            }
+          } catch (error) {
+            console.error("PDF Processing failed even with fallback:", error);
+            return; // Error already alerted in ai.ts
           }
 
           if (data) {
