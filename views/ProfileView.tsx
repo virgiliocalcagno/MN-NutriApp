@@ -8,9 +8,20 @@ const ProfileView: React.FC = () => {
   const { store, user, saveStore, logout } = useStore();
   const [showLogout, setShowLogout] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const { profile } = store;
+  const [editData, setEditData] = useState(profile);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { profile } = store;
+  const handleSaveManual = async () => {
+    await saveStore({ ...store, profile: editData });
+    setIsEditing(false);
+    alert("✅ Perfil actualizado manualmente.");
+  };
+
+  const handleChange = (field: keyof typeof profile, value: any) => {
+    setEditData(prev => ({ ...prev, [field]: value }));
+  };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -22,14 +33,11 @@ const ProfileView: React.FC = () => {
 
       setIsProcessing(true);
       try {
-        // Convert to Base64
         const reader = new FileReader();
         reader.onload = async () => {
           const base64 = reader.result as string;
-
           let data;
           try {
-            // Usar la llave de Gemini centralizada en firebase.ts (no visible en UI)
             const activeKey = (firebaseConfig as any).geminiApiKey;
             data = await processPdfWithGemini(profile, base64, undefined, activeKey);
           } catch (error) {
@@ -38,33 +46,12 @@ const ProfileView: React.FC = () => {
           }
 
           if (data) {
-            // Update Store
-            const newProfile = { ...store.profile, ...data.perfilAuto };
-
-            // Clean undefined/null values
-            Object.keys(newProfile).forEach(key => {
-              if (newProfile[key as keyof typeof newProfile] === 'No especificado' || newProfile[key as keyof typeof newProfile] === null) {
-                delete newProfile[key as keyof typeof newProfile];
-              }
-            });
-            // NEW: We REPLACE the data to avoid mixing different patients.
-            const mergedProfile = {
-              ...initialStore.profile, // Start clean
-              ...data.perfilAuto
-            };
-
+            const mergedProfile = { ...initialStore.profile, ...data.perfilAuto };
             const newMenu = data.semana || {};
             const newExercises = data.ejercicios || {};
-
-            // Map Compras to MealItems
             const newItems: MealItem[] = (data.compras || []).map((c, idx) => ({
               id: Date.now() + '-' + idx,
-              n: c[0],
-              q: c[1],
-              lv: 4,
-              cat: c[3] || 'Gral',
-              p: c[3] || 'Gral',
-              b: false
+              n: c[0], q: c[1], lv: 4, cat: c[3] || 'Gral', p: c[3] || 'Gral', b: false
             }));
 
             saveStore({
@@ -72,21 +59,16 @@ const ProfileView: React.FC = () => {
               profile: mergedProfile,
               menu: newMenu,
               exercises: newExercises,
-              items: newItems // REPLACED
+              items: newItems
             });
 
-            const daysCount = Object.keys(newMenu || {}).length;
-            const itemsCount = newItems.length;
-            const patientName = mergedProfile.paciente || 'Paciente';
-
-            alert(`✅ ANÁLISIS COMPLETADO EXITOSAMENTE\n\n👤 Paciente: ${patientName}\n📅 Menú: ${daysCount} días generados\n🛒 Despensa: ${itemsCount} productos agregados\n\nTu perfil ha sido actualizado.`);
+            alert(`✅ ANÁLISIS COMPLETADO EXITOSAMENTE\n\n👤 Paciente: ${mergedProfile.paciente || 'Paciente'}\n📅 Menú: ${Object.keys(newMenu).length} días\n🛒 Despensa: ${newItems.length} productos\n\nTu perfil ha sido actualizado.`);
           }
         };
         reader.readAsDataURL(file);
-
       } catch (error: any) {
         console.error(error);
-        alert(`⚠️ Error al procesar el PDF: ${error.message || error}\n\nNecesitas una API Key válida de AI Studio.`);
+        alert(`⚠️ Error al procesar el PDF: ${error.message || error}`);
       } finally {
         setIsProcessing(false);
         if (fileInputRef.current) fileInputRef.current.value = '';
@@ -109,7 +91,7 @@ const ProfileView: React.FC = () => {
         </div>
       )}
 
-      {/* Profile Bio */}
+      {/* Profile Header */}
       <div className="px-6 py-6 flex items-center gap-5 bg-white border-b border-slate-100">
         <div className="relative">
           <div className="size-20 rounded-full bg-primary/10 flex items-center justify-center border-2 border-primary/20 overflow-hidden shadow-inner">
@@ -125,8 +107,30 @@ const ProfileView: React.FC = () => {
         </div>
         <div className="flex-1">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-slate-900">{profile.paciente || user?.displayName || 'Usuario'}</h2>
-            <div className="relative">
+            {isEditing ? (
+              <input
+                value={editData.paciente}
+                onChange={(e) => handleChange('paciente', e.target.value)}
+                className="text-xl font-bold text-slate-900 border-b-2 border-primary w-full outline-none bg-transparent"
+                placeholder="Nombre del Paciente"
+              />
+            ) : (
+              <h2 className="text-xl font-bold text-slate-900">{profile.paciente || user?.displayName || 'Usuario'}</h2>
+            )}
+            <div className="relative flex items-center gap-2">
+              <button
+                onClick={() => {
+                  if (isEditing) {
+                    handleSaveManual();
+                  } else {
+                    setEditData(profile);
+                    setIsEditing(true);
+                  }
+                }}
+                className={`p-2 rounded-lg transition-all active:scale-95 ${isEditing ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 'hover:bg-slate-100 text-slate-400'}`}
+              >
+                <span className="material-symbols-outlined text-xl">{isEditing ? 'save' : 'edit_square'}</span>
+              </button>
               <button onClick={() => setShowLogout(!showLogout)} className="p-2 rounded-lg hover:bg-slate-100 transition-colors text-slate-400">
                 <span className="material-symbols-outlined text-xl">settings</span>
               </button>
@@ -140,7 +144,16 @@ const ProfileView: React.FC = () => {
               )}
             </div>
           </div>
-          <p className="text-sm text-primary font-bold bg-primary/5 px-2 py-0.5 rounded-md inline-block mt-1">Dr. {profile.doctor || 'No asignado'}</p>
+          {isEditing ? (
+            <input
+              value={editData.doctor}
+              onChange={(e) => handleChange('doctor', e.target.value)}
+              className="text-xs text-primary font-bold bg-primary/5 px-2 py-1 rounded-md mt-2 w-full outline-none border-0"
+              placeholder="Nombre del Doctor"
+            />
+          ) : (
+            <p className="text-sm text-primary font-bold bg-primary/5 px-2 py-0.5 rounded-md inline-block mt-1">Dr. {profile.doctor || 'No asignado'}</p>
+          )}
           <p className="text-xs text-slate-400 mt-1">{user?.email}</p>
         </div>
       </div>
@@ -185,18 +198,40 @@ const ProfileView: React.FC = () => {
             {/* Card Stats */}
             <div className="grid grid-cols-2 gap-3">
               <div className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="material-symbols-outlined text-slate-400 text-lg">cake</span>
-                  <p className="text-xs text-slate-400 font-bold uppercase">Edad</p>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-slate-400 text-lg">cake</span>
+                    <p className="text-xs text-slate-400 font-bold uppercase">Edad</p>
+                  </div>
                 </div>
-                <p className="text-2xl font-bold text-slate-800">{profile.edad || '--'} <span className="text-sm font-medium text-slate-400">años</span></p>
+                {isEditing ? (
+                  <input
+                    type="number"
+                    value={editData.edad}
+                    onChange={(e) => handleChange('edad', e.target.value)}
+                    className="text-2xl font-bold text-slate-800 w-full outline-none bg-slate-50 rounded-lg px-2"
+                  />
+                ) : (
+                  <p className="text-2xl font-bold text-slate-800">{profile.edad || '--'} <span className="text-sm font-medium text-slate-400">años</span></p>
+                )}
               </div>
               <div className="p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="material-symbols-outlined text-slate-400 text-lg">monitor_weight</span>
-                  <p className="text-xs text-slate-400 font-bold uppercase">Peso</p>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-slate-400 text-lg">monitor_weight</span>
+                    <p className="text-xs text-slate-400 font-bold uppercase">Peso</p>
+                  </div>
                 </div>
-                <p className="text-2xl font-bold text-slate-800">{profile.peso || '--'} <span className="text-sm font-medium text-slate-400">lbs</span></p>
+                {isEditing ? (
+                  <input
+                    type="number"
+                    value={editData.peso}
+                    onChange={(e) => handleChange('peso', e.target.value)}
+                    className="text-2xl font-bold text-slate-800 w-full outline-none bg-slate-50 rounded-lg px-2"
+                  />
+                ) : (
+                  <p className="text-2xl font-bold text-slate-800">{profile.peso || '--'} <span className="text-sm font-medium text-slate-400">lbs</span></p>
+                )}
               </div>
             </div>
 
@@ -227,14 +262,23 @@ const ProfileView: React.FC = () => {
 
             {/* Card Observaciones */}
             <div className="p-5 rounded-2xl border border-slate-100 bg-white shadow-sm flex items-start gap-4">
-              <div className="bg-slate-100 p-2.5 rounded-xl text-slate-500">
+              <div className="bg-slate-100 p-2.5 rounded-xl text-slate-500 shrink-0">
                 <span className="material-symbols-outlined text-2xl">description</span>
               </div>
               <div className="flex-1">
                 <p className="text-sm font-bold text-slate-800 mb-1">Observaciones Médicas</p>
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  {profile.observaciones || 'Sin observaciones particulares.'}
-                </p>
+                {isEditing ? (
+                  <textarea
+                    value={editData.observaciones}
+                    onChange={(e) => handleChange('observaciones', e.target.value)}
+                    className="text-xs text-slate-500 leading-relaxed w-full outline-none bg-slate-50 rounded-xl p-3 border-0 min-h-[80px]"
+                    placeholder="Escribe recomendaciones u observaciones aquí..."
+                  />
+                ) : (
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    {profile.observaciones || 'Sin observaciones particulares.'}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -247,16 +291,25 @@ const ProfileView: React.FC = () => {
             Contacto de Emergencia
           </h3>
           <div className="bg-red-50 border border-red-100 rounded-2xl p-4 flex justify-between items-center shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="size-10 rounded-full bg-red-100 flex items-center justify-center text-red-500">
+            <div className="flex items-center gap-3 flex-1">
+              <div className="size-10 rounded-full bg-red-100 flex items-center justify-center text-red-500 shrink-0">
                 <span className="material-symbols-outlined">sos</span>
               </div>
-              <div>
-                <p className="text-sm font-bold text-slate-900">{profile.emergencia || 'No configurado'}</p>
+              <div className="flex-1">
+                {isEditing ? (
+                  <input
+                    value={editData.emergencia}
+                    onChange={(e) => handleChange('emergencia', e.target.value)}
+                    className="text-sm font-bold text-slate-900 w-full outline-none bg-transparent"
+                    placeholder="Número de Emergencia"
+                  />
+                ) : (
+                  <p className="text-sm font-bold text-slate-900">{profile.emergencia || 'No configurado'}</p>
+                )}
                 <p className="text-xs text-red-400 font-medium">Toque para llamar</p>
               </div>
             </div>
-            {profile.emergencia && (
+            {!isEditing && profile.emergencia && (
               <a href={`tel:${profile.emergencia}`} className="bg-red-500 text-white size-10 rounded-full flex items-center justify-center shadow-lg shadow-red-500/30 active:scale-95 transition-all">
                 <span className="material-symbols-outlined">call</span>
               </a>
