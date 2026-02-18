@@ -22,8 +22,30 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
   const shoppingCount = store.items.filter(i => i.lv <= 2).length;
 
   return (
-    <div className="flex flex-col animate-in fade-in duration-500">
-      <div className="p-4 space-y-8">
+    <div className="flex flex-col animate-in fade-in duration-500 pb-24">
+      <div className="p-4 space-y-6">
+        {/* Metabolic Coach AI */}
+        <section className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 p-5 shadow-xl shadow-blue-200 group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-3xl group-hover:bg-white/20 transition-all duration-700"></div>
+          <div className="relative z-10 flex items-start gap-4">
+            <div className="bg-white/20 p-2.5 rounded-xl backdrop-blur-md border border-white/30 text-white shrink-0">
+              <span className="material-symbols-outlined text-2xl animate-pulse">psychology</span>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-white font-extrabold text-sm uppercase tracking-widest mb-1 opacity-80">Coach Metabólico AI</h3>
+              <p className="text-white text-[13px] font-bold leading-relaxed mb-3">
+                {store.profile.objetivos.includes('Bajar de peso')
+                  ? "Recuerda: El orden de los alimentos importa. Empieza con la fibra (ensalada) para aplanar tu curva de glucosa hoy."
+                  : "Tu metabolismo está en fase de reparación. Hoy prioriza el descanso y la hidratación con electrolitos naturales."}
+              </p>
+              <div className="flex gap-2">
+                <span className="px-2 py-1 bg-white/20 rounded-md text-[10px] font-bold text-white border border-white/20 uppercase">Bio-Hack activo</span>
+                <span className="px-2 py-1 bg-emerald-400/30 rounded-md text-[10px] font-bold text-emerald-100 border border-emerald-400/30 uppercase">Estado: Óptimo</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Shopping List CTA */}
         <section>
           <button onClick={() => setView('shopping')} className="w-full bg-primary text-white p-4 rounded-xl shadow-lg shadow-primary/25 flex items-center justify-between group active:scale-[0.98] transition-all">

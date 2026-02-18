@@ -1,14 +1,24 @@
 import React, { useState } from 'react';
-import { useStore } from '../src/context/StoreContext';
-import { MealItem } from '../src/types/store';
-import { getProductImage, syncPlanToPantry } from '../src/utils/helpers';
+import { useStore } from '@/src/context/StoreContext';
+import { MealItem } from '@/src/types/store';
+import { getProductImage, syncPlanToPantry } from '@/src/utils/helpers';
+import { useLongPress } from '@/src/hooks/useLongPress';
 
 const CATEGORIES = ['Panadería', 'Proteínas', 'Frutas y Verduras', 'Lácteos', 'Grasas', 'Bebidas', 'Gral', 'Otros', 'Cereales'];
 
 const ShoppingView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
     const { store, saveStore } = useStore();
+    const { locks } = store;
     const [activeTab, setActiveTab] = useState<'shopping' | 'pantry'>('pantry');
     const [searchTerm, setSearchTerm] = useState('');
+
+    const toggleLock = () => {
+        const newLocks = { ...locks, compras: !locks.compras };
+        saveStore({ ...store, locks: newLocks });
+        if (window.navigator.vibrate) window.navigator.vibrate(50);
+    };
+
+    const longPressProps = useLongPress(toggleLock, undefined, { delay: 1000 });
 
     // Add Item State
     const [isAdding, setIsAdding] = useState(false);
@@ -111,24 +121,35 @@ const ShoppingView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
     return (
         <div className="flex flex-col min-h-screen bg-[#f5f7fa] font-sans text-slate-800">
             {/* Header */}
-            <header className="sticky top-0 z-20 bg-white px-4 py-3 flex items-center justify-between shadow-sm">
+            <header
+                {...longPressProps}
+                className="sticky top-0 z-20 bg-white px-4 py-3 flex items-center justify-between shadow-sm select-none active:bg-slate-50 transition-colors"
+            >
                 <div className="flex items-center gap-4">
                     <button onClick={() => setView('home')} className="p-2 -ml-2 rounded-full hover:bg-slate-100 text-slate-700">
                         <span className="material-symbols-outlined">arrow_back</span>
                     </button>
-                    <h1 className="text-xl font-bold text-slate-900">MN-NutriApp Pro</h1>
+                    <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                        MN-NutriApp Pro
+                        <span className={`material-symbols-outlined text-sm ${locks.compras ? 'text-blue-500' : 'text-slate-300'}`}>
+                            {locks.compras ? 'lock' : 'lock_open'}
+                        </span>
+                    </h1>
                 </div>
                 <div className="flex items-center gap-2">
-                    <button onClick={handleSync} className="p-2 rounded-full hover:bg-slate-100 text-slate-700" title="Sincronizar con Plan">
-                        <span className="material-symbols-outlined">sync</span>
-                    </button>
-                    {/* Search implementation requires input mode, keeping simple button for now or enabling search state */}
+                    {!locks.compras && (
+                        <>
+                            <button onClick={handleSync} className="p-2 rounded-full hover:bg-slate-100 text-slate-700" title="Sincronizar con Plan">
+                                <span className="material-symbols-outlined">sync</span>
+                            </button>
+                            <button onClick={() => setIsAdding(!isAdding)} className="p-2 rounded-full hover:bg-slate-100 text-slate-700">
+                                <span className="material-symbols-outlined">add</span>
+                            </button>
+                        </>
+                    )}
                     <button className="p-2 rounded-full hover:bg-slate-100 text-slate-700 relative">
                         <span className="material-symbols-outlined">notifications</span>
                         <span className="absolute top-2 right-2 size-2 bg-slate-900 rounded-full"></span>
-                    </button>
-                    <button onClick={() => setIsAdding(!isAdding)} className="p-2 rounded-full hover:bg-slate-100 text-slate-700">
-                        <span className="material-symbols-outlined">add</span>
                     </button>
                 </div>
             </header>
@@ -228,31 +249,35 @@ const ShoppingView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
                                             </div>
 
                                             {/* Right: Stepper (Blue plus) */}
-                                            <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl">
+                                            {!locks.compras && (
+                                                <div className="flex items-center gap-1 bg-slate-50 p-1 rounded-xl">
+                                                    <button
+                                                        onClick={() => updateItemLevel(item.originalIdx, item.uiLevel - 1)}
+                                                        className="size-8 flex items-center justify-center bg-white rounded-lg shadow-sm text-slate-600 active:scale-90 transition-all hover:text-red-500"
+                                                    >
+                                                        <span className="material-symbols-outlined text-base">remove</span>
+                                                    </button>
+
+                                                    <span className="w-6 text-center font-bold text-lg text-slate-800">{item.uiLevel}</span>
+
+                                                    <button
+                                                        onClick={() => updateItemLevel(item.originalIdx, item.uiLevel + 1)}
+                                                        className="size-8 flex items-center justify-center bg-blue-600 rounded-lg shadow-sm text-white active:scale-90 transition-all hover:bg-blue-700"
+                                                    >
+                                                        <span className="material-symbols-outlined text-base">add</span>
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            {/* Optional Delete */}
+                                            {!locks.compras && (
                                                 <button
-                                                    onClick={() => updateItemLevel(item.originalIdx, item.uiLevel - 1)}
-                                                    className="size-8 flex items-center justify-center bg-white rounded-lg shadow-sm text-slate-600 active:scale-90 transition-all hover:text-red-500"
+                                                    onClick={() => deleteItem(item.originalIdx)}
+                                                    className="absolute top-2 right-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 rounded-full p-1"
                                                 >
-                                                    <span className="material-symbols-outlined text-base">remove</span>
+                                                    <span className="material-symbols-outlined text-sm">delete</span>
                                                 </button>
-
-                                                <span className="w-6 text-center font-bold text-lg text-slate-800">{item.uiLevel}</span>
-
-                                                <button
-                                                    onClick={() => updateItemLevel(item.originalIdx, item.uiLevel + 1)}
-                                                    className="size-8 flex items-center justify-center bg-blue-600 rounded-lg shadow-sm text-white active:scale-90 transition-all hover:bg-blue-700"
-                                                >
-                                                    <span className="material-symbols-outlined text-base">add</span>
-                                                </button>
-                                            </div>
-
-                                            {/* Optional Delete (Hover or Long Press in real app, here hidden until needed) */}
-                                            <button
-                                                onClick={() => deleteItem(item.originalIdx)}
-                                                className="absolute top-2 right-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 rounded-full p-1"
-                                            >
-                                                <span className="material-symbols-outlined text-sm">delete</span>
-                                            </button>
+                                            )}
                                         </div>
                                     );
                                 })}
@@ -268,14 +293,23 @@ const ShoppingView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
                 )}
             </main>
 
-            {/* Floating Action Button (Blue Plus) - Bottom Right as per image 1? 
-                Image 1 has a large blue + button at bottom right. */}
-            <button
-                onClick={() => setIsAdding(true)}
-                className="fixed bottom-6 right-6 size-16 bg-blue-600 rounded-full shadow-2xl shadow-blue-600/40 flex items-center justify-center text-white active:scale-90 transition-transform z-30"
-            >
-                <span className="material-symbols-outlined text-3xl">add</span>
-            </button>
+            {/* Floating Action Button */}
+            {!locks.compras && (
+                <button
+                    onClick={() => setIsAdding(true)}
+                    className="fixed bottom-6 right-6 size-16 bg-blue-600 rounded-full shadow-2xl shadow-blue-600/40 flex items-center justify-center text-white active:scale-90 transition-transform z-30"
+                >
+                    <span className="material-symbols-outlined text-3xl">add</span>
+                </button>
+            )}
+            {locks.compras && (
+                <div className="fixed bottom-24 left-4 right-4 z-30 animate-in slide-in-from-bottom-5">
+                    <div className="bg-slate-900/90 backdrop-blur-md text-white p-4 rounded-2xl flex items-center gap-3 shadow-2xl border border-white/10">
+                        <span className="material-symbols-outlined text-blue-400">lock</span>
+                        <p className="text-xs font-medium">Lista bloqueada. Mantén presionado el título arriba para desbloquear.</p>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

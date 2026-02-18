@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useStore } from '../src/context/StoreContext';
 import { processPdfWithGemini } from '../src/utils/ai';
 import { MealItem, initialStore } from '../src/types/store';
+import { useLongPress } from '../src/hooks/useLongPress';
 import { firebaseConfig } from '../src/firebase'; // Import config
 
 const ProfileView: React.FC = () => {
@@ -9,9 +10,18 @@ const ProfileView: React.FC = () => {
   const [showLogout, setShowLogout] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const { profile } = store;
+  const { profile, locks } = store;
   const [editData, setEditData] = useState(profile);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const toggleLock = () => {
+    const newLocks = { ...locks, perfil: !locks.perfil };
+    saveStore({ ...store, locks: newLocks });
+    // Vibration feedback if available (simulated)
+    if (window.navigator.vibrate) window.navigator.vibrate(50);
+  };
+
+  const longPressProps = useLongPress(toggleLock, undefined, { delay: 1000 });
 
   const handleSaveManual = async () => {
     await saveStore({ ...store, profile: editData });
@@ -92,7 +102,10 @@ const ProfileView: React.FC = () => {
       )}
 
       {/* Profile Header */}
-      <div className="px-6 py-6 flex items-center gap-5 bg-white border-b border-slate-100">
+      <div
+        {...longPressProps}
+        className="px-6 py-6 flex items-center gap-5 bg-white border-b border-slate-100 select-none active:bg-slate-50 transition-colors"
+      >
         <div className="relative">
           <div className="size-20 rounded-full bg-primary/10 flex items-center justify-center border-2 border-primary/20 overflow-hidden shadow-inner">
             {user?.photoURL ? (
@@ -115,22 +128,36 @@ const ProfileView: React.FC = () => {
                 placeholder="Nombre del Paciente"
               />
             ) : (
-              <h2 className="text-xl font-bold text-slate-900">{profile.paciente || user?.displayName || 'Usuario'}</h2>
+              <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                {profile.paciente || user?.displayName || 'Usuario'}
+                {!isEditing && (
+                  <span className={`material-symbols-outlined text-sm ${locks.perfil ? 'text-blue-500' : 'text-slate-300'}`}>
+                    {locks.perfil ? 'lock' : 'lock_open'}
+                  </span>
+                )}
+              </h2>
             )}
             <div className="relative flex items-center gap-2">
-              <button
-                onClick={() => {
-                  if (isEditing) {
-                    handleSaveManual();
-                  } else {
-                    setEditData(profile);
-                    setIsEditing(true);
-                  }
-                }}
-                className={`p-2 rounded-lg transition-all active:scale-95 ${isEditing ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 'hover:bg-slate-100 text-slate-400'}`}
-              >
-                <span className="material-symbols-outlined text-xl">{isEditing ? 'save' : 'edit_square'}</span>
-              </button>
+              {!locks.perfil && (
+                <button
+                  onClick={() => {
+                    if (isEditing) {
+                      handleSaveManual();
+                    } else {
+                      setEditData(profile);
+                      setIsEditing(true);
+                    }
+                  }}
+                  className={`p-2 rounded-lg transition-all active:scale-95 ${isEditing ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200' : 'hover:bg-slate-100 text-slate-400'}`}
+                >
+                  <span className="material-symbols-outlined text-xl">{isEditing ? 'save' : 'edit_square'}</span>
+                </button>
+              )}
+              {locks.perfil && !isEditing && (
+                <div className="p-2 text-slate-300">
+                  <span className="material-symbols-outlined text-xl">lock</span>
+                </div>
+              )}
               <button onClick={() => setShowLogout(!showLogout)} className="p-2 rounded-lg hover:bg-slate-100 transition-colors text-slate-400">
                 <span className="material-symbols-outlined text-xl">settings</span>
               </button>
@@ -159,26 +186,38 @@ const ProfileView: React.FC = () => {
       </div>
 
       {/* Import Action */}
-      <div className="px-6 py-6">
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleFileSelect}
-          accept="application/pdf"
-          className="hidden"
-        />
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isProcessing}
-          className="w-full bg-slate-900 hover:bg-slate-800 text-white flex items-center justify-center gap-3 py-4 rounded-xl font-bold text-base transition-all shadow-lg shadow-slate-900/20 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed group"
-        >
-          <span className="material-symbols-outlined group-hover:animate-bounce">upload_file</span>
-          <span>Importar Ficha Médica (PDF)</span>
-        </button>
-        <p className="text-center text-xs text-slate-400 mt-3 px-4">
-          Sube tu Plan Nutricional. Si falla la clave interna, se te pedirá una Key propia.
-        </p>
-      </div>
+      {!locks.perfil && (
+        <div className="px-6 py-6">
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileSelect}
+            accept="application/pdf"
+            className="hidden"
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isProcessing}
+            className="w-full bg-slate-900 hover:bg-slate-800 text-white flex items-center justify-center gap-3 py-4 rounded-xl font-bold text-base transition-all shadow-lg shadow-slate-900/20 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed group"
+          >
+            <span className="material-symbols-outlined group-hover:animate-bounce">upload_file</span>
+            <span>Importar Ficha Médica (PDF)</span>
+          </button>
+          <p className="text-center text-xs text-slate-400 mt-3 px-4">
+            Sube tu Plan Nutricional. Mantén presionado arriba para bloquear/desbloquear.
+          </p>
+        </div>
+      )}
+      {locks.perfil && (
+        <div className="px-6 py-4 mt-2">
+          <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex items-center gap-3">
+            <span className="material-symbols-outlined text-blue-500">info</span>
+            <p className="text-xs text-blue-700 font-medium leading-tight">
+              Perfil bloqueado para evitar cambios accidentales. Mantén presionado tu nombre para desbloquear.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Medical Record */}
       <main className="px-6 space-y-6">
