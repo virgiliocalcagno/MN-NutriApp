@@ -46,10 +46,28 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
         const reader = new FileReader();
         reader.onload = async () => {
           const base64 = reader.result as string;
-          // Note: In a real app, API key would be central, here we call our utility
-          const result = await analyzeImageWithGemini(base64);
-          // Add the base64 image to the result for preview
-          setScanResult({ ...result, image: base64 });
+
+          // Prepare profile context for AI
+          const profileContext = {
+            paciente: store.profile.paciente,
+            objetivo: store.profile.objetivos.join(", "),
+            condiciones: store.profile.comorbilidades.join(", ") + (store.profile.alergias ? `, Alergias: ${store.profile.alergias}` : "")
+          };
+
+          const result = await analyzeImageWithGemini(base64, profileContext);
+
+          // Map AI response to UI structure
+          setScanResult({
+            ...result,
+            image: base64,
+            // Mapping fields if they don't match
+            plato: result.platos ? result.platos.join(", ") : result.plato,
+            impacto: result.semaforo || result.impacto,
+            hack: result.analisis || result.hack,
+            tip: result.bioHack || result.tip,
+            kcal: result.totalCalorias || result.kcal || (result.macros?.kcal)
+          });
+
           setIsScanning(false);
           if (window.navigator?.vibrate) window.navigator.vibrate([100, 50, 100]);
         };
@@ -160,16 +178,16 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
                 <div>
                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Calorías Diarias</p>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-black text-slate-900">{store.calories || 1200}</span>
-                    <span className="text-sm font-bold text-slate-300">/ 2,000 Kcal</span>
+                    <span className="text-3xl font-black text-slate-900">{store.calories || 0}</span>
+                    <span className="text-sm font-bold text-slate-300">/ {store.caloriesTarget || 2000} Kcal</span>
                   </div>
                 </div>
                 <div className="bg-blue-50 text-blue-600 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tight">
-                  60% Completado
+                  {Math.round(((store.calories || 0) / (store.caloriesTarget || 2000)) * 100)}% Completado
                 </div>
               </div>
               <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 rounded-full transition-all duration-1000" style={{ width: '60%' }}></div>
+                <div className="h-full bg-blue-500 rounded-full transition-all duration-1000" style={{ width: `${Math.min(((store.calories || 0) / (store.caloriesTarget || 2000)) * 100, 100)}%` }}></div>
               </div>
             </div>
 
@@ -241,23 +259,25 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
                 <h3 className="text-2xl font-black text-slate-900 tracking-tight px-1">Análisis de Nutrientes</h3>
 
                 {/* Alerta Precaucion/Info */}
-                <div className={`p-6 rounded-[32px] border ${scanResult.impacto === 'Rojo' ? 'bg-red-50 border-red-100' : 'bg-amber-50 border-amber-100'}`}>
+                <div className={`p-6 rounded-[32px] border ${scanResult.impacto === 'ROJO' ? 'bg-red-50 border-red-100' : scanResult.impacto === 'AMARILLO' ? 'bg-amber-50 border-amber-100' : 'bg-emerald-50 border-emerald-100'}`}>
                   <div className="flex items-center gap-2 mb-3">
-                    <div className={`size-2 rounded-full ${scanResult.impacto === 'Rojo' ? 'bg-red-500' : 'bg-amber-500'}`}></div>
-                    <p className="text-[10px] font-black uppercase tracking-[.2em] text-slate-900">{scanResult.impacto === 'Rojo' ? 'ALERTA' : 'PRECAUCIÓN'}</p>
+                    <div className={`size-2 rounded-full ${scanResult.impacto === 'ROJO' ? 'bg-red-500' : scanResult.impacto === 'AMARILLO' ? 'bg-amber-500' : 'bg-emerald-500'}`}></div>
+                    <p className="text-[10px] font-black uppercase tracking-[.2em] text-slate-900">
+                      {scanResult.impacto === 'ROJO' ? 'ALERTA' : scanResult.impacto === 'AMARILLO' ? 'PRECAUCIÓN' : 'SALUDABLE'}
+                    </p>
                   </div>
                   <p className="text-[13px] leading-[1.6] text-slate-600 font-medium">
-                    {scanResult.hack || "Este plato parece equilibrado, pero ten cuidado con los aderezos y las grasas saturadas ocultas en las proteínas fritas."}
+                    {scanResult.hack || "Análisis metabólico listo..."}
                   </p>
                 </div>
 
                 {/* Macros Grid */}
                 <div className="grid grid-cols-4 gap-3">
                   {[
-                    { l: 'KCAL', v: scanResult.macros?.kcal || '---' },
-                    { l: 'PROT', v: (scanResult.macros?.p || '---') + 'g' },
-                    { l: 'CARB', v: (scanResult.macros?.c || '---') + 'g' },
-                    { l: 'GRASA', v: (scanResult.macros?.f || '---') + 'g' }
+                    { l: 'KCAL', v: scanResult.kcal || scanResult.totalCalorias || '---' },
+                    { l: 'PROT', v: (scanResult.macros?.p || '---') },
+                    { l: 'CARB', v: (scanResult.macros?.c || '---') },
+                    { l: 'GRASA', v: (scanResult.macros?.f || '---') }
                   ].map((m, i) => (
                     <div key={i} className="bg-white p-4 rounded-[24px] border border-slate-100 shadow-sm flex flex-col items-center">
                       <p className="text-lg font-black text-slate-900">{m.v}</p>
@@ -278,7 +298,7 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
                     <div className="flex flex-col">
                       <p className="text-[11px] font-black text-blue-600 uppercase tracking-widest mb-1">BIO-HACK EXPERTO</p>
                       <p className="text-[13px] leading-relaxed italic text-slate-700 font-medium mb-3">
-                        {scanResult.tip || "Para optimizar tu metabolismo, prioriza el consumo de vegetales verdes antes de las proteínas para mejorar la sensibilidad a la insulina."}
+                        {scanResult.tip || "Consejo experto para tu comida..."}
                       </p>
                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">
                         — NUTRICIONISTA EXPERTO
@@ -290,11 +310,11 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
                 {/* Boton Final Registrar */}
                 <button
                   onClick={() => {
-                    const addedCals = parseInt(scanResult.macros?.kcal || '0');
+                    const addedCals = parseInt(scanResult.kcal || scanResult.totalCalorias || '0');
                     saveStore({
                       ...store,
                       calories: (store.calories || 0) + addedCals,
-                      lastScan: null // Clear after registry or keep it? Let's keep for now but add to calories
+                      lastScan: null
                     });
                     alert(`✅ ${addedCals} Kcal registradas en tu diario.`);
                   }}

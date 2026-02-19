@@ -92,27 +92,31 @@ exports.analizarComida = onRequest({
     }
 
     // Prompt Experto para Bio-Hacks y Análisis
-    const prompt = `Analiza esta imagen de comida como un Coach Metabólico experto.
+    const prompt = `Analiza esta imagen de comida como un Coach Metabólico Experto y Analista Nutricional de MN-NutriApp.
         
         PERFIL PACIENTE:
+        - Nombre: ${p.paciente || 'Nuevo Paciente'}
         - Meta: ${p.objetivo || 'Salud General'}
         - Patologías/Alergias: ${p.condiciones || 'Ninguna'}
         
         TU MISIÓN:
-        1. Identificar alimentos y estimar calorías totales (sé realista).
-        2. SEMÁFORO METABÓLICO: 
-           - VERDE (Balanceado), AMARILLO (Precaución), ROJO (Exceso/Desbalance).
-        3. BIO-HACK (Consejo de Experto):
-           - No solo digas "es malo". Da una ESTRATEGIA para mitigar el impacto (ej: "Come fibra antes", "Camina después", "Añade proteína").
+        1. IDENTIFICACIÓN PRECISA: Identifica todos los componentes del plato.
+        2. ESTIMACIÓN NUTRICIONAL: Calcula calorías, proteínas, carbohidratos y grasas. Sé riguroso y realista.
+        3. SEMÁFORO METABÓLICO: 
+           - VERDE: Combustión óptima, baja carga glucémica.
+           - AMARILLO: Cuidado con proporciones o salsas.
+           - ROJO: Picos de insulina probables, inflamatorio.
+        4. ANÁLISIS TÉCNICO: Explica BREVEMENTE por qué cayó en ese color (ej: "Exceso de carbohidratos simples").
+        5. BIO-HACK EXPERTO: Da una ESTRATEGIA ACCIONABLE para mitigar el impacto negativo o potenciar el positivo. Usa un tono profesional y motivador.
         
-        RESPONDE SOLO JSON:
+        RESPONDE EXCLUSIVAMENTE EN JSON:
         {
-            "platos": ["Nombre Plato", ...],
-            "totalCalorias": 0,
+            "platos": ["Nombre del Plato Detectado"],
+            "totalCalorias": 123,
             "semaforo": "VERDE" | "AMARILLO" | "ROJO",
-            "macros": { "p": "0g", "c": "0g", "f": "0g" },
-            "analisis": "Breve explicación del semáforo...",
-            "bioHack": "Tu consejo experto y accionable aquí."
+            "macros": { "p": "10g", "c": "25g", "f": "8g" },
+            "analisis": "Explicación técnica simplificada...",
+            "bioHack": "Estrategia experta (ej: Añade 1 cda de Vinagre de Manzana antes)."
         }`;
 
     const parts = [
