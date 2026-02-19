@@ -184,7 +184,7 @@ const MealCard: React.FC<MealCardProps> = ({ type, time, title, kcal, status }) 
     <div className="relative z-10 flex gap-5 group items-start">
       {/* Indicator Dot */}
       <div className={`size-8 rounded-full flex items-center justify-center shrink-0 border-4 border-white shadow-sm mt-1 transition-all ${status === 'completed' ? 'bg-emerald-500' :
-          status === 'active' ? 'bg-primary' : 'bg-slate-200'
+        status === 'active' ? 'bg-primary' : 'bg-slate-200'
         }`}>
         {status === 'completed' && <span className="material-symbols-outlined text-white text-sm font-bold">check</span>}
         {status === 'active' && <div className="size-2.5 bg-white rounded-full"></div>}
@@ -203,4 +203,11 @@ const MealCard: React.FC<MealCardProps> = ({ type, time, title, kcal, status }) 
             <span className="material-symbols-outlined text-[18px] fill-1">local_fire_department</span>
             <span className="text-xs font-black">{kcal}</span>
           </div>
-          export default HomeView;
+          <button className="text-primary font-black text-[10px] hover:underline uppercase tracking-wider">Ver Receta</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default HomeView;
