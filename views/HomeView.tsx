@@ -45,17 +45,16 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
         {/* NutriScan AI Banner */}
         <section
           onClick={() => setView('progress')}
-          className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-blue-600 to-indigo-500 p-6 flex items-center gap-5 shadow-lg shadow-blue-200 cursor-pointer active:scale-[0.98] transition-all group"
+          className="relative overflow-hidden rounded-[24px] bg-[#1e60f1] p-6 flex items-center gap-5 shadow-lg shadow-blue-200 cursor-pointer active:scale-[0.98] transition-all group"
         >
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
           <div className="size-14 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/30 text-white shrink-0">
             <span className="material-symbols-outlined text-3xl">filter_center_focus</span>
           </div>
           <div className="flex-1">
-            <h3 className="text-white font-black text-lg leading-none mb-1">NUTRISCAN AI</h3>
-            <p className="text-white/80 text-[11px] font-bold leading-tight">Analiza tu plato actual con inteligencia artificial</p>
+            <h3 className="text-white font-black text-lg leading-none mb-1 uppercase">NUTRISCAN AI</h3>
+            <p className="text-white/90 text-[11px] font-bold leading-tight">Analiza tu plato actual con inteligencia artificial</p>
           </div>
-          <span className="material-symbols-outlined text-white/60 group-hover:translate-x-1 transition-transform">arrow_forward_ios</span>
+          <span className="material-symbols-outlined text-white transition-transform group-hover:translate-x-1">arrow_forward</span>
         </section>
 
         {/* Date Selector */}
@@ -64,8 +63,8 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
             <div
               key={idx}
               className={`flex flex-col items-center justify-center min-w-[64px] h-20 rounded-2xl border transition-all duration-300 ${day.active
-                  ? 'bg-primary border-primary text-white shadow-md shadow-primary/30 scale-105'
-                  : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'
+                ? 'bg-primary border-primary text-white shadow-md shadow-primary/30 scale-105'
+                : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'
                 }`}
             >
               <span className={`text-[10px] font-black tracking-widest ${day.active ? 'text-white/70' : 'text-slate-300'}`}>{day.label}</span>
@@ -150,7 +149,7 @@ const MealCard: React.FC<MealCardProps> = ({ type, time, title, kcal, status, im
     <div className="relative z-10 flex gap-5 group items-start">
       {/* Indicator Dot */}
       <div className={`size-8 rounded-full flex items-center justify-center shrink-0 border-4 border-white shadow-sm mt-1 transition-all ${status === 'completed' ? 'bg-emerald-500' :
-          status === 'active' ? 'bg-primary' : 'bg-slate-200'
+        status === 'active' ? 'bg-primary' : 'bg-slate-200'
         }`}>
         {status === 'completed' && <span className="material-symbols-outlined text-white text-sm font-bold">check</span>}
         {status === 'active' && <div className="size-2.5 bg-white rounded-full"></div>}
