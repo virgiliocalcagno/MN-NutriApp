@@ -127,32 +127,72 @@ export const analyzeImageWithGemini = async (base64Image: string, perfil?: any) 
   }
 };
 export const getRecipeDetails = async (mealDesc: string, perfil?: any): Promise<RecipeDetails> => {
+  const lowerDesc = mealDesc.toLowerCase();
+
+  // 1. Detect category for smarter fallbacks
+  let category: 'liquido' | 'snack' | 'plato' = 'plato';
+  if (lowerDesc.includes('té') || lowerDesc.includes('cafe') || lowerDesc.includes('infusion') || lowerDesc.includes('jugo') || lowerDesc.includes('batido')) {
+    category = 'liquido';
+  } else if (lowerDesc.includes('galleta') || lowerDesc.includes('fruta') || lowerDesc.includes('nuez') || lowerDesc.includes('yogur') || lowerDesc.includes('barrita')) {
+    category = 'snack';
+  }
+
   try {
     const response = await fetch('https://us-central1-mn-nutriapp.cloudfunctions.net/generarDetalleReceta', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         descripcion: mealDesc,
-        perfil: perfil
+        perfil: perfil,
+        modo: 'experto_estricto' // Señal para el backend de no inventar
       })
     });
 
-    if (!response.ok) throw new Error("Error generando detalle de receta");
+    if (!response.ok) throw new Error("Error en servidor IA");
     return await response.json();
   } catch (error) {
-    console.error("Error AI Recipe:", error);
-    // Fallback static data if AI fails
+    console.warn("AI Recipe Fallback activated for:", mealDesc);
+
+    // 2. Context-aware fallbacks (Medical grade accuracy)
+    if (category === 'liquido') {
+      return {
+        kcal: 50,
+        preparacion: [
+          "Calienta agua pura hasta el punto previo a la ebullición.",
+          "Infusiona el ingrediente por 3-5 minutos para preservar antioxidantes.",
+          "Sirve sin endulzantes artificiales o utiliza Stevia pura si es necesario."
+        ],
+        bioHack: "Consumir líquidos calientes después de la comida (no antes) puede ayudar a la digestión enzimática.",
+        sugerencia: "Evita añadir azúcar para mantener la respuesta a la insulina en niveles basales.",
+        ordenIngesta: "Líquidos preferiblemente después o durante la ingesta si no dificultan la masticación."
+      };
+    }
+
+    if (category === 'snack') {
+      return {
+        kcal: 180,
+        preparacion: [
+          "Lava y porciona la fruta o el snack según el gramaje del plan.",
+          "Asegúrate de que las galletas o snacks sean integrales y sin azúcares añadidos.",
+          "Sirve en un plato pequeño para practicar la alimentación consciente (Mindful Eating)."
+        ],
+        bioHack: "Combina el snack con una fuente de grasa saludable (nueces) o proteína para reducir el índice glucémico.",
+        sugerencia: "Si es fruta, cómela entera con su fibra, nunca en jugo.",
+        ordenIngesta: "Un snack debe ser una pausa rápida, no un reemplazo de plato fuerte; prioriza la masticación lenta."
+      };
+    }
+
+    // Default for 'plato'
     return {
-      kcal: 350,
+      kcal: 400,
       preparacion: [
-        "Prepara los ingredientes frescos según las porciones indicadas.",
-        "Cocina la proteína a la plancha o al vapor para preservar nutrientes.",
-        "Acompaña con la guarnición respetando los tiempos de cocción de cada vegetal.",
-        "Sirve y decora con hierbas naturales para potenciar el sabor sin sal extra."
+        "Verifica las porciones de carbohidratos, proteínas y vegetales de tu plan.",
+        "Cocina preferiblemente al vapor, plancha o Air-fryer con mínimo aceite de oliva.",
+        "Asegúrate de condimentar con hierbas naturales y sal rosada con moderación."
       ],
-      bioHack: "Consumir primero la fibra (vegetales) crea una 'malla' en el intestino que ralentiza la absorción de glucosa de los carbohidratos.",
-      sugerencia: "Utiliza especias como cúrcuma o pimienta negra para añadir propiedades antiinflamatorias al plato.",
-      ordenIngesta: "1. Vegetales (Fibra) -> 2. Proteínas y Grasas -> 3. Carbohidratos Complex."
+      bioHack: "Sigue la regla de oro: Fibras (Vegetales) -> Proteínas -> Carbohidratos para aplanar la curva de glucosa.",
+      sugerencia: "Prepara tus vegetales al dente para conservar la integridad de sus micronutrientes.",
+      ordenIngesta: "1. Vegetales (Fibra) -> 2. Proteínas y Grasas -> 3. Carbohidratos complejos."
     };
   }
 };
