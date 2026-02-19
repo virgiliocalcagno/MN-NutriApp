@@ -1,10 +1,12 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useStore } from '../src/context/StoreContext';
 import { sortMeals, getProductImage } from '../src/utils/helpers';
+import { getRecipeDetails, RecipeDetails } from '../src/utils/ai';
 
 const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
   const { store, saveStore } = useStore();
+  const [selectedMeal, setSelectedMeal] = useState<{ title: string; description: string } | null>(null);
 
   // Helper to normalize strings for comparison (remove accents and uppercase)
   const normalize = (str: string) =>
@@ -30,7 +32,7 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
       d.setDate(monday.getDate() + i);
       const name = diasSemana[d.getDay()];
       week.push({
-        label: name.substring(0, 3).replace('IÉR', 'MIÉ').replace('ÁBA', 'SÁB'), // Keep accents in labels
+        label: name.substring(0, 3).replace('IÉR', 'MIÉ').replace('ÁBA', 'SÁB'),
         fullDay: name,
         date: d.getDate().toString(),
         active: selectedDay === name
@@ -45,7 +47,7 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
     saveStore({ ...store, selectedDay: dayName });
   };
 
-  // Improved Menu Logic: Search in store.menu using normalized keys
+  // Improved Menu Logic
   const getMenuForDay = () => {
     const normalizedSelected = normalize(selectedDay);
     const originalKey = Object.keys(store.menu).find(key => normalize(key) === normalizedSelected);
@@ -55,7 +57,6 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
   const menuForDay = getMenuForDay();
   const mealItems = sortMeals(menuForDay);
 
-  // Macros Logic (Placeholder)
   const macros = [
     { label: 'PROTEÍNA', value: '85g', target: '120', color: 'bg-primary', percentage: 70 },
     { label: 'CARBOS', value: '150g', target: '200', color: 'bg-emerald-500', percentage: 75 },
@@ -64,6 +65,15 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
 
   return (
     <div className="flex flex-col bg-slate-50 min-h-screen pb-32 animate-in fade-in duration-700">
+      {/* Recipe Modal */}
+      {selectedMeal && (
+        <RecipeModal
+          meal={selectedMeal}
+          perfil={store.profile}
+          onClose={() => setSelectedMeal(null)}
+        />
+      )}
+
       {/* Header Section */}
       <header className="px-6 pt-8 pb-4 flex items-center justify-between sticky top-0 bg-white/80 backdrop-blur-md z-30">
         <div>
@@ -135,7 +145,6 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
 
         {/* Meal Timeline */}
         <section className="space-y-6 pt-4 relative">
-          {/* Vertical Line */}
           <div className="absolute left-[15px] top-6 bottom-0 w-[2px] bg-slate-100 z-0"></div>
 
           {mealItems.length > 0 ? (
@@ -147,6 +156,7 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
                 title={meal.description}
                 kcal={`${meal.kcal || '---'} kcal`}
                 status={idx === 0 ? 'completed' : idx === 1 ? 'active' : 'pending'}
+                onViewRecipe={() => setSelectedMeal({ title: meal.name, description: meal.description })}
               />
             ))
           ) : (
@@ -173,12 +183,12 @@ interface MealCardProps {
   title: string;
   kcal: string;
   status: 'completed' | 'active' | 'pending';
+  onViewRecipe: () => void;
 }
 
-const MealCard: React.FC<MealCardProps> = ({ type, time, title, kcal, status }) => {
+const MealCard: React.FC<MealCardProps> = ({ type, time, title, kcal, status, onViewRecipe }) => {
   return (
     <div className="relative z-10 flex gap-5 group items-start">
-      {/* Indicator Dot */}
       <div className={`size-8 rounded-full flex items-center justify-center shrink-0 border-4 border-white shadow-sm mt-1 transition-all ${status === 'completed' ? 'bg-emerald-500' :
           status === 'active' ? 'bg-primary' : 'bg-slate-200'
         }`}>
@@ -198,7 +208,145 @@ const MealCard: React.FC<MealCardProps> = ({ type, time, title, kcal, status }) 
             <span className="material-symbols-outlined text-[18px] fill-1">local_fire_department</span>
             <span className="text-xs font-black">{kcal}</span>
           </div>
-          <button className="text-primary font-black text-[10px] hover:underline uppercase tracking-wider">Ver Receta</button>
+          <button
+            onClick={onViewRecipe}
+            className="text-primary font-black text-[10px] hover:underline uppercase tracking-wider"
+          >
+            Ver Receta
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const RecipeModal: React.FC<{
+  meal: { title: string; description: string };
+  perfil: any;
+  onClose: () => void;
+}> = ({ meal, perfil, onClose }) => {
+  const [loading, setLoading] = React.useState(true);
+  const [details, setDetails] = React.useState<RecipeDetails | null>(null);
+
+  React.useEffect(() => {
+    const fetchDetails = async () => {
+      try {
+        const data = await getRecipeDetails(meal.description, perfil);
+        setDetails(data);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDetails();
+  }, [meal.description]);
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4">
+      <div
+        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300"
+        onClick={onClose}
+      />
+
+      <div className="relative w-full max-w-lg bg-white rounded-[32px] overflow-hidden shadow-2xl animate-in slide-in-from-bottom duration-500 max-h-[90vh] flex flex-col">
+        {/* Header Visual */}
+        <div className="h-32 bg-primary relative overflow-hidden shrink-0">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary via-blue-600 to-indigo-700 opacity-90" />
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10" />
+          <div className="relative h-full flex flex-col justify-end p-6">
+            <span className="text-[10px] font-black text-white/70 tracking-[0.2em] uppercase">{meal.title}</span>
+            <h2 className="text-white font-black text-xl leading-tight line-clamp-1">{meal.description}</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 size-10 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white backdrop-blur-md transition-all border border-white/20"
+          >
+            <span className="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20 space-y-4">
+              <div className="size-12 border-4 border-slate-100 border-t-primary rounded-full animate-spin" />
+              <p className="text-slate-400 font-bold text-sm tracking-wider animate-pulse uppercase">IA GENERANDO RECETA...</p>
+            </div>
+          ) : details ? (
+            <>
+              {/* Portion Kcal */}
+              <div className="bg-slate-50 flex items-center justify-between p-5 rounded-3xl border border-slate-100">
+                <div className="flex items-center gap-3">
+                  <div className="size-10 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
+                    <span className="material-symbols-outlined fill-1">local_fire_department</span>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 tracking-widest uppercase">Energía x Porción</p>
+                    <p className="text-lg font-black text-slate-800">{details.kcal} kcal</p>
+                  </div>
+                </div>
+                <span className="text-[11px] font-bold text-slate-400 italic">Estimación IA ✨</span>
+              </div>
+
+              {/* Bio-Hacks (Sugestión Saludable & Orden) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-emerald-50/50 p-5 rounded-3xl border border-emerald-100/50 space-y-2">
+                  <div className="flex items-center gap-2 text-emerald-600 mb-1">
+                    <span className="material-symbols-outlined text-[20px]">verified</span>
+                    <span className="text-[10px] font-black tracking-widest uppercase">Sugerencia Saludable</span>
+                  </div>
+                  <p className="text-slate-700 text-sm font-medium leading-relaxed">{details.sugerencia}</p>
+                </div>
+
+                <div className="bg-blue-50/50 p-5 rounded-3xl border border-blue-100/50 space-y-2">
+                  <div className="flex items-center gap-2 text-blue-600 mb-1">
+                    <span className="material-symbols-outlined text-[20px]">low_priority</span>
+                    <span className="text-[10px] font-black tracking-widest uppercase">Orden de Ingesta</span>
+                  </div>
+                  <p className="text-slate-700 text-sm font-medium leading-relaxed">{details.ordenIngesta}</p>
+                </div>
+              </div>
+
+              {/* Bio-Hack Destacado */}
+              <div className="bg-primary/5 p-5 rounded-3xl border border-primary/10 flex gap-4">
+                <span className="material-symbols-outlined text-primary text-3xl shrink-0">psychology</span>
+                <div>
+                  <h4 className="text-primary font-black text-[10px] tracking-widest uppercase mb-1">Mental Bio-Hack</h4>
+                  <p className="text-slate-700 text-sm font-bold leading-relaxed">{details.bioHack}</p>
+                </div>
+              </div>
+
+              {/* Preparación */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 px-2">
+                  <div className="h-[2px] flex-1 bg-slate-100" />
+                  <span className="text-[10px] font-black text-slate-300 tracking-[0.3em] uppercase">Preparación</span>
+                  <div className="h-[2px] flex-1 bg-slate-100" />
+                </div>
+
+                <div className="space-y-4">
+                  {details.preparacion.map((step, i) => (
+                    <div key={i} className="flex gap-4 group">
+                      <div className="size-6 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center text-[10px] font-black shrink-0 transition-colors group-hover:bg-primary/10 group-hover:text-primary">
+                        {i + 1}
+                      </div>
+                      <p className="text-slate-600 text-sm font-medium leading-relaxed group-hover:text-slate-800 transition-colors">{step}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Note */}
+              <p className="text-center text-[10px] text-slate-300 font-bold pt-4 pb-2 uppercase tracking-widest">
+                Creado por el Cerebro IA de MN-NutriApp
+              </p>
+            </>
+          ) : (
+            <div className="text-center py-20 text-slate-400 font-bold uppercase tracking-widest">
+              Error al generar receta
+            </div>
+          )}
         </div>
       </div>
     </div>

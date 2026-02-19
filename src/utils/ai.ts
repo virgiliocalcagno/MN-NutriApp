@@ -8,6 +8,14 @@ export interface AIResponse {
   compras: [string, string, number, string, string][];
 }
 
+export interface RecipeDetails {
+  kcal: number;
+  preparacion: string[];
+  bioHack: string;
+  sugerencia: string;
+  ordenIngesta: string;
+}
+
 // URL of the Cloud Function (Reliable fallback)
 const CLOUD_FUNCTION_URL = 'https://us-central1-mn-nutriapp.cloudfunctions.net/procesarNutricion';
 
@@ -116,5 +124,30 @@ export const analyzeImageWithGemini = async (base64Image: string, perfil?: any) 
   } catch (error) {
     console.error("Error NutriScan:", error);
     throw error;
+  }
+};
+export const getRecipeDetails = async (mealDesc: string, perfil?: any): Promise<RecipeDetails> => {
+  try {
+    const response = await fetch('https://us-central1-mn-nutriapp.cloudfunctions.net/generarDetalleReceta', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        descripcion: mealDesc,
+        perfil: perfil
+      })
+    });
+
+    if (!response.ok) throw new Error("Error generando detalle de receta");
+    return await response.json();
+  } catch (error) {
+    console.error("Error AI Recipe:", error);
+    // Fallback static data if AI fails
+    return {
+      kcal: 350,
+      preparacion: ["Lava los ingredientes", "Cocina a fuego lento", "Sirve caliente"],
+      bioHack: "Bebe un vaso de agua antes de comer para mejorar la digestión.",
+      sugerencia: "Agrega una pizca de orégano para realzar el sabor sin añadir sodio.",
+      ordenIngesta: "Empieza por los vegetales para reducir el pico de glucosa."
+    };
   }
 };
