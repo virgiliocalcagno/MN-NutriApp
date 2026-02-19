@@ -6,8 +6,12 @@ import { sortMeals, getProductImage } from '../src/utils/helpers';
 const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
   const { store, saveStore } = useStore();
 
+  // Helper to normalize strings for comparison (remove accents and uppercase)
+  const normalize = (str: string) =>
+    str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+
   // Days logic
-  const diasSemana = ["DOMINGO", "LUNES", "MARTES", "MIERCOLES", "JUEVES", "VIERNES", "SABADO"];
+  const diasSemana = ["DOMINGO", "LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO"];
   const todayIndex = new Date().getDay();
   const todayName = diasSemana[todayIndex];
   const selectedDay = store.selectedDay || todayName;
@@ -26,7 +30,7 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
       d.setDate(monday.getDate() + i);
       const name = diasSemana[d.getDay()];
       week.push({
-        label: name.substring(0, 3),
+        label: name.substring(0, 3).replace('IÉR', 'MIÉ').replace('ÁBA', 'SÁB'), // Keep accents in labels if needed
         fullDay: name,
         date: d.getDate().toString(),
         active: selectedDay === name
@@ -41,11 +45,18 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
     saveStore({ ...store, selectedDay: dayName });
   };
 
-  // Menu Logic
-  const menuForDay = store.menu[selectedDay] || {};
+  // Improved Menu Logic: Search in store.menu using normalized keys
+  const getMenuForDay = () => {
+    const normalizedSelected = normalize(selectedDay);
+    // Find the original key in the menu that matches the normalized selection
+    const originalKey = Object.keys(store.menu).find(key => normalize(key) === normalizedSelected);
+    return originalKey ? store.menu[originalKey] : {};
+  };
+
+  const menuForDay = getMenuForDay();
   const mealItems = sortMeals(menuForDay);
 
-  // Macros Logic (Placeholder since store doesn't have real-time macro calculation yet)
+  // Macros Logic (Placeholder)
   const macros = [
     { label: 'PROTEÍNA', value: '85g', target: '120', color: 'bg-primary', percentage: 70 },
     { label: 'CARBOS', value: '150g', target: '200', color: 'bg-emerald-500', percentage: 75 },
@@ -143,12 +154,12 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
           ) : (
             <div className="p-8 text-center border-2 border-dashed border-slate-200 rounded-3xl bg-white/50">
               <span className="material-symbols-outlined text-slate-300 text-5xl mb-2">event_busy</span>
-              <p className="text-slate-400 font-bold">No hay plan para el {selectedDay.toLowerCase()}</p>
+              <p className="text-slate-400 font-bold uppercase tracking-widest text-sm">Sin plan para el {selectedDay.toLowerCase()}</p>
               <button
                 onClick={() => setView('profile')}
-                className="mt-4 text-primary font-black text-xs uppercase tracking-widest"
+                className="mt-4 text-primary font-black text-xs uppercase tracking-widest border border-primary/20 bg-primary/5 px-6 py-3 rounded-xl active:scale-95 transition-all"
               >
-                Sincronizar PDF de Nutrición
+                Sincronizar PDF
               </button>
             </div>
           )}
@@ -188,7 +199,7 @@ const MealCard: React.FC<MealCardProps> = ({ type, time, title, kcal, status, im
         <h3 className="text-slate-800 font-extrabold text-base leading-tight mb-4">{title}</h3>
 
         {image && status === 'active' && (
-          <div className="relative w-full h-40 rounded-[24px] overflow-hidden mb-4 shadow-inner">
+          <div className="relative w-full h-40 rounded-[24px] overflow-hidden mb-4 shadow-inner border border-slate-50">
             <img src={image} className="w-full h-full object-contain bg-slate-50 p-4" alt={title} />
           </div>
         )}
