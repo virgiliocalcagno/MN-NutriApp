@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useStore } from '@/src/context/StoreContext';
 import { analyzeImageWithGemini } from '@/src/utils/ai';
 
-const FitnessView: React.FC = () => {
+const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
   const { store, saveStore } = useStore();
   const [activeTab, setActiveTab] = useState<'fit' | 'scan'>('fit');
   const [isScanning, setIsScanning] = useState(false);

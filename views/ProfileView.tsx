@@ -5,7 +5,7 @@ import { MealItem, initialStore } from '@/src/types/store';
 import { firebaseConfig } from '@/src/firebase';
 import { useLongPress } from '@/src/hooks/useLongPress';
 
-const ProfileView: React.FC = () => {
+const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
   const { store, user, saveStore, logout } = useStore();
   const [showLogout, setShowLogout] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -197,7 +197,7 @@ const ProfileView: React.FC = () => {
                   <input
                     type="number"
                     value={editData.edad || ''}
-                    onChange={e => setEditData({ ...editData, edad: parseInt(e.target.value) })}
+                    onChange={e => setEditData({ ...editData, edad: e.target.value })}
                     className="text-2xl font-black text-slate-800 bg-transparent border-none p-0 focus:ring-0 w-16"
                   />
                 ) : <span className="text-3xl font-black text-slate-800">{profile.edad || '--'}</span>}
@@ -213,7 +213,7 @@ const ProfileView: React.FC = () => {
                   <input
                     type="number"
                     value={editData.peso || ''}
-                    onChange={e => setEditData({ ...editData, peso: parseFloat(e.target.value) })}
+                    onChange={e => setEditData({ ...editData, peso: e.target.value })}
                     className="text-2xl font-black text-slate-800 bg-transparent border-none p-0 focus:ring-0 w-16"
                   />
                 ) : <span className="text-3xl font-black text-slate-800">{profile.peso || '--'}</span>}

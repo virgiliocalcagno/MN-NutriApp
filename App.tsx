@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { View } from './types';
 import HomeView from './views/HomeView';
 import FitnessView from './views/FitnessView';
-import ProgressView from './views/ProgressView';
 import ProfileView from './views/ProfileView';
 import TopNav from './components/TopNav';
 import ShoppingView from './views/ShoppingView';
@@ -29,11 +28,11 @@ const App: React.FC = () => {
 
   const renderView = () => {
     switch (currentView) {
-      case 'home': return <HomeView />;
-      case 'fitness': return <FitnessView />;
-      case 'shopping': return <ShoppingView />;
-      case 'profile': return <ProfileView />;
-      default: return <HomeView />;
+      case 'home': return <HomeView setView={setCurrentView} />;
+      case 'fitness': return <FitnessView setView={setCurrentView} />;
+      case 'shopping': return <ShoppingView setView={setCurrentView} />;
+      case 'profile': return <ProfileView setView={setCurrentView} />;
+      default: return <HomeView setView={setCurrentView} />;
     }
   };
 

@@ -83,8 +83,13 @@ exports.analizarComida = onRequest({
     const vertexAI = new VertexAI({ project: 'mn-nutriapp', location: 'us-central1' });
     const modelIA = vertexAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
-    const { imagenBase64, perfilPaciente } = req.body;
+    const { imagenBase64, image, perfilPaciente } = req.body;
+    const finalImage = imagenBase64 || image;
     const p = perfilPaciente || {};
+
+    if (!finalImage) {
+      return res.status(400).send({ error: "No se proporcionó imagenBase64 o image" });
+    }
 
     // Prompt Experto para Bio-Hacks y Análisis
     const prompt = `Analiza esta imagen de comida como un Coach Metabólico experto.
@@ -112,7 +117,7 @@ exports.analizarComida = onRequest({
 
     const parts = [
       { text: prompt },
-      { inlineData: { mimeType: "image/jpeg", data: imagenBase64 } }
+      { inlineData: { mimeType: "image/jpeg", data: finalImage } }
     ];
 
     const result = await modelIA.generateContent({ contents: [{ role: 'user', parts }] });
