@@ -30,7 +30,7 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
       d.setDate(monday.getDate() + i);
       const name = diasSemana[d.getDay()];
       week.push({
-        label: name.substring(0, 3).replace('IÉR', 'MIÉ').replace('ÁBA', 'SÁB'), // Keep accents in labels if needed
+        label: name.substring(0, 3).replace('IÉR', 'MIÉ').replace('ÁBA', 'SÁB'), // Keep accents in labels
         fullDay: name,
         date: d.getDate().toString(),
         active: selectedDay === name
@@ -48,7 +48,6 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
   // Improved Menu Logic: Search in store.menu using normalized keys
   const getMenuForDay = () => {
     const normalizedSelected = normalize(selectedDay);
-    // Find the original key in the menu that matches the normalized selection
     const originalKey = Object.keys(store.menu).find(key => normalize(key) === normalizedSelected);
     return originalKey ? store.menu[originalKey] : {};
   };
@@ -148,7 +147,6 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
                 title={meal.description}
                 kcal={`${meal.kcal || '---'} kcal`}
                 status={idx === 0 ? 'completed' : idx === 1 ? 'active' : 'pending'}
-                image={getProductImage(meal.description, 'Gral')}
               />
             ))
           ) : (
@@ -175,8 +173,6 @@ interface MealCardProps {
   title: string;
   kcal: string;
   status: 'completed' | 'active' | 'pending';
-  image?: string;
-  macros?: { p: string; c: string };
 }
 
 const MealCard: React.FC<MealCardProps> = ({ type, time, title, kcal, status }) => {
@@ -184,14 +180,13 @@ const MealCard: React.FC<MealCardProps> = ({ type, time, title, kcal, status }) 
     <div className="relative z-10 flex gap-5 group items-start">
       {/* Indicator Dot */}
       <div className={`size-8 rounded-full flex items-center justify-center shrink-0 border-4 border-white shadow-sm mt-1 transition-all ${status === 'completed' ? 'bg-emerald-500' :
-        status === 'active' ? 'bg-primary' : 'bg-slate-200'
+          status === 'active' ? 'bg-primary' : 'bg-slate-200'
         }`}>
         {status === 'completed' && <span className="material-symbols-outlined text-white text-sm font-bold">check</span>}
         {status === 'active' && <div className="size-2.5 bg-white rounded-full"></div>}
       </div>
 
-      <div className={`flex-1 bg-white rounded-[28px] border p-5 transition-all duration-300 ${status === 'active' ? 'border-primary/50 shadow-lg shadow-primary/5 ring-1 ring-primary/5' : 'border-slate-50 shadow-sm'
-        }`}>
+      <div className="flex-1 bg-white rounded-[28px] border border-slate-100 p-5 shadow-sm transition-all duration-300">
         <div className="flex justify-between items-center mb-1">
           <span className="text-[10px] font-black text-primary tracking-widest uppercase">{type}</span>
           <span className="text-[11px] font-black text-slate-400">{time}</span>
