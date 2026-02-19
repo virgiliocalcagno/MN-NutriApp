@@ -48,6 +48,9 @@ export interface Store {
     historial: string[];
     medals: { silver: number; gold: number };
     locks: { perfil: boolean; compras: boolean; existencia: boolean };
+    calories: number;
+    caloriesTarget: number;
+    lastScan: any | null;
 }
 
 export const initialStore: Store = {
@@ -65,5 +68,8 @@ export const initialStore: Store = {
     },
     historial: [],
     medals: { silver: 0, gold: 0 },
-    locks: { perfil: true, compras: true, existencia: true }
+    locks: { perfil: true, compras: true, existencia: true },
+    calories: 1200,
+    caloriesTarget: 2000,
+    lastScan: null
 };

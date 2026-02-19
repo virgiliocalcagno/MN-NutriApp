@@ -16,7 +16,8 @@ Este archivo es tu **"Botón de Pánico"**. Aquí guardo los momentos en los que
 | `CP004` | 18/02/2026 | `1f04a75` | Comienzo de Nueva Sesión - Estado Verificado | ✅ Estable |
 | `CP005` | 18/02/2026 | `52355c7` | Restauración NutriScan AI completa. | ✅ Estable |
 | `CP006` | 18/02/2026 | `73aee26` | **Versión Masterpiece**: Fusión Logica + UI Premium. | ✅ Estable |
-| `CP007` | 18/02/2026 | `8deb143` | **Prueba 002+006**: 4 botones, NutriScan en Zona Fit, Ficha Médica CP002. | 🚀 Activo |
+| `CP007` | 18/02/2026 | `ad9eebd` | **Prueba 002+006**: 4 botones, NutriScan en Zona Fit, Ficha Médica CP002. | ✅ Estable |
+| `CP008` | 18/02/2026 | `HEAD` | **NutriScan Pro**: UI Premium, animaciones de escaneo, widget de calorías y Bio-Hacks. | 🚀 Activo |
 
 ---
 > [!IMPORTANT]

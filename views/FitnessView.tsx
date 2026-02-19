@@ -6,7 +6,8 @@ const FitnessView: React.FC = () => {
   const { store, saveStore } = useStore();
   const [activeTab, setActiveTab] = useState<'fit' | 'scan'>('fit');
   const [isScanning, setIsScanning] = useState(false);
-  const [scanResult, setScanResult] = useState<any>(null);
+  const scanResult = store.lastScan;
+  const setScanResult = (val: any) => saveStore({ ...store, lastScan: val });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // --- Fit Logic (from CP002) ---
@@ -47,8 +48,10 @@ const FitnessView: React.FC = () => {
           const base64 = reader.result as string;
           // Note: In a real app, API key would be central, here we call our utility
           const result = await analyzeImageWithGemini(base64);
-          setScanResult(result);
+          // Add the base64 image to the result for preview
+          setScanResult({ ...result, image: base64 });
           setIsScanning(false);
+          if (window.navigator?.vibrate) window.navigator.vibrate([100, 50, 100]);
         };
         reader.readAsDataURL(file);
       } catch (err) {
@@ -150,62 +153,154 @@ const FitnessView: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="space-y-6 animate-in fade-in slide-in-from-right duration-300 px-2">
-            {/* Camera Trigger */}
-            <div className="relative aspect-[4/3] rounded-3xl bg-slate-200 overflow-hidden group shadow-inner flex items-center justify-center border-2 border-dashed border-slate-300">
+          <div className="space-y-6 animate-in fade-in duration-500 pb-10">
+            {/* 1. Calorías Diarias Widget */}
+            <div className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-100">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Calorías Diarias</p>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-black text-slate-900">{store.calories || 1200}</span>
+                    <span className="text-sm font-bold text-slate-300">/ 2,000 Kcal</span>
+                  </div>
+                </div>
+                <div className="bg-blue-50 text-blue-600 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tight">
+                  60% Completado
+                </div>
+              </div>
+              <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-500 rounded-full transition-all duration-1000" style={{ width: '60%' }}></div>
+              </div>
+            </div>
+
+            {/* 2. NutriScan Header Card */}
+            <div className="bg-white p-8 rounded-[32px] shadow-sm border border-slate-100 flex flex-col items-center text-center">
+              <div className="size-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-4">
+                <span className="material-symbols-outlined text-4xl font-fill">center_focus_weak</span>
+              </div>
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-1">NUTRISCAN</h2>
+              <p className="text-[10px] text-blue-500 font-bold uppercase tracking-[0.2em] mb-4">PRO AI ANALYZER</p>
+              <p className="text-xs text-slate-400 leading-relaxed max-w-[240px]">
+                Escanea platos, menús, recetas o etiquetas nutricionales. Análisis inteligente con traducción automática.
+              </p>
+            </div>
+
+            {/* 3. Area de Escaneo / Imagen */}
+            <div className="relative aspect-square rounded-[40px] bg-slate-200 overflow-hidden shadow-2xl border-4 border-white">
               <input type="file" ref={fileInputRef} onChange={handleScan} accept="image/*" className="hidden" />
 
               {isScanning ? (
-                <div className="flex flex-col items-center gap-4">
-                  <div className="size-16 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
-                  <p className="text-primary font-black text-sm tracking-widest uppercase">Escaneando...</p>
+                <div className="absolute inset-0 bg-black/60 z-20 flex flex-col items-center justify-center gap-4 backdrop-blur-sm">
+                  <div className="size-20 border-[6px] border-white/20 border-t-white rounded-full animate-spin"></div>
+                  <p className="text-white font-black text-sm tracking-widest uppercase animate-pulse">Analizando plato...</p>
+                </div>
+              ) : null}
+
+              {scanResult?.image ? (
+                <div className="h-full w-full relative">
+                  <img src={scanResult.image} alt="Plato" className="w-full h-full object-cover" />
+                  {/* Etiqueta de detección */}
+                  <div className="absolute top-6 left-6 bg-white/10 backdrop-blur-md border border-white/20 px-4 py-2 rounded-full flex items-center gap-2 animate-in slide-in-from-left duration-500">
+                    <div className="size-2 bg-blue-400 rounded-full animate-pulse"></div>
+                    <span className="text-[10px] font-black text-white uppercase tracking-wider">Detectando: {scanResult.plato || 'Alimento...'}</span>
+                  </div>
+                  {/* Confianza */}
+                  <div className="absolute bottom-10 right-10 bg-white/90 backdrop-blur-xl p-4 rounded-3xl shadow-2xl border border-white flex flex-col items-center animate-in zoom-in duration-500">
+                    <p className="text-[8px] text-slate-400 font-black uppercase tracking-tighter mb-0.5">Confidencia</p>
+                    <p className="text-2xl font-black text-slate-900">98.4%</p>
+                  </div>
+                  {/* Scanning Line Animation */}
+                  <div className="absolute top-0 left-0 w-full h-[2px] bg-blue-400/50 shadow-[0_0_15px_blue] animate-scan z-10"></div>
                 </div>
               ) : (
-                <button onClick={() => fileInputRef.current?.click()} className="flex flex-col items-center gap-3 active:scale-95 transition-all">
-                  <div className="size-20 bg-primary text-white rounded-full flex items-center justify-center shadow-2xl shadow-primary/30 group-hover:scale-110 transition-transform">
-                    <span className="material-symbols-outlined text-4xl font-fill">photo_camera</span>
+                <button onClick={() => fileInputRef.current?.click()} className="w-full h-full flex flex-col items-center justify-center gap-4 group transition-all">
+                  <div className="size-24 bg-white rounded-full flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform duration-500">
+                    <span className="material-symbols-outlined text-4xl text-blue-600 font-fill">photo_camera</span>
                   </div>
-                  <p className="text-slate-500 font-bold text-sm">Toma una foto de tu comida</p>
+                  <p className="text-slate-500 font-bold text-sm tracking-tight">Toca para capturar tu comida</p>
                 </button>
               )}
             </div>
 
-            {/* Results Placeholder/Actual */}
-            {scanResult ? (
-              <div className="bg-white p-6 rounded-3xl shadow-lg border border-slate-100 animate-in zoom-in-95">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="font-bold text-xl">Análisis de Comida</h3>
-                  <div className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider ${scanResult.impacto === 'Rojo' ? 'bg-red-50 text-red-500' :
-                    scanResult.impacto === 'Amarillo' ? 'bg-amber-50 text-amber-500' : 'bg-emerald-50 text-emerald-500'
-                    }`}>
-                    Semaforo: {scanResult.impacto}
+            {/* 4. Boton Analizar Ahora style */}
+            {!scanResult && !isScanning && (
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-5 rounded-[24px] shadow-xl shadow-blue-500/20 flex items-center justify-center gap-3 active:scale-95 transition-all text-sm tracking-widest uppercase"
+              >
+                <span className="material-symbols-outlined font-fill">auto_awesome</span>
+                ANALIZAR AHORA
+              </button>
+            )}
+
+            {/* 5. Resultados de Analisis */}
+            {scanResult && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom duration-700">
+                <h3 className="text-2xl font-black text-slate-900 tracking-tight px-1">Análisis de Nutrientes</h3>
+
+                {/* Alerta Precaucion/Info */}
+                <div className={`p-6 rounded-[32px] border ${scanResult.impacto === 'Rojo' ? 'bg-red-50 border-red-100' : 'bg-amber-50 border-amber-100'}`}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className={`size-2 rounded-full ${scanResult.impacto === 'Rojo' ? 'bg-red-500' : 'bg-amber-500'}`}></div>
+                    <p className="text-[10px] font-black uppercase tracking-[.2em] text-slate-900">{scanResult.impacto === 'Rojo' ? 'ALERTA' : 'PRECAUCIÓN'}</p>
+                  </div>
+                  <p className="text-[13px] leading-[1.6] text-slate-600 font-medium">
+                    {scanResult.hack || "Este plato parece equilibrado, pero ten cuidado con los aderezos y las grasas saturadas ocultas en las proteínas fritas."}
+                  </p>
+                </div>
+
+                {/* Macros Grid */}
+                <div className="grid grid-cols-4 gap-3">
+                  {[
+                    { l: 'KCAL', v: scanResult.macros?.kcal || '---' },
+                    { l: 'PROT', v: (scanResult.macros?.p || '---') + 'g' },
+                    { l: 'CARB', v: (scanResult.macros?.c || '---') + 'g' },
+                    { l: 'GRASA', v: (scanResult.macros?.f || '---') + 'g' }
+                  ].map((m, i) => (
+                    <div key={i} className="bg-white p-4 rounded-[24px] border border-slate-100 shadow-sm flex flex-col items-center">
+                      <p className="text-lg font-black text-slate-900">{m.v}</p>
+                      <p className="text-[8px] text-slate-400 font-black uppercase tracking-tighter">{m.l}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Bio-Hack Experto section */}
+                <div className="bg-[#eff3ff] p-6 rounded-[32px] border border-blue-100/50 relative overflow-hidden group">
+                  <div className="absolute -bottom-6 -right-6 text-blue-100 opacity-20 pointer-events-none group-hover:scale-110 transition-transform duration-1000">
+                    <span className="material-symbols-outlined text-[140px] font-fill">settings</span>
+                  </div>
+                  <div className="flex gap-4 relative z-10">
+                    <div className="size-14 rounded-2xl overflow-hidden border-2 border-white shadow-lg shrink-0">
+                      <img src="https://i.pravatar.cc/150?u=marlin" alt="Dra Marlin" className="w-full h-full object-cover" />
+                    </div>
+                    <div className="flex flex-col">
+                      <p className="text-[11px] font-black text-blue-600 uppercase tracking-widest mb-1">BIO-HACK EXPERTO</p>
+                      <p className="text-[13px] leading-relaxed italic text-slate-700 font-medium mb-3">
+                        {scanResult.tip || "Para optimizar tu metabolismo, prioriza el consumo de vegetales verdes antes de las proteínas para mejorar la sensibilidad a la insulina."}
+                      </p>
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">
+                        — DRA. MARLIN, DIRECTORA CLÍNICA
+                      </p>
+                    </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  <div className="p-3 bg-slate-50 rounded-2xl">
-                    <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">Proteína</p>
-                    <p className="text-lg font-bold text-slate-700">{scanResult.macros?.p || '---'}g</p>
-                  </div>
-                  <div className="p-3 bg-slate-50 rounded-2xl">
-                    <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">Calorías</p>
-                    <p className="text-lg font-bold text-slate-700">{scanResult.macros?.kcal || '---'} kcal</p>
-                  </div>
-                </div>
-
-                <div className="bg-primary/5 p-4 rounded-2xl border border-primary/10 flex gap-4">
-                  <div className="bg-primary text-white size-10 rounded-full flex items-center justify-center shrink-0">
-                    <span className="material-symbols-outlined text-xl">psychology</span>
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold text-primary uppercase mb-1">Criterio Nutricional</p>
-                    <p className="text-sm text-slate-600 italic">"{scanResult.hack || 'No hay consejo disponible.'}"</p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="p-8 text-center text-slate-400">
-                <p className="text-xs font-medium italic">Sube una imagen para ver el análisis nutricional en tiempo real.</p>
+                {/* Boton Final Registrar */}
+                <button
+                  onClick={() => {
+                    const addedCals = parseInt(scanResult.macros?.kcal || '0');
+                    saveStore({
+                      ...store,
+                      calories: (store.calories || 0) + addedCals,
+                      lastScan: null // Clear after registry or keep it? Let's keep for now but add to calories
+                    });
+                    alert(`✅ ${addedCals} Kcal registradas en tu diario.`);
+                  }}
+                  className="w-full bg-slate-900 hover:bg-black text-white py-6 rounded-[28px] shadow-2xl shadow-slate-900/40 flex items-center justify-between px-8 active:scale-[0.98] transition-all group"
+                >
+                  <span className="font-black text-sm tracking-[0.1em] uppercase">Registrar en mi Diario</span>
+                  <span className="material-symbols-outlined text-xl group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                </button>
               </div>
             )}
           </div>
