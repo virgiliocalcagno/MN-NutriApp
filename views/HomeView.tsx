@@ -108,8 +108,8 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
               key={idx}
               onClick={() => handleDaySelect(day.fullDay)}
               className={`flex flex-col items-center justify-center min-w-[64px] h-20 rounded-2xl border transition-all duration-300 ${day.active
-                  ? 'bg-primary border-primary text-white shadow-md shadow-primary/30 scale-105'
-                  : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'
+                ? 'bg-primary border-primary text-white shadow-md shadow-primary/30 scale-105'
+                : 'bg-white border-slate-100 text-slate-400 hover:border-slate-200'
                 }`}
             >
               <span className={`text-[10px] font-black tracking-widest ${day.active ? 'text-white/70' : 'text-slate-300'}`}>{day.label}</span>
@@ -179,7 +179,7 @@ interface MealCardProps {
   macros?: { p: string; c: string };
 }
 
-const MealCard: React.FC<MealCardProps> = ({ type, time, title, kcal, status, image, macros }) => {
+const MealCard: React.FC<MealCardProps> = ({ type, time, title, kcal, status }) => {
   return (
     <div className="relative z-10 flex gap-5 group items-start">
       {/* Indicator Dot */}
@@ -198,29 +198,9 @@ const MealCard: React.FC<MealCardProps> = ({ type, time, title, kcal, status, im
         </div>
         <h3 className="text-slate-800 font-extrabold text-base leading-tight mb-4">{title}</h3>
 
-        {image && status === 'active' && (
-          <div className="relative w-full h-40 rounded-[24px] overflow-hidden mb-4 shadow-inner border border-slate-50">
-            <img src={image} className="w-full h-full object-contain bg-slate-50 p-4" alt={title} />
-          </div>
-        )}
-
         <div className="flex items-center justify-between mt-auto">
           <div className="flex items-center gap-1.5 text-primary">
             <span className="material-symbols-outlined text-[18px] fill-1">local_fire_department</span>
             <span className="text-xs font-black">{kcal}</span>
           </div>
-          {status === 'active' ? (
-            <div className="flex gap-2">
-              <button className="bg-slate-50 text-slate-500 font-black text-[10px] px-3 py-2 rounded-xl hover:bg-slate-100 transition-colors uppercase tracking-wider">Sustituir</button>
-              <button className="bg-primary text-white font-black text-[10px] px-3 py-2 rounded-xl shadow-md shadow-primary/20 hover:bg-primary/90 transition-all uppercase tracking-wider">Registrar</button>
-            </div>
-          ) : (
-            <button className="text-primary font-black text-[10px] hover:underline uppercase tracking-wider">Ver Receta</button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default HomeView;
+          export default HomeView;
