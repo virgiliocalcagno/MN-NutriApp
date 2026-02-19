@@ -41,6 +41,7 @@ export const processPdfWithGemini = async (
                 1. EXTRAE Y RELLENA EL PERFIL: Analiza los documentos PDF y extrae REALMENTE: Nombre del Paciente, Doctor, Edad, Peso, Estatura, Cintura, Objetivos, Comorbilidades, Tipo de Sangre y Alergias.
                 2. MENÚ DE 7 DÍAS: Transcribe el menú para CADA DÍA encontrado en el PDF.
                 3. RUTINA DE EJERCICIOS DIARIA: Crea una rutina específica para CADA DÍA.
+                   - IMPORTANTE: Para cada ejercicio, busca e incluye un enlace informativo o de video ("link") de 'eresfitness.com/ejercicios' o YouTube.
                 4. LISTA DE MERCADO DOMINICANA:
                    - Convierte a Libras (Lb) o Onzas (Oz).
                    - ESTRUCTURA JSON: ["Nombre", "Cantidad", NivelStock, "Categoría", "Pasillo"]

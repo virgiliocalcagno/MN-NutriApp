@@ -6,6 +6,7 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
   const { store, saveStore } = useStore();
   const [activeTab, setActiveTab] = useState<'fit' | 'scan'>('fit');
   const [isScanning, setIsScanning] = useState(false);
+  const [activeVideoUrl, setActiveVideoUrl] = useState<string | null>(null);
   const scanResult = store.lastScan;
   const setScanResult = (val: any) => saveStore({ ...store, lastScan: val });
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -35,6 +36,61 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
     if (pos === -1) newDone.push(idx);
     else newDone.splice(pos, 1);
     saveStore({ ...store, doneEx: { ...store.doneEx, [displayDay]: newDone } });
+  };
+
+  // --- Video Parsing ---
+  const getYouTubeEmbedUrl = (url: string) => {
+    if (!url) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? `https://www.youtube.com/embed/${match[2]}` : null;
+  };
+
+  const VideoModal = () => {
+    if (!activeVideoUrl) return null;
+    const embedUrl = getYouTubeEmbedUrl(activeVideoUrl);
+
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+        <div className="bg-white w-full max-w-2xl rounded-[32px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+          <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+            <h3 className="font-black text-slate-900 tracking-tight">VIDEO GUÍA</h3>
+            <button
+              onClick={() => setActiveVideoUrl(null)}
+              className="size-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors"
+            >
+              <span className="material-symbols-outlined">close</span>
+            </button>
+          </div>
+          <div className="aspect-video bg-black relative">
+            {embedUrl ? (
+              <iframe
+                src={embedUrl}
+                className="w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              ></iframe>
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center text-center p-10 gap-4">
+                <span className="material-symbols-outlined text-5xl text-white/20">video_library</span>
+                <p className="text-white font-bold text-sm">Este video debe verse en el sitio externo.</p>
+                <a
+                  href={activeVideoUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-primary text-white px-6 py-3 rounded-2xl font-black text-xs tracking-widest uppercase shadow-xl shadow-primary/30"
+                >
+                  Abrir Video Externo
+                </a>
+              </div>
+            )}
+          </div>
+          <div className="p-6 bg-slate-50 text-center">
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Powered by MN-NutriScan & EresFitness</p>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   // --- NutriScan Logic (from CP006) ---
@@ -147,18 +203,24 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
               {exercisesList.length > 0 ? exercisesList.map((ex: any, idx: number) => {
                 const isCompleted = completedList.includes(idx);
                 return (
-                  <div key={idx} onClick={() => toggleExercise(idx)} className={`p-4 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 transition-all active:scale-[0.98] ${isCompleted ? 'opacity-60 bg-slate-50/50' : ''}`}>
-                    <div className={`size-12 rounded-xl flex items-center justify-center transition-all ${isCompleted ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
+                  <div key={idx} className={`p-4 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 transition-all ${isCompleted ? 'opacity-60 bg-slate-50/50' : ''}`}>
+                    <div
+                      onClick={() => toggleExercise(idx)}
+                      className={`size-12 rounded-xl flex items-center justify-center transition-all cursor-pointer ${isCompleted ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                    >
                       <span className="material-symbols-outlined">{isCompleted ? 'check_circle' : 'fitness_center'}</span>
                     </div>
-                    <div className="flex-1">
+                    <div className="flex-1" onClick={() => toggleExercise(idx)}>
                       <h4 className={`font-bold text-slate-900 ${isCompleted ? 'line-through text-slate-400' : ''}`}>{ex.n}</h4>
                       <p className="text-xs text-slate-500 line-clamp-1">{ex.i}</p>
                     </div>
                     {ex.link && (
-                      <a href={ex.link} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="p-2 text-primary hover:bg-primary/5 rounded-lg transition-colors">
-                        <span className="material-symbols-outlined text-xl">play_circle</span>
-                      </a>
+                      <button
+                        onClick={() => setActiveVideoUrl(ex.link)}
+                        className="size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center hover:bg-primary hover:text-white transition-all active:scale-95 shadow-lg shadow-primary/5"
+                      >
+                        <span className="material-symbols-outlined text-xl font-fill">play_circle</span>
+                      </button>
                     )}
                   </div>
                 )
@@ -328,6 +390,8 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
           </div>
         )}
       </main>
+
+      <VideoModal />
     </div>
   );
 };

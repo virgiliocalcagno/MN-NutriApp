@@ -33,6 +33,7 @@ exports.procesarNutricion = onRequest({
             1. EXTRAE Y RELLENA EL PERFIL: Analiza los documentos y extrae: Nombre del Paciente, Doctor, Edad, Peso, Estatura, Cintura, Objetivos, Comorbilidades, Tipo de Sangre, Alergias y Meta Calórica.
             2. MENÚ DE 7 DÍAS: Transcribe el menú para CADA DÍA. IMPORTANTE: Respeta las Alergias. Usa EMOJIS.
             3. RUTINA DE EJERCICIOS DIARIA: Crea una rutina específica para CADA DÍA.
+               - IMPORTANTE: Para cada ejercicio, intenta incluir un enlace informativo o de video ("link") de 'eresfitness.com' o YouTube si es posible.
             4. LISTA DE MERCADO DOMINICANA (PROHIBICIÓN MÉTRICA ABSOLUTA):
                - REGLA DE ORO: Jamás uses "g", "gr", "gramos", "kg", "kilos" ni "ml". Usa "Lbs" u "Oz".
                - Convierte raciones a Cantidades Comerciales Dominicanas (Libras o Onzas).
@@ -40,21 +41,13 @@ exports.procesarNutricion = onRequest({
 
             RESPONDE ÚNICAMENTE CON ESTE FORMATO JSON:
             {
-              "perfilAuto": {
-                "paciente": "...", "doctor": "...", "edad": "...", "peso": "...", "estatura": "...", "cintura": "...",
-                "sangre": "...", "alergias": "...",
-                "objetivos": [], "comorbilidades": [],
-                "metaCalorias": 0
-              },
-              "semana": { 
-                "LUNES": {"DESAYUNO": "...", "MERIENDA_AM": "...", "ALMUERZO": "...", "MERIENDA_PM": "...", "CENA": "..." },
-                ... (todos los días con EMOJIS)
-              },
+              "perfilAuto": { ... },
+              "semana": { ... },
               "ejercicios": {
-                "LUNES": [ {"n": "🏋️ Ejercicio", "i": "3x12", "link": ""} ],
-                ... (todos los días)
+                "LUNES": [ {"n": "🏋️ Ejercicio", "i": "3x12", "link": "https://eresfitness.com/ejercicio/nombre-del-ejercicio/"} ],
+                ...
               },
-              "compras": [ ["Nombre", "Cantidad Comercial (Lbs/Oz)", 1, "Categoría", "Pasillo"] ]
+              "compras": [ ... ]
             }`
     }];
 

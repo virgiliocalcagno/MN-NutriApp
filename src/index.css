@@ -2,7 +2,9 @@
 
 @layer base {
   body {
-    @apply bg-[#f5f6f8] text-slate-900;
+    background-color: #f5f6f8;
+    color: #0f172a;
+    /* text-slate-900 */
     font-family: 'Manrope', sans-serif;
   }
 }
