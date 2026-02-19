@@ -3,6 +3,8 @@ import { View } from './types';
 import HomeView from './views/HomeView';
 import FitnessView from './views/FitnessView';
 import ProfileView from './views/ProfileView';
+import ProgressView from './views/ProgressView';
+import WelcomeView from './views/WelcomeView';
 import TopNav from './components/TopNav';
 import ShoppingView from './views/ShoppingView';
 import LoginScreen from './src/components/LoginScreen';
@@ -10,7 +12,7 @@ import { useStore } from './src/context/StoreContext';
 import BottomNav from './components/BottomNav';
 
 const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState<View>('home');
+  const [currentView, setCurrentView] = useState<View>('welcome');
   const { user, loading } = useStore();
 
   if (loading) {
@@ -28,23 +30,25 @@ const App: React.FC = () => {
 
   const renderView = () => {
     switch (currentView) {
+      case 'welcome': return <WelcomeView onStart={() => setCurrentView('home')} />;
       case 'home': return <HomeView setView={setCurrentView} />;
       case 'fitness': return <FitnessView setView={setCurrentView} />;
       case 'shopping': return <ShoppingView setView={setCurrentView} />;
       case 'profile': return <ProfileView setView={setCurrentView} />;
+      case 'progress': return <ProgressView />;
       default: return <HomeView setView={setCurrentView} />;
     }
   };
 
   return (
-    <div className="max-w-md mx-auto bg-[#f8fafc] h-screen shadow-2xl relative flex flex-col overflow-hidden">
-      {currentView !== 'shopping' && (
+    <div className="max-w-md mx-auto bg-white min-h-screen shadow-2xl relative flex flex-col overflow-x-hidden">
+      {currentView !== 'shopping' && currentView !== 'welcome' && (
         <TopNav currentView={currentView} setCurrentView={setCurrentView} />
       )}
-      <main className="flex-1 overflow-y-auto no-scrollbar pb-24">
+      <main className={`flex-1 overflow-y-auto ${currentView !== 'welcome' ? 'pb-20' : ''}`}>
         {renderView()}
       </main>
-      {currentView !== 'shopping' && (
+      {currentView !== 'shopping' && currentView !== 'welcome' && (
         <BottomNav currentView={currentView} setCurrentView={setCurrentView} />
       )}
     </div>
