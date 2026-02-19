@@ -8,7 +8,7 @@ interface BottomNavProps {
 
 const BottomNav: React.FC<BottomNavProps> = ({ currentView, setCurrentView }) => {
   const navItems = [
-    { id: 'home', label: 'Inicio', icon: 'home' },
+    { id: 'home', label: 'Menú', icon: 'home' },
     { id: 'fitness', label: 'Zona Fit', icon: 'fitness_center' },
     { id: 'shopping', label: 'Plan', icon: 'description' },
     { id: 'profile', label: 'Perfil', icon: 'person' }
