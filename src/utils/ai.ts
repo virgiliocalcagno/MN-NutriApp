@@ -28,7 +28,6 @@ export interface RecipeDetails {
   notaPro: string;
 }
 
-// URL of the Cloud Function (Reliable fallback)
 const CLOUD_FUNCTION_URL = 'https://us-central1-mn-nutriapp.cloudfunctions.net/procesarNutricion';
 
 export const processPdfWithGemini = async (
@@ -37,7 +36,6 @@ export const processPdfWithGemini = async (
   pdfEvalBase64?: string,
   apiKey?: string
 ): Promise<AIResponse> => {
-  // Try direct Gemini first if key exists
   if (apiKey && apiKey !== 'AIzaSyAF5rs3cJFs_E6S7ouibqs7B2fgVRDLzc0') {
     try {
       console.log("Intentando procesamiento directo con Gemini...");
@@ -82,20 +80,15 @@ export const processPdfWithGemini = async (
       const responseText = result.response.text();
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       if (jsonMatch) return JSON.parse(jsonMatch[0]) as AIResponse;
-
       throw new Error("Formato de respuesta inválido");
     } catch (e: any) {
       console.warn("Procesamiento directo falló, intentando Fallback (Cloud Function)...", e.message);
-      // Fall through to Cloud Function
     }
   }
 
-  // Fallback / Default: Cloud Function (Robust)
   try {
-    console.log("Usando procesamiento seguro (Cloud Function)...");
     const cleanPlan = pdfPlanBase64?.replace(/^data:application\/pdf;base64,/, "");
     const cleanEval = pdfEvalBase64?.replace(/^data:application\/pdf;base64,/, "");
-
     const response = await fetch(CLOUD_FUNCTION_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -105,12 +98,10 @@ export const processPdfWithGemini = async (
         pdfEval: cleanEval
       })
     });
-
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error || `Error Servidor (${response.status})`);
     }
-
     return await response.json();
   } catch (error: any) {
     console.error("AI Critical Error:", error);
@@ -130,7 +121,6 @@ export const analyzeImageWithGemini = async (base64Image: string, perfil?: any) 
         perfilPaciente: perfil
       })
     });
-
     if (!response.ok) throw new Error("Error en servidor de análisis");
     return await response.json();
   } catch (error) {
@@ -139,92 +129,62 @@ export const analyzeImageWithGemini = async (base64Image: string, perfil?: any) 
   }
 };
 
-export const getRecipeDetails = async (mealDesc: string, perfil?: any): Promise<RecipeDetails> => {
-  const lowerDesc = mealDesc.toLowerCase();
+const generateDynamicFallback = (mealDesc: string): RecipeDetails => {
+  const ingredients = mealDesc.split(/[:\+,]/).map(s => s.trim()).filter(s => s.length > 5);
+  return {
+    kcal: 350,
+    ingredientes: ingredients.length > 0 ? ingredients : [mealDesc],
+    preparacion: [
+      `Preparación de ingredientes: Organiza los elementos mencionados (${mealDesc}) respetando las porciones indicadas.`,
+      "Cocción Técnica: Utiliza métodos de calor seco (plancha, horno u Air-fryer) para carnes y vegetales.",
+      "Finalizado: Condimenta con especias naturales y aceite de oliva crudo para preservar grasas monoinsaturadas."
+    ],
+    bioHack: {
+      titulo: "Secuenciación MN-Precision",
+      pasos: ["1. Vegetales (Fibra)", "2. Proteína y Grasa", "3. Carbohidrato"],
+      explicacion: "El orden de ingesta es sagrado: la fibra ralentiza la absorción de glucosa de los ingredientes posteriores."
+    },
+    nutrientes: { proteina: "25g", grasas: "12g", carbos: "30g", fibra: "5g" },
+    sugerencia: "Asegúrate de que la presentación sea atractiva; el hambre visual activa las enzimas digestivas.",
+    notaPro: "Protocolo de emergencia generado por análisis de texto para asegurar fidelidad con tu menú."
+  };
+};
 
-  // 1. Detect category for smarter fallbacks
-  let category: 'liquido' | 'snack' | 'plato' = 'plato';
-  if (lowerDesc.includes('té') || lowerDesc.includes('cafe') || lowerDesc.includes('infusion') || lowerDesc.includes('jugo') || lowerDesc.includes('batido')) {
-    category = 'liquido';
-  } else if (lowerDesc.includes('galleta') || lowerDesc.includes('fruta') || lowerDesc.includes('nuez') || lowerDesc.includes('yogur') || lowerDesc.includes('barrita')) {
-    category = 'snack';
-  }
-
+export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: string): Promise<RecipeDetails> => {
   try {
     const response = await fetch('https://us-central1-mn-nutriapp.cloudfunctions.net/generarDetalleReceta', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        descripcion: mealDesc,
-        perfil: perfil,
-        modo: 'v10_protocolo_optimo'
-      })
+      body: JSON.stringify({ descripcion: mealDesc, perfil, modo: 'v10_protocolo_optimo' })
     });
-
-    if (!response.ok) throw new Error("Error en servidor IA");
-    return await response.json();
-  } catch (error) {
-    console.warn("AI Recipe Fallback v10 activated for:", mealDesc);
-
-    // Fallback de élite basado en el ejemplo del usuario (Atún/Tortilla) o similar
-    if (category === 'liquido') {
-      return {
-        kcal: 45,
-        ingredientes: ["250ml de Agua Filtrada", "1 bolsita de té o infusión herbal", "Stevia pura (opcional)"],
-        preparacion: [
-          "Acondicionamiento del Agua: Calienta el agua filtrada hasta los 85°C (punto previo a la ebullición) para no quemar las hojas.",
-          "Infusión: Sumerge la bolsa y deja reposar exactamente 4 minutos para una extracción óptima de polifenoles.",
-          "Servicio: Retira la bolsa sin exprimirla y sirve en porcelana para mantener la temperatura basal."
-        ],
-        bioHack: {
-          titulo: "Hidratación Termogénica",
-          pasos: ["Bebe después de la comida principal", "No endulces para mantener la insulina en reposo"],
-          explicacion: "La temperatura del líquido ayuda a la emulsificación de las grasas ingeridas, facilitando la acción de las lipasas gástricas."
-        },
-        nutrientes: { proteina: "0g", grasas: "0g", carbos: "0g", fibra: "0g" },
-        sugerencia: "Agrega una rodaja de limón real para mejorar la biodisponibilidad de los antioxidantes.",
-        notaPro: "Consumir té verde o negro después de las comidas puede inhibir la absorción de hierro; si tienes anemia, espera 60 minutos."
-      };
-    }
-
-    if (category === 'snack') {
-      return {
-        kcal: 180,
-        ingredientes: ["1 Porción de fruta de temporada", "15g de Nueces o Almendras", "Canela en polvo"],
-        preparacion: [
-          "Porcionado Exacto: Corta la fruta en cubos uniformes para controlar la carga glucémica.",
-          "Activación: Acompaña con las semillas crudas para añadir una fuente de grasa que ralentice la digestión.",
-          "Finalizado: Espolvorea canela para mejorar la sensibilidad a la insulina celular."
-        ],
-        bioHack: {
-          titulo: "Control Glucémico en Snacks",
-          pasos: ["Come primero las nueces", "Sigue con la fruta entera"],
-          explicacion: "La grasa de la nuez induce la liberación de colecistoquinina (CCK), indicando saciedad al cerebro antes de procesar el azúcar de la fruta."
-        },
-        nutrientes: { proteina: "4g", grasas: "9g", carbos: "22g", fibra: "5g" },
-        sugerencia: "Nunca consumas la fruta en jugo; la ausencia de fibra provoca picos de glucosa hepática indeseados.",
-        notaPro: "Este snack tiene una densidad nutricional alta; mastica cada bocado al menos 20 veces para optimizar la amilasa salival."
-      };
-    }
-
-    // Default 'Plato Optimizado' (Basado en el ejemplo del usuario)
-    return {
-      kcal: 295,
-      ingredientes: ["140g de Atún en agua (escurrido)", "1 Tortilla de trigo integral", "5ml de Aceite de Oliva VE", "Mix de Espinacas y Pepino"],
-      preparacion: [
-        "Acondicionamiento de la Proteína: Mezcla el atún con el aceite de oliva y pimienta. El aceite facilita la absorción de vitaminas liposolubles (A, D, E, K).",
-        "Tratamiento de la Base: Calienta la tortilla 30s por lado sin tostar (evita compuestos pro-inflamatorios de glicación avanzada).",
-        "Ensamblaje Técnico: Coloca la cama de vegetales primero, luego la proteína y cierra con firmeza.",
-        "Emplatado: Sirve los vegetales frescos adicionales al lado para maximizar la ingesta de fibra cruda."
-      ],
-      bioHack: {
-        titulo: "Secuenciación de Nutrientes",
-        pasos: ["1. Vegetales (Fibra)", "2. Proteína y Grasa", "3. Carbohidrato"],
-        explicacion: "La fibra crea una 'malla' intestinal que ralentiza la absorción de glucosa. La proteína libera hormonas de saciedad (GLP-1) antes de llegar al carbohidrato."
-      },
-      nutrientes: { proteina: "26g", grasas: "8g", carbos: "28g", fibra: "6g" },
-      sugerencia: "Agrega unas gotas de vinagre de sidra de manzana a los vegetales para mejorar la respuesta insulínica de la comida completa.",
-      notaPro: "Usa pimienta negra recién molida; la piperina aumenta la absorción de nutrientes en un 200%."
-    };
+    if (response.ok) return await response.json();
+  } catch (e) {
+    console.warn("Cloud Function failed, trying Local Gemini...");
   }
+
+  if (apiKey && apiKey !== 'AIzaSyAF5rs3cJFs_E6S7ouibqs7B2fgVRDLzc0') {
+    try {
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const prompt = `Actúa como Nutricionista Clínico Experto. Genera una RECETA EXACTA para este plato: "${mealDesc}".
+      Usa exactamente este formato JSON (sin markdown):
+      {
+        "kcal": 300,
+        "ingredientes": ["Ingrediente 1 con cantidad", "..."],
+        "preparacion": ["Paso 1 técnico", "..."],
+        "bioHack": { "titulo": "...", "pasos": ["...", "..."], "explicacion": "..." },
+        "nutrientes": { "proteina": "20g", "grasas": "10g", "carbos": "30g", "fibra": "5g" },
+        "sugerencia": "...",
+        "notaPro": "..."
+      }`;
+      const result = await model.generateContent(prompt);
+      const text = result.response.text();
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) return JSON.parse(jsonMatch[0]);
+    } catch (e) {
+      console.error("Gemini Direct failed:", e);
+    }
+  }
+
+  return generateDynamicFallback(mealDesc);
 };

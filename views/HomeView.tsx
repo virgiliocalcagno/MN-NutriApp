@@ -195,7 +195,7 @@ const RecipeModal: React.FC<{
   React.useEffect(() => {
     const fetchDetails = async () => {
       try {
-        const data = await getRecipeDetails(meal.description, perfil);
+        const data = await getRecipeDetails(meal.description, perfil, perfil?.apiKey);
         setDetails(data);
       } catch (e) {
         console.error(e);
@@ -220,7 +220,7 @@ const RecipeModal: React.FC<{
               <span className="text-[10px] font-black text-white/60 tracking-[0.2em] uppercase">{meal.type}</span>
               <div className="h-px w-8 bg-white/20"></div>
             </div>
-            <h2 className="text-white font-black text-xl leading-tight line-clamp-2">Receta: Protocolo Nutricional</h2>
+            <h2 className="text-white font-black text-xl leading-tight line-clamp-2">{meal.description}</h2>
           </div>
           <button onClick={onClose} className="absolute top-4 right-4 size-10 bg-white/10 hover:bg-white/30 rounded-full flex items-center justify-center text-white backdrop-blur-xl border border-white/20 transition-all">
             <span className="material-symbols-outlined">close</span>
