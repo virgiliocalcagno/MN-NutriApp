@@ -6,7 +6,7 @@ import { getRecipeDetails, RecipeDetails } from '../src/utils/ai';
 
 const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
   const { store, saveStore } = useStore();
-  const [selectedMeal, setSelectedMeal] = useState<{ title: string; description: string } | null>(null);
+  const [selectedMeal, setSelectedMeal] = useState<{ type: string; description: string } | null>(null);
 
   // Helper to normalize strings for comparison (remove accents and uppercase)
   const normalize = (str: string) =>
@@ -18,11 +18,10 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
   const todayName = diasSemana[todayIndex];
   const selectedDay = store.selectedDay || todayName;
 
-  // Generate current week items (simple logic for display)
+  // Generate current week items
   const getWeekDays = () => {
     const week = [];
     const now = new Date();
-    // Start from Monday of current week
     const currentDay = now.getDay();
     const diff = now.getDate() - currentDay + (currentDay === 0 ? -6 : 1);
     const monday = new Date(now.setDate(diff));
@@ -47,7 +46,6 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
     saveStore({ ...store, selectedDay: dayName });
   };
 
-  // Improved Menu Logic
   const getMenuForDay = () => {
     const normalizedSelected = normalize(selectedDay);
     const originalKey = Object.keys(store.menu).find(key => normalize(key) === normalizedSelected);
@@ -156,7 +154,7 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
                 title={meal.description}
                 kcal={`${meal.kcal || '---'} kcal`}
                 status={idx === 0 ? 'completed' : idx === 1 ? 'active' : 'pending'}
-                onViewRecipe={() => setSelectedMeal({ title: meal.name, description: meal.description })}
+                onViewRecipe={() => setSelectedMeal({ type: meal.name, description: meal.description })}
               />
             ))
           ) : (
@@ -221,7 +219,7 @@ const MealCard: React.FC<MealCardProps> = ({ type, time, title, kcal, status, on
 };
 
 const RecipeModal: React.FC<{
-  meal: { title: string; description: string };
+  meal: { type: string; description: string };
   perfil: any;
   onClose: () => void;
 }> = ({ meal, perfil, onClose }) => {
@@ -245,22 +243,28 @@ const RecipeModal: React.FC<{
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300"
+        className="absolute inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300"
         onClick={onClose}
       />
 
-      <div className="relative w-full max-w-lg bg-white rounded-[32px] overflow-hidden shadow-2xl animate-in slide-in-from-bottom duration-500 max-h-[90vh] flex flex-col">
-        {/* Header Visual */}
-        <div className="h-32 bg-primary relative overflow-hidden shrink-0">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary via-blue-600 to-indigo-700 opacity-90" />
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10" />
-          <div className="relative h-full flex flex-col justify-end p-6">
-            <span className="text-[10px] font-black text-white/70 tracking-[0.2em] uppercase">{meal.title}</span>
-            <h2 className="text-white font-black text-xl leading-tight line-clamp-1">{meal.description}</h2>
+      <div className="relative w-full max-w-lg bg-white rounded-[32px] overflow-hidden shadow-2xl animate-in slide-in-from-bottom duration-500 max-h-[92vh] flex flex-col">
+        {/* Header Visual con Imagen */}
+        <div className="h-44 bg-slate-100 relative overflow-hidden shrink-0">
+          <img
+            src={getProductImage(meal.description, 'Gral')}
+            alt={meal.description}
+            className="w-full h-full object-cover opacity-80"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent" />
+
+          <div className="absolute bottom-6 left-6 right-6">
+            <span className="text-[10px] font-black text-white/70 tracking-[0.2em] uppercase">{meal.type}</span>
+            <h2 className="text-white font-black text-xl leading-tight line-clamp-2">{meal.description}</h2>
           </div>
+
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 size-10 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white backdrop-blur-md transition-all border border-white/20"
+            className="absolute top-4 right-4 size-10 bg-white/20 hover:bg-white/40 rounded-full flex items-center justify-center text-white backdrop-blur-md transition-all border border-white/20"
           >
             <span className="material-symbols-outlined">close</span>
           </button>
@@ -269,78 +273,85 @@ const RecipeModal: React.FC<{
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-20 space-y-4">
+            <div className="flex flex-col items-center justify-center py-24 space-y-4">
               <div className="size-12 border-4 border-slate-100 border-t-primary rounded-full animate-spin" />
-              <p className="text-slate-400 font-bold text-sm tracking-wider animate-pulse uppercase">IA GENERANDO RECETA...</p>
+              <p className="text-slate-400 font-bold text-[10px] tracking-widest animate-pulse uppercase text-center px-10">Calculando Bio-Hacks y Receta Experta...</p>
             </div>
           ) : details ? (
             <>
-              {/* Portion Kcal */}
+              {/* Información Nutricional IA */}
               <div className="bg-slate-50 flex items-center justify-between p-5 rounded-3xl border border-slate-100">
                 <div className="flex items-center gap-3">
                   <div className="size-10 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
                     <span className="material-symbols-outlined fill-1">local_fire_department</span>
                   </div>
                   <div>
-                    <p className="text-[10px] font-black text-slate-400 tracking-widest uppercase">Energía x Porción</p>
+                    <p className="text-[10px] font-black text-slate-400 tracking-widest uppercase">Energía Real x Porción</p>
                     <p className="text-lg font-black text-slate-800">{details.kcal} kcal</p>
                   </div>
                 </div>
-                <span className="text-[11px] font-bold text-slate-400 italic">Estimación IA ✨</span>
+                <div className="text-right">
+                  <p className="text-[9px] font-black text-primary/50 uppercase tracking-tighter">Planificado por IA</p>
+                  <p className="text-[11px] font-bold text-slate-400 italic">Nutrición de Precisión</p>
+                </div>
               </div>
 
-              {/* Bio-Hacks (Sugestión Saludable & Orden) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="bg-emerald-50/50 p-5 rounded-3xl border border-emerald-100/50 space-y-2">
-                  <div className="flex items-center gap-2 text-emerald-600 mb-1">
-                    <span className="material-symbols-outlined text-[20px]">verified</span>
-                    <span className="text-[10px] font-black tracking-widest uppercase">Sugerencia Saludable</span>
+              {/* Bio-Hacks Expertos */}
+              <div className="space-y-4">
+                {/* Mental Bio-Hack (Orden de Ingesta) - PRIORIDAD */}
+                <div className="bg-primary/5 p-6 rounded-[32px] border border-primary/10 space-y-3 relative overflow-hidden group">
+                  <div className="absolute top-[-10px] right-[-10px] size-24 bg-primary/5 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
+                  <div className="flex items-center gap-3 text-primary relative z-10">
+                    <span className="material-symbols-outlined text-[28px] fill-1">psychology</span>
+                    <h4 className="font-black text-xs tracking-[0.1em] uppercase">Mental Bio-Hack: Orden de Ingesta</h4>
                   </div>
-                  <p className="text-slate-700 text-sm font-medium leading-relaxed">{details.sugerencia}</p>
-                </div>
-
-                <div className="bg-blue-50/50 p-5 rounded-3xl border border-blue-100/50 space-y-2">
-                  <div className="flex items-center gap-2 text-blue-600 mb-1">
-                    <span className="material-symbols-outlined text-[20px]">low_priority</span>
-                    <span className="text-[10px] font-black tracking-widest uppercase">Orden de Ingesta</span>
+                  <p className="text-slate-700 text-sm font-bold leading-relaxed relative z-10">{details.ordenIngesta}</p>
+                  <div className="p-3 bg-white/60 rounded-2xl border border-primary/5 relative z-10">
+                    <p className="text-[11px] font-medium text-slate-500 italic leading-relaxed">{details.bioHack}</p>
                   </div>
-                  <p className="text-slate-700 text-sm font-medium leading-relaxed">{details.ordenIngesta}</p>
+                </div>
+
+                {/* Sugerencia de Cocina */}
+                <div className="bg-emerald-50/50 p-5 rounded-3xl border border-emerald-100/50 flex gap-4">
+                  <div className="size-10 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 shrink-0">
+                    <span className="material-symbols-outlined text-[20px] fill-1">temp_preferences_eco</span>
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="text-[10px] font-black text-emerald-700 tracking-widest uppercase">Sugerencia Pro-Salud</h4>
+                    <p className="text-slate-600 text-sm font-medium leading-relaxed">{details.sugerencia}</p>
+                  </div>
                 </div>
               </div>
 
-              {/* Bio-Hack Destacado */}
-              <div className="bg-primary/5 p-5 rounded-3xl border border-primary/10 flex gap-4">
-                <span className="material-symbols-outlined text-primary text-3xl shrink-0">psychology</span>
-                <div>
-                  <h4 className="text-primary font-black text-[10px] tracking-widest uppercase mb-1">Mental Bio-Hack</h4>
-                  <p className="text-slate-700 text-sm font-bold leading-relaxed">{details.bioHack}</p>
-                </div>
-              </div>
-
-              {/* Preparación */}
+              {/* Preparación Guiada */}
               <div className="space-y-4">
                 <div className="flex items-center gap-3 px-2">
-                  <div className="h-[2px] flex-1 bg-slate-100" />
-                  <span className="text-[10px] font-black text-slate-300 tracking-[0.3em] uppercase">Preparación</span>
-                  <div className="h-[2px] flex-1 bg-slate-100" />
+                  <div className="h-[1px] flex-1 bg-slate-100" />
+                  <span className="text-[10px] font-black text-slate-300 tracking-[0.3em] uppercase">Guía de Preparación</span>
+                  <div className="h-[1px] flex-1 bg-slate-100" />
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-4 pt-2">
                   {details.preparacion.map((step, i) => (
                     <div key={i} className="flex gap-4 group">
-                      <div className="size-6 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center text-[10px] font-black shrink-0 transition-colors group-hover:bg-primary/10 group-hover:text-primary">
+                      <div className="size-7 rounded-2xl bg-slate-50 border border-slate-100 text-slate-400 flex items-center justify-center text-[10px] font-black shrink-0 transition-all group-hover:bg-primary group-hover:text-white group-hover:border-primary group-hover:scale-110">
                         {i + 1}
                       </div>
-                      <p className="text-slate-600 text-sm font-medium leading-relaxed group-hover:text-slate-800 transition-colors">{step}</p>
+                      <p className="text-slate-600 text-sm font-medium leading-relaxed group-hover:text-slate-800 transition-colors flex-1">{step}</p>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Note */}
-              <p className="text-center text-[10px] text-slate-300 font-bold pt-4 pb-2 uppercase tracking-widest">
-                Creado por el Cerebro IA de MN-NutriApp
-              </p>
+              {/* Footer Credentials */}
+              <div className="pt-6 pb-2 border-t border-slate-50">
+                <div className="flex items-center justify-center gap-2 grayscale opacity-40">
+                  <span className="material-symbols-outlined text-[16px]">verified_user</span>
+                  <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none">
+                    Protocolo Generado por MN-Expert Engine
+                  </p>
+                </div>
+              </div>
             </>
           ) : (
             <div className="text-center py-20 text-slate-400 font-bold uppercase tracking-widest">

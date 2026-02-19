@@ -144,10 +144,15 @@ export const getRecipeDetails = async (mealDesc: string, perfil?: any): Promise<
     // Fallback static data if AI fails
     return {
       kcal: 350,
-      preparacion: ["Lava los ingredientes", "Cocina a fuego lento", "Sirve caliente"],
-      bioHack: "Bebe un vaso de agua antes de comer para mejorar la digestión.",
-      sugerencia: "Agrega una pizca de orégano para realzar el sabor sin añadir sodio.",
-      ordenIngesta: "Empieza por los vegetales para reducir el pico de glucosa."
+      preparacion: [
+        "Prepara los ingredientes frescos según las porciones indicadas.",
+        "Cocina la proteína a la plancha o al vapor para preservar nutrientes.",
+        "Acompaña con la guarnición respetando los tiempos de cocción de cada vegetal.",
+        "Sirve y decora con hierbas naturales para potenciar el sabor sin sal extra."
+      ],
+      bioHack: "Consumir primero la fibra (vegetales) crea una 'malla' en el intestino que ralentiza la absorción de glucosa de los carbohidratos.",
+      sugerencia: "Utiliza especias como cúrcuma o pimienta negra para añadir propiedades antiinflamatorias al plato.",
+      ordenIngesta: "1. Vegetales (Fibra) -> 2. Proteínas y Grasas -> 3. Carbohidratos Complex."
     };
   }
 };
