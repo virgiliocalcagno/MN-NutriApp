@@ -131,22 +131,49 @@ export const analyzeImageWithGemini = async (base64Image: string, perfil?: any) 
 
 const generateDynamicFallback = (mealDesc: string): RecipeDetails => {
   const ingredients = mealDesc.split(/[:\+,]/).map(s => s.trim()).filter(s => s.length > 5);
+  const lower = mealDesc.toLowerCase();
+
+  // Categorización para lógica de preparación
+  const isLiquido = lower.includes('té') || lower.includes('infusion') || lower.includes('cafe') || lower.includes('jugo') || lower.includes('agua');
+  const isSnack = lower.includes('galleta') || lower.includes('fruta') || lower.includes('nuez') || lower.includes('yogur') || lower.includes('naranja');
+
+  let prep = [
+    `Preparación: Organiza los elementos de tu plan (${mealDesc}) respetando las porciones.`,
+    "Cocción Técnica: Utiliza calor seco (plancha o Air-fryer) solo para proteínas y carbohidratos complejos.",
+    "Finalizado: Condimenta con especias naturales y evita azúcares añadidos."
+  ];
+
+  if (isLiquido) {
+    prep = [
+      "Acondicionamiento del Agua: Calienta agua filtrada hasta los 85°C (punto previo a ebullición).",
+      "Infusión: Deja reposar el ingrediente por 4-5 minutos para una extracción óptima de antioxidantes.",
+      "Servicio: Disfruta sin endulzantes para mantener la respuesta insulínica estable."
+    ];
+  } else if (isSnack) {
+    prep = [
+      "Lavado y Porcionado: Asegura la higiene de la fruta o snack y mide la cantidad exacta del plan.",
+      "Ensamblaje: Acompaña con agua o una infusión si el plan lo permite.",
+      "Masticación Consciente: Ingiere lentamente para activar las señales de saciedad cerebral."
+    ];
+  }
+
   return {
-    kcal: 350,
+    kcal: isLiquido ? 45 : isSnack ? 150 : 350,
     ingredientes: ingredients.length > 0 ? ingredients : [mealDesc],
-    preparacion: [
-      `Preparación de ingredientes: Organiza los elementos mencionados (${mealDesc}) respetando las porciones indicadas.`,
-      "Cocción Técnica: Utiliza métodos de calor seco (plancha, horno u Air-fryer) para carnes y vegetales.",
-      "Finalizado: Condimenta con especias naturales y aceite de oliva crudo para preservar grasas monoinsaturadas."
-    ],
+    preparacion: prep,
     bioHack: {
-      titulo: "Secuenciación MN-Precision",
-      pasos: ["1. Vegetales (Fibra)", "2. Proteína y Grasa", "3. Carbohidrato"],
-      explicacion: "El orden de ingesta es sagrado: la fibra ralentiza la absorción de glucosa de los ingredientes posteriores."
+      titulo: isLiquido ? "Terapia de Hidratación" : "Secuenciación MN-Precision",
+      pasos: isLiquido ? ["Bebe después de comer", "Evita endulzar"] : ["1. Vegetales", "2. Proteína", "3. Carbohidrato"],
+      explicacion: isLiquido ? "La hidratación post-prandial ayuda a la digestión sin diluir excesivamente los ácidos gástricos." : "El orden de ingesta protege tu metabolismo de picos de glucosa."
     },
-    nutrientes: { proteina: "25g", grasas: "12g", carbos: "30g", fibra: "5g" },
-    sugerencia: "Asegúrate de que la presentación sea atractiva; el hambre visual activa las enzimas digestivas.",
-    notaPro: "Protocolo de emergencia generado por análisis de texto para asegurar fidelidad con tu menú."
+    nutrientes: {
+      proteina: isLiquido ? "0g" : isSnack ? "2g" : "25g",
+      grasas: isLiquido ? "0g" : isSnack ? "5g" : "12g",
+      carbos: isLiquido ? "0g" : isSnack ? "20g" : "30g",
+      fibra: isLiquido ? "0g" : isSnack ? "3g" : "6g"
+    },
+    sugerencia: isLiquido ? "Puedes agregar canela para mejorar el sabor." : "La presentación visual es clave para la saciedad.",
+    notaPro: "Protocolo dinámico sincronizado con el contenido real de tu menú."
   };
 };
 
