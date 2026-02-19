@@ -173,8 +173,10 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
               </div>
             </div>
 
-            {/* 2. NutriScan Header Card */}
-            <div className="bg-white p-8 rounded-[32px] shadow-sm border border-slate-100 flex flex-col items-center text-center">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full bg-white p-8 rounded-[32px] shadow-sm border border-slate-100 flex flex-col items-center text-center hover:bg-slate-50 transition-colors active:scale-[0.98]"
+            >
               <div className="size-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-4">
                 <span className="material-symbols-outlined text-4xl font-fill">center_focus_weak</span>
               </div>
@@ -183,7 +185,7 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
               <p className="text-xs text-slate-400 leading-relaxed max-w-[240px]">
                 Escanea platos, menús, recetas o etiquetas nutricionales. Análisis inteligente con traducción automática.
               </p>
-            </div>
+            </button>
 
             {/* 3. Area de Escaneo / Imagen */}
             <div className="relative aspect-square rounded-[40px] bg-slate-200 overflow-hidden shadow-2xl border-4 border-white">
@@ -270,8 +272,8 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
                     <span className="material-symbols-outlined text-[140px] font-fill">settings</span>
                   </div>
                   <div className="flex gap-4 relative z-10">
-                    <div className="size-14 rounded-2xl overflow-hidden border-2 border-white shadow-lg shrink-0">
-                      <img src="https://i.pravatar.cc/150?u=marlin" alt="Dra Marlin" className="w-full h-full object-cover" />
+                    <div className="size-14 rounded-2xl overflow-hidden border-2 border-white shadow-lg shrink-0 bg-blue-100 flex items-center justify-center">
+                      <span className="material-symbols-outlined text-blue-600 text-3xl font-fill">nutrition</span>
                     </div>
                     <div className="flex flex-col">
                       <p className="text-[11px] font-black text-blue-600 uppercase tracking-widest mb-1">BIO-HACK EXPERTO</p>
@@ -279,7 +281,7 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
                         {scanResult.tip || "Para optimizar tu metabolismo, prioriza el consumo de vegetales verdes antes de las proteínas para mejorar la sensibilidad a la insulina."}
                       </p>
                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">
-                        — DRA. MARLIN, DIRECTORA CLÍNICA
+                        — NUTRICIONISTA EXPERTO
                       </p>
                     </div>
                   </div>
