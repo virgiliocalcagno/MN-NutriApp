@@ -214,13 +214,25 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
                       <h4 className={`font-bold text-slate-900 ${isCompleted ? 'line-through text-slate-400' : ''}`}>{ex.n}</h4>
                       <p className="text-xs text-slate-500 line-clamp-1">{ex.i}</p>
                     </div>
-                    {ex.link && (
+                    {ex.link ? (
                       <button
                         onClick={() => setActiveVideoUrl(ex.link)}
                         className="size-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center hover:bg-primary hover:text-white transition-all active:scale-95 shadow-lg shadow-primary/5"
+                        title="Ver Video"
                       >
                         <span className="material-symbols-outlined text-xl font-fill">play_circle</span>
                       </button>
+                    ) : (
+                      <a
+                        href={`https://www.youtube.com/results?search_query=ejercicio+${encodeURIComponent(ex.n)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="size-10 rounded-xl bg-slate-50 text-slate-300 flex items-center justify-center hover:bg-blue-50 hover:text-blue-500 transition-all active:scale-95 shadow-sm"
+                        title="Buscar Video"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <span className="material-symbols-outlined text-xl">search</span>
+                      </a>
                     )}
                   </div>
                 )
