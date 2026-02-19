@@ -36,11 +36,12 @@ export const processPdfWithGemini = async (
   pdfEvalBase64?: string,
   apiKey?: string
 ): Promise<AIResponse> => {
+  // Try direct Gemini 2.0 first
   if (apiKey && apiKey !== 'AIzaSyAF5rs3cJFs_E6S7ouibqs7B2fgVRDLzc0') {
     try {
-      console.log("Intentando procesamiento directo con Gemini...");
+      console.log("Intentando procesamiento directo con Gemini 2.0 Flash...");
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }, { apiVersion: 'v1' });
+      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
       const p = perfil || {};
       let promptText = `Actúa como procesador médico experto para MN-NutriApp. 
@@ -59,7 +60,7 @@ export const processPdfWithGemini = async (
                 1. EXTRAE Y RELLENA EL PERFIL: Analiza los documentos PDF y extrae REALMENTE: Nombre del Paciente, Doctor, Edad, Peso, Estatura, Cintura, Objetivos, Comorbilidades, Tipo de Sangre y Alergias.
                 2. MENÚ DE 7 DÍAS: Transcribe el menú para CADA DÍA encontrado en el PDF.
                 3. RUTINA DE EJERCICIOS DIARIA: Crea una rutina específica para CADA DÍA.
-                   - IMPORTANTE: Para cada ejercicio, busca e incluye un enlace informativo o de video ("link") de 'eresfitness.com/ejercicios' o YouTube.
+                   - Incluye enlaces de 'eresfitness.com/ejercicios' o YouTube.
                 4. LISTA DE MERCADO DOMINICANA:
                    - Convierte a Libras (Lb) o Onzas (Oz).
                    - ESTRUCTURA JSON: ["Nombre", "Cantidad", NivelStock, "Categoría", "Pasillo"]
@@ -82,7 +83,7 @@ export const processPdfWithGemini = async (
       if (jsonMatch) return JSON.parse(jsonMatch[0]) as AIResponse;
       throw new Error("Formato de respuesta inválido");
     } catch (e: any) {
-      console.warn("Procesamiento directo falló, intentando Fallback (Cloud Function)...", e.message);
+      console.warn("Gemini 2.0 falló, intentando Fallback (Cloud Function)...", e.message);
     }
   }
 
@@ -98,28 +99,33 @@ export const processPdfWithGemini = async (
         pdfEval: cleanEval
       })
     });
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `Error Servidor (${response.status})`);
-    }
+    if (!response.ok) throw new Error("Error Servidor Cloud");
     return await response.json();
   } catch (error: any) {
     console.error("AI Critical Error:", error);
-    alert(`⚠️ Error de Análisis: ${error.message}`);
     throw error;
   }
 };
 
-export const analyzeImageWithGemini = async (base64Image: string, perfil?: any) => {
+export const analyzeImageWithGemini = async (base64Image: string, perfil?: any, apiKey?: string) => {
   try {
     const cleanBase64 = base64Image.replace(/^data:image\/\w+;base64,/, "");
+
+    // Prioritize Gemini 2.0 Flash for NutriScan
+    if (apiKey && apiKey !== 'AIzaSyAF5rs3cJFs_E6S7ouibqs7B2fgVRDLzc0') {
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+      const prompt = "Analiza esta comida. Detecta ingredientes, calorías estimadas, macronutrientes y da 3 bio-hacks científicos. Responde en JSON.";
+      const result = await model.generateContent([{ inlineData: { mimeType: "image/jpeg", data: cleanBase64 } }, { text: prompt }]);
+      const text = result.response.text();
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) return JSON.parse(jsonMatch[0]);
+    }
+
     const response = await fetch('https://us-central1-mn-nutriapp.cloudfunctions.net/analizarComida', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        imagenBase64: cleanBase64,
-        perfilPaciente: perfil
-      })
+      body: JSON.stringify({ imagenBase64: cleanBase64, perfilPaciente: perfil })
     });
     if (!response.ok) throw new Error("Error en servidor de análisis");
     return await response.json();
@@ -129,55 +135,8 @@ export const analyzeImageWithGemini = async (base64Image: string, perfil?: any) 
   }
 };
 
-const generateDynamicFallback = (mealDesc: string): RecipeDetails => {
-  const ingredients = mealDesc.split(/[:\+,]/).map(s => s.trim()).filter(s => s.length > 5);
-  const lower = mealDesc.toLowerCase();
-
-  // Categorización para lógica de preparación
-  const isLiquido = lower.includes('té') || lower.includes('infusion') || lower.includes('cafe') || lower.includes('jugo') || lower.includes('agua');
-  const isSnack = lower.includes('galleta') || lower.includes('fruta') || lower.includes('nuez') || lower.includes('yogur') || lower.includes('naranja');
-
-  let prep = [
-    `Preparación: Organiza los elementos de tu plan (${mealDesc}) respetando las porciones.`,
-    "Cocción Técnica: Utiliza calor seco (plancha o Air-fryer) solo para proteínas y carbohidratos complejos.",
-    "Finalizado: Condimenta con especias naturales y evita azúcares añadidos."
-  ];
-
-  if (isLiquido) {
-    prep = [
-      "Acondicionamiento del Agua: Calienta agua filtrada hasta los 85°C (punto previo a ebullición).",
-      "Infusión: Deja reposar el ingrediente por 4-5 minutos para una extracción óptima de antioxidantes.",
-      "Servicio: Disfruta sin endulzantes para mantener la respuesta insulínica estable."
-    ];
-  } else if (isSnack) {
-    prep = [
-      "Lavado y Porcionado: Asegura la higiene de la fruta o snack y mide la cantidad exacta del plan.",
-      "Ensamblaje: Acompaña con agua o una infusión si el plan lo permite.",
-      "Masticación Consciente: Ingiere lentamente para activar las señales de saciedad cerebral."
-    ];
-  }
-
-  return {
-    kcal: isLiquido ? 45 : isSnack ? 150 : 350,
-    ingredientes: ingredients.length > 0 ? ingredients : [mealDesc],
-    preparacion: prep,
-    bioHack: {
-      titulo: isLiquido ? "Terapia de Hidratación" : "Secuenciación MN-Precision",
-      pasos: isLiquido ? ["Bebe después de comer", "Evita endulzar"] : ["1. Vegetales", "2. Proteína", "3. Carbohidrato"],
-      explicacion: isLiquido ? "La hidratación post-prandial ayuda a la digestión sin diluir excesivamente los ácidos gástricos." : "El orden de ingesta protege tu metabolismo de picos de glucosa."
-    },
-    nutrientes: {
-      proteina: isLiquido ? "0g" : isSnack ? "2g" : "25g",
-      grasas: isLiquido ? "0g" : isSnack ? "5g" : "12g",
-      carbos: isLiquido ? "0g" : isSnack ? "20g" : "30g",
-      fibra: isLiquido ? "0g" : isSnack ? "3g" : "6g"
-    },
-    sugerencia: isLiquido ? "Puedes agregar canela para mejorar el sabor." : "La presentación visual es clave para la saciedad.",
-    notaPro: "Protocolo dinámico sincronizado con el contenido real de tu menú."
-  };
-};
-
 export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: string): Promise<RecipeDetails> => {
+  // 1. Try Cloud Function first
   try {
     const response = await fetch('https://us-central1-mn-nutriapp.cloudfunctions.net/generarDetalleReceta', {
       method: 'POST',
@@ -185,33 +144,56 @@ export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: 
       body: JSON.stringify({ descripcion: mealDesc, perfil, modo: 'v10_protocolo_optimo' })
     });
     if (response.ok) return await response.json();
-  } catch (e) {
-    console.warn("Cloud Function failed, trying Local Gemini...");
-  }
+  } catch (e) { }
 
+  // 2. High-Precision Local Fallback with Gemini 2.0 Flash
   if (apiKey && apiKey !== 'AIzaSyAF5rs3cJFs_E6S7ouibqs7B2fgVRDLzc0') {
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-      const prompt = `Actúa como Nutricionista Clínico Experto. Genera una RECETA EXACTA para este plato: "${mealDesc}".
-      Usa exactamente este formato JSON (sin markdown):
+      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+      const prompt = `Actúa como Nutricionista Clínico experto en Nutrición de Precisión.
+      
+      OBJETIVO: Generar una ficha técnica de preparación para: "${mealDesc}".
+      
+      REGLAS DE SEGURIDAD CRÍTICAS:
+      1. CATEGORIZACIÓN: Diferencia estrictamente entre:
+         - SUPLEMENTOS (Proteína, Whey, Aminoácidos): NUNCA USAR CALOR. Mezcla mecánica en shaker con líquido FRÍO o ambiente.
+         - BEBIDAS FRÍAS (Jugos, Leche): No usar calor.
+         - INFUSIONES (Té, Café): Solo aquí se usa agua caliente (85°C).
+         - SÓLIDOS CRUDOS (Fruta, Galletas): Solo lavado y porcionado. No inventar cocción.
+         - SÓLIDOS COCINADOS (Carnes, Arroz): Usar técnicas de calor seco (plancha, air-fryer).
+      
+      2. BIO-HACK: Enfócate en la SECCIÓN DE INGESTA (Vegetales > Proteína > Carbo). Si es un batido, el hack es sobre la velocidad de ingesta y saciedad.
+
+      FORMATO JSON (SIN MARKDOWN):
       {
-        "kcal": 300,
-        "ingredientes": ["Ingrediente 1 con cantidad", "..."],
-        "preparacion": ["Paso 1 técnico", "..."],
+        "kcal": número,
+        "ingredientes": ["Cantidad exacta e ingrediente", "..."],
+        "preparacion": ["Paso 1 técnico", "Paso 2 técnico", "..."],
         "bioHack": { "titulo": "...", "pasos": ["...", "..."], "explicacion": "..." },
-        "nutrientes": { "proteina": "20g", "grasas": "10g", "carbos": "30g", "fibra": "5g" },
+        "nutrientes": { "proteina": "...g", "grasas": "...g", "carbos": "...g", "fibra": "...g" },
         "sugerencia": "...",
         "notaPro": "..."
       }`;
+
       const result = await model.generateContent(prompt);
       const text = result.response.text();
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) return JSON.parse(jsonMatch[0]);
     } catch (e) {
-      console.error("Gemini Direct failed:", e);
+      console.error("Gemini 2.0 Recipe Failed:", e);
     }
   }
 
-  return generateDynamicFallback(mealDesc);
+  // 3. Ultra-Safe Minimal Fallback (Solo si todo lo demás falla)
+  return {
+    kcal: 0,
+    ingredientes: [mealDesc],
+    preparacion: ["Mantenimiento de seguridad: No se pudo generar una receta segura por IA. Sigue las instrucciones de tu plan impreso."],
+    bioHack: { titulo: "Verificación Requerida", pasos: ["Consulta tu plan original"], explicacion: "Seguridad ante todo." },
+    nutrientes: { proteina: "Consultar", grasas: "Consultar", carbos: "Consultar", fibra: "Consultar" },
+    sugerencia: "Consulta con tu médico sobre este plato específico.",
+    notaPro: "Protocolo de seguridad activado por falta de contexto clínico."
+  };
 };
