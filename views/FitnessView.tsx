@@ -43,26 +43,38 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
     if (!url) return null;
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
     const match = url.match(regExp);
-    return (match && match[2].length === 11) ? `https://www.youtube.com/embed/${match[2]}` : null;
+    if (match && match[2].length === 11) {
+      // modestbranding=1, rel=0 for clean experience
+      return `https://www.youtube.com/embed/${match[2]}?modestbranding=1&rel=0&iv_load_policy=3`;
+    }
+    return null;
+  };
+
+  const isDirectMedia = (url: string) => {
+    return url.match(/\.(mp4|webm|ogg|gif|jpg|jpeg|png)$|^data:image\/(gif|png|jpeg)/i);
   };
 
   const VideoModal = () => {
     if (!activeVideoUrl) return null;
     const embedUrl = getYouTubeEmbedUrl(activeVideoUrl);
+    const directMedia = isDirectMedia(activeVideoUrl);
 
     return (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
-        <div className="bg-white w-full max-w-2xl rounded-[32px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
+        <div className="bg-white w-full max-w-2xl rounded-[40px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
           <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-            <h3 className="font-black text-slate-900 tracking-tight">VIDEO GUÍA</h3>
+            <div>
+              <h3 className="font-black text-slate-900 tracking-tight">GUÍA TÉCNICA</h3>
+              <p className="text-[10px] text-primary font-bold uppercase tracking-widest">Sin distracciones</p>
+            </div>
             <button
               onClick={() => setActiveVideoUrl(null)}
-              className="size-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-colors"
+              className="size-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 transition-all active:scale-90"
             >
               <span className="material-symbols-outlined">close</span>
             </button>
           </div>
-          <div className="aspect-video bg-black relative">
+          <div className="aspect-video bg-black relative flex items-center justify-center text-center">
             {embedUrl ? (
               <iframe
                 src={embedUrl}
@@ -70,23 +82,36 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
               ></iframe>
+            ) : directMedia ? (
+              <div className="w-full h-full bg-slate-900 flex items-center justify-center">
+                {activeVideoUrl.match(/\.(mp4|webm|ogg)$/i) ? (
+                  <video src={activeVideoUrl} controls autoPlay loop className="max-w-full max-h-full" />
+                ) : (
+                  <img src={activeVideoUrl} alt="Guía" className="max-w-full max-h-full object-contain" />
+                )}
+              </div>
             ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center text-center p-10 gap-4">
-                <span className="material-symbols-outlined text-5xl text-white/20">video_library</span>
-                <p className="text-white font-bold text-sm">Este video debe verse en el sitio externo.</p>
+              <div className="w-full h-full flex flex-col items-center justify-center p-10 gap-6 bg-slate-900">
+                <div className="size-20 bg-white/10 rounded-full flex items-center justify-center">
+                  <span className="material-symbols-outlined text-4xl text-white/40">video_library</span>
+                </div>
+                <div>
+                  <p className="text-white font-black text-lg">Contenido Externo</p>
+                  <p className="text-white/40 text-xs mt-1">Este ejercicio debe verse en su sitio original.</p>
+                </div>
                 <a
                   href={activeVideoUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="bg-primary text-white px-6 py-3 rounded-2xl font-black text-xs tracking-widest uppercase shadow-xl shadow-primary/30"
+                  className="bg-primary text-white px-8 py-4 rounded-2xl font-black text-xs tracking-widest uppercase shadow-2xl shadow-primary/40 hover:scale-105 transition-transform"
                 >
-                  Abrir Video Externo
+                  Ver Ejercicio ↗
                 </a>
               </div>
             )}
           </div>
           <div className="p-6 bg-slate-50 text-center">
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Powered by MN-NutriScan & EresFitness</p>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest italic">Powered by MN-NutriScan Pro</p>
           </div>
         </div>
       </div>
