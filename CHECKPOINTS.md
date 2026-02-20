@@ -20,7 +20,8 @@ Este archivo es tu **"Botón de Pánico"**. Aquí guardo los momentos en los que
 | `CP008` | 18/02/2026 | `e7680a8` | **NutriScan Pro**: UI Premium, animaciones de escaneo, widget de calorías y Bio-Hacks. | ✅ Estable |
 | `CP009` | 19/02/2026 | `54ec539` | **Base Sincronización Premium**: Estado previo a la limpieza. | ✅ Estable |
 | `CP010` | 20/02/2026 | `5413000` | **MN-NutriApp v32.0**: NutriScan Pro Implementation. | ✅ Estable |
-| `CP011` | 20/02/2026 | `aacca1a` | **MN-NutriApp v32.1**: Masterpiece Professionalization. | 🚀 Activo |
+| `CP011` | 20/02/2026 | `aacca1a` | **MN-NutriApp v32.1**: Masterpiece Professionalization. | ✅ Estable |
+| `CP012` | 20/02/2026 | `0a68091` | **MN-NutriApp v32.2**: Dedicated NutriScan View & Navigation Refactor. | 🚀 Activo |
 
 ---
 > [!IMPORTANT]
