@@ -207,169 +207,170 @@ const RecipeModal: React.FC<{
   }, [meal.description]);
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 overflow-hidden">
-      <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-md animate-in fade-in duration-300" onClick={onClose} />
+    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose} />
 
-      <div className="relative w-full max-w-lg bg-white rounded-[40px] overflow-hidden shadow-2xl animate-in slide-in-from-bottom duration-500 max-h-[94vh] flex flex-col">
-        {/* Header Visual */}
-        <div className="h-44 bg-slate-100 relative overflow-hidden shrink-0">
-          <img src={getProductImage(meal.description, 'Gral')} alt={meal.description} className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/20 to-transparent" />
-          <div className="absolute bottom-6 left-6 right-6">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[10px] font-black text-white/60 tracking-[0.2em] uppercase">{meal.type}</span>
-              <div className="h-px w-8 bg-white/20"></div>
-            </div>
-            <h2 className="text-white font-black text-xl leading-tight line-clamp-2">{meal.description}</h2>
-          </div>
-          <button onClick={onClose} className="absolute top-4 right-4 size-10 bg-white/10 hover:bg-white/30 rounded-full flex items-center justify-center text-white backdrop-blur-xl border border-white/20 transition-all">
-            <span className="material-symbols-outlined">close</span>
+      <div className="relative w-full max-w-lg bg-[#f8f9fd] rounded-[48px] overflow-hidden shadow-2xl animate-in slide-in-from-bottom duration-500 h-full max-h-[96vh] flex flex-col mx-4 my-8">
+
+        {/* TOP BAR CUSTOM (REPLACING NAV) */}
+        <div className="absolute top-8 left-8 right-8 z-20 flex justify-between items-center">
+          <button onClick={onClose} className="size-11 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center text-white border border-white/30 active:scale-95 transition-all">
+            <span className="material-symbols-outlined text-2xl">arrow_back</span>
+          </button>
+          <h4 className="text-white text-[11px] font-black tracking-[0.2em] uppercase opacity-80">Detalle de Almuerzo</h4>
+          <button className="size-11 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center text-white border border-white/30 active:scale-95 transition-all">
+            <span className="material-symbols-outlined text-2xl">share</span>
           </button>
         </div>
 
-        {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar bg-white">
-          {loading ? (
-            <div className="flex flex-col items-center justify-center py-32 space-y-4">
-              <div className="size-14 border-4 border-slate-100 border-t-primary rounded-full animate-spin" />
-              <p className="text-slate-400 font-bold text-[10px] tracking-widest animate-pulse uppercase">Generando Estándar de Precisión...</p>
-            </div>
-          ) : details ? (
-            <div className="p-6 space-y-10">
+        {/* Scrollable Area */}
+        <div className="flex-1 overflow-y-auto no-scrollbar">
 
-              {/* 1. Ingredientes Exactos */}
+          {/* HEADER IMAGE & TITLE */}
+          <div className="relative h-[420px] shrink-0">
+            <img
+              src={details?.imageUrl || getProductImage(meal.description, 'Gral')}
+              alt={meal.description}
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#f8f9fd] via-transparent to-black/40" />
+
+            <div className="absolute bottom-10 left-8 right-8">
+              <span className="bg-[#1e60f1] text-[9px] font-black text-white px-4 py-1.5 rounded-full tracking-widest uppercase mb-4 inline-block">PRO NUTRICIÓN</span>
+              <h1 className="text-white text-4xl font-black leading-[1.1] [text-shadow:_0_4px_12px_rgba(0,0,0,0.5)]">{meal.description}</h1>
+            </div>
+          </div>
+
+          {!loading && details ? (
+            <div className="px-8 pb-32 -mt-6 relative z-10 space-y-10">
+
+              {/* MACROS CARDS GRID (Stitch Style) */}
+              <div className="grid grid-cols-2 gap-4">
+                {/* CALORÍAS */}
+                <div className="bg-white rounded-[32px] p-6 shadow-sm border border-slate-100/50 flex flex-col items-center text-center">
+                  <span className="text-[10px] font-black text-slate-300 tracking-widest uppercase mb-2">CALORÍAS</span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-2xl font-black text-[#1e60f1]">{details.kcal}</span>
+                    <span className="text-[10px] font-bold text-slate-300 lowercase">kcal</span>
+                  </div>
+                </div>
+                {/* PROTEÍNA */}
+                <div className="bg-white rounded-[32px] p-6 shadow-sm border border-slate-100/50 flex flex-col items-center">
+                  <span className="text-[10px] font-black text-slate-300 tracking-widest uppercase mb-2">PROTEÍNA</span>
+                  <span className="text-2xl font-black text-slate-800 mb-3">{details.nutrientes.proteina}</span>
+                  <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-500 rounded-full" style={{ width: '75%' }}></div>
+                  </div>
+                </div>
+                {/* CARBOHIDRATOS */}
+                <div className="bg-white rounded-[32px] p-6 shadow-sm border border-slate-100/50 flex flex-col items-center">
+                  <span className="text-[10px] font-black text-slate-300 tracking-widest uppercase mb-2">CARBOS</span>
+                  <span className="text-2xl font-black text-slate-800 mb-3">{details.nutrientes.carbos}</span>
+                  <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-orange-500 rounded-full" style={{ width: '45%' }}></div>
+                  </div>
+                </div>
+                {/* GRASAS */}
+                <div className="bg-white rounded-[32px] p-6 shadow-sm border border-slate-100/50 flex flex-col items-center">
+                  <span className="text-[10px] font-black text-slate-300 tracking-widest uppercase mb-2">GRASAS</span>
+                  <span className="text-2xl font-black text-slate-800 mb-3">{details.nutrientes.grasas}</span>
+                  <div className="w-full h-1.5 bg-emerald-400 rounded-full overflow-hidden">
+                    <div className="h-full bg-emerald-400 rounded-full" style={{ width: '35%' }}></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* INGREDIENTES (Stitch List) */}
               <section className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <div className="size-8 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
-                    <span className="material-symbols-outlined text-lg">nutrition</span>
+                  <div className="bg-[#1e60f1] size-8 rounded-xl flex items-center justify-center text-white">
+                    <span className="material-symbols-outlined text-[18px]">shopping_basket</span>
                   </div>
-                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">Ingredientes (Cantidades Exactas)</h3>
+                  <h3 className="text-lg font-black text-slate-800">Ingredientes</h3>
                 </div>
-                <div className="bg-slate-50/50 rounded-3xl p-5 border border-slate-100 grid grid-cols-1 gap-3">
+                <div className="space-y-3">
                   {details.ingredientes.map((ing, i) => (
-                    <div key={i} className="flex items-start gap-3">
-                      <div className="size-1.5 bg-primary rounded-full mt-1.5 shrink-0"></div>
-                      <p className="text-sm font-bold text-slate-600 leading-relaxed">{ing}</p>
+                    <div key={i} className="bg-white rounded-2xl p-5 shadow-sm border border-slate-50 flex items-center justify-between group">
+                      <p className="text-sm font-bold text-slate-600">{ing}</p>
+                      <div className="size-6 bg-slate-100 rounded-full flex items-center justify-center text-slate-300 group-hover:bg-blue-50 group-hover:text-[#1e60f1] transition-all">
+                        <span className="material-symbols-outlined text-sm font-black">check_circle</span>
+                      </div>
                     </div>
                   ))}
                 </div>
               </section>
 
-              {/* 2. Preparación Profesional */}
-              <section className="space-y-4">
+              {/* PREPARACIÓN PROFESIONAL */}
+              <section className="space-y-6">
                 <div className="flex items-center gap-3">
-                  <div className="size-8 bg-amber-500/10 rounded-xl flex items-center justify-center text-amber-600">
-                    <span className="material-symbols-outlined text-lg">restaurant</span>
+                  <div className="bg-[#1e60f1] size-8 rounded-xl flex items-center justify-center text-white">
+                    <span className="material-symbols-outlined text-[18px]">architecture</span>
                   </div>
-                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">Preparación Profesional</h3>
+                  <h3 className="text-lg font-black text-slate-800">Preparación Profesional</h3>
                 </div>
-                <div className="space-y-6">
+                <div className="space-y-8 relative pl-4">
+                  <div className="absolute left-0 top-4 bottom-4 w-px bg-slate-100" />
                   {details.preparacion.map((step, i) => (
-                    <div key={i} className="flex gap-4 group">
-                      <div className="size-7 rounded-2xl bg-white border-2 border-slate-100 text-slate-400 flex items-center justify-center text-[10px] font-black shrink-0 group-hover:border-primary group-hover:text-primary transition-all">
+                    <div key={i} className="relative">
+                      <div className="absolute -left-[29px] top-1 size-7 bg-[#1e60f1] rounded-full border-4 border-[#f8f9fd] flex items-center justify-center text-white text-[10px] font-extrabold shadow-md shadow-blue-200">
                         {i + 1}
                       </div>
-                      <p className="text-slate-600 text-sm font-bold leading-relaxed flex-1 pt-0.5">{step}</p>
+                      <div className="space-y-1">
+                        <h4 className="text-sm font-black text-slate-800 uppercase tracking-tight">
+                          {step.includes(':') ? step.split(':')[0] : `Paso ${i + 1}`}
+                        </h4>
+                        <p className="text-[13px] font-bold text-slate-400 leading-relaxed">
+                          {step.includes(':') ? step.split(':')[1].trim() : step}
+                        </p>
+                      </div>
                     </div>
                   ))}
                 </div>
               </section>
 
-              {/* 3. El Bio-Hack */}
-              <section className="bg-primary/5 rounded-[40px] p-7 border border-primary/10 space-y-6 relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-8 text-primary/10 pointer-events-none group-hover:scale-110 transition-transform duration-700">
-                  <span className="material-symbols-outlined text-8xl">bolt</span>
-                </div>
-
-                <div className="flex items-center gap-3 relative z-10">
-                  <div className="size-10 bg-primary rounded-2xl flex items-center justify-center text-white shadow-lg shadow-primary/20">
-                    <span className="material-symbols-outlined text-xl">psychology</span>
-                  </div>
-                  <div>
-                    <h4 className="text-[10px] font-black text-primary tracking-widest uppercase">EL BIO-HACK</h4>
-                    <h3 className="text-lg font-black text-slate-800 leading-none">"{details.bioHack.titulo}"</h3>
-                  </div>
-                </div>
-
-                <div className="space-y-5 relative z-10">
-                  <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-4 border border-white/50">
-                    <p className="text-slate-500 text-[11px] font-medium leading-relaxed italic">"{details.bioHack.explicacion}"</p>
-                  </div>
-
-                  <div className="space-y-3">
-                    <p className="text-[10px] font-black text-slate-400 tracking-wider uppercase">Sigue este orden de consumo:</p>
-                    {details.bioHack.pasos.map((paso, i) => (
-                      <div key={i} className="flex items-center gap-3 bg-white/40 p-3 rounded-xl border border-primary/5">
-                        <span className="text-xs font-black text-primary">{i + 1}.</span>
-                        <p className="text-sm font-bold text-slate-700">{paso}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </section>
-
-              {/* 4. Valor Nutricional */}
-              <section className="space-y-4">
+              {/* BIO-HACK: SECUENCIACIÓN METABÓLICA */}
+              <section className="bg-blue-50/50 rounded-[40px] p-8 border border-blue-100/50 space-y-6">
                 <div className="flex items-center gap-3">
-                  <div className="size-8 bg-emerald-500/10 rounded-xl flex items-center justify-center text-emerald-600">
-                    <span className="material-symbols-outlined text-lg">analytics</span>
+                  <div className="text-[#1e60f1]">
+                    <span className="material-symbols-outlined text-3xl fill-1">bolt</span>
                   </div>
-                  <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">Valor Nutricional (Aproximado)</h3>
+                  <h3 className="text-[#1e60f1] text-[13px] font-black tracking-widest uppercase leading-tight">
+                    BIO-HACK: SECUENCIACIÓN<br />METABÓLICA
+                  </h3>
                 </div>
-                <div className="overflow-hidden rounded-3xl border border-slate-100">
-                  <table className="w-full text-left text-sm">
-                    <thead className="bg-slate-50">
-                      <tr>
-                        <th className="px-5 py-3 font-black text-slate-400 text-[10px] uppercase">Nutriente</th>
-                        <th className="px-5 py-3 font-black text-slate-800 text-[10px] uppercase">Cantidad</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50 font-bold text-slate-600">
-                      <tr>
-                        <td className="px-5 py-3">Energía</td>
-                        <td className="px-5 py-3 text-slate-800 font-black">{details.kcal} kcal</td>
-                      </tr>
-                      <tr>
-                        <td className="px-5 py-3">Proteína</td>
-                        <td className="px-5 py-3">{details.nutrientes.proteina}</td>
-                      </tr>
-                      <tr>
-                        <td className="px-5 py-3">Grasas</td>
-                        <td className="px-5 py-3">{details.nutrientes.grasas}</td>
-                      </tr>
-                      <tr>
-                        <td className="px-5 py-3">Carbohidratos</td>
-                        <td className="px-5 py-3">{details.nutrientes.carbos}</td>
-                      </tr>
-                      <tr>
-                        <td className="px-5 py-3">Fibra</td>
-                        <td className="px-5 py-3">{details.nutrientes.fibra}</td>
-                      </tr>
-                    </tbody>
-                  </table>
+
+                <p className="text-[#1e60f1]/70 text-sm font-bold leading-relaxed">
+                  {details.bioHack.explicacion}
+                </p>
+
+                <div className="space-y-3 pt-2">
+                  {details.bioHack.pasos.map((paso, i) => (
+                    <div key={i} className="bg-white rounded-full p-2.5 pl-4 pr-10 border border-blue-100/30 flex items-center gap-3 inline-flex shadow-sm">
+                      <div className={`size-2.5 rounded-full ${i === 0 ? 'bg-emerald-400' : i === 1 ? 'bg-blue-500' : 'bg-orange-400'}`}></div>
+                      <p className="text-[11px] font-black text-slate-700 whitespace-nowrap">
+                        <span className="text-slate-400 mr-2">{i + 1}.</span> {paso}
+                      </p>
+                    </div>
+                  ))}
                 </div>
               </section>
 
-              {/* 5. Nota Pro */}
-              <section className="bg-slate-900 rounded-[32px] p-6 flex gap-4 items-start relative overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent pointer-events-none" />
-                <div className="size-10 bg-white/10 rounded-2xl flex items-center justify-center text-white shrink-0 relative z-10">
-                  <span className="material-symbols-outlined text-xl">star</span>
-                </div>
-                <div className="space-y-1 relative z-10">
-                  <h4 className="text-[10px] font-black text-primary tracking-widest uppercase">Nota Pro</h4>
-                  <p className="text-slate-300 text-sm font-bold leading-relaxed">{details.notaPro}</p>
-                </div>
-              </section>
-
-              <div className="flex flex-col items-center justify-center py-6 opacity-30 gap-1">
-                <span className="material-symbols-outlined text-slate-400">verified_user</span>
-                <p className="text-[8px] font-black text-slate-500 uppercase tracking-[0.3em]">Protocolo Certificado MN-NutriApp v10</p>
+              {/* FOOTER BUTTON */}
+              <div className="flex justify-center pt-8">
+                <button onClick={onClose} className="size-20 bg-[#1e60f1] rounded-full flex items-center justify-center text-white shadow-xl shadow-blue-200 active:scale-95 transition-all">
+                  <span className="material-symbols-outlined text-4xl">check</span>
+                </button>
               </div>
 
             </div>
           ) : (
-            <div className="text-center py-20 text-slate-400 font-bold uppercase">Error de Protocolo</div>
+            <div className="flex flex-col items-center justify-center py-64 space-y-6">
+              <div className="relative size-24">
+                <div className="absolute inset-0 border-4 border-slate-100 rounded-full"></div>
+                <div className="absolute inset-0 border-4 border-[#1e60f1] border-t-transparent rounded-full animate-spin"></div>
+              </div>
+              <p className="text-[#1e60f1] font-black text-[10px] tracking-[0.3em] uppercase animate-pulse">Optimizando Protocolo VIP...</p>
+            </div>
           )}
         </div>
       </div>
