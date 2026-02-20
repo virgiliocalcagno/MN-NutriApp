@@ -107,37 +107,37 @@ export const analyzeImageWithGemini = async (base64Image: string, perfil?: any, 
 };
 
 export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: string): Promise<RecipeDetails> => {
-  console.log("Iniciando motor v21.0 (Humanizado) para:", mealDesc);
+  console.log("Iniciando motor v22.0 (Restricción Líquidos) para:", mealDesc);
 
-  // 1. MOTOR TITÁNICO: Gemini 2.0 Flash con Tono Cercano
+  // 1. MOTOR TITÁNICO: Gemini 2.0 Flash con Restricciones Médicas Estrictas
   if (apiKey && apiKey.length > 20) {
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-      const prompt = `Actúa como un nutricionista y amigo experto, con un lenguaje sencillo, cálido y práctico que cualquier persona pueda entender perfectamente.
+      const prompt = `Actúa como un Nutricionista Jefe y Especialista en Bio-Hacking.
 
-      TU TAREA: Explicar cómo preparar este plato: "${mealDesc}"
+      TU TAREA: Explicar cómo preparar este plato y dar consejos de Bio-Hack: "${mealDesc}"
       
-      REGLAS DE ORO (LENGUAJE CERCANO):
-      1. NO uses palabras científicas complejas (como polimerización, bioquímica, síntesis, etc.).
-      2. Título de Bio-Hack: Cámbialo por "El Truco del Chef" o "Consejo Útil".
-      3. Preparación: Usa instrucciones claras como "Calienta la sartén", "Corta en trozos", etc.
-      4. Ingredientes: Nombres comunes y fáciles de reconocer.
+      REGLAS MÉDICAS CRÍTICAS (NO NEGOCIABLES):
+      1. RESTRICCIÓN DE LÍQUIDOS: NUNCA recomiendes beber agua, jugos, té o cualquier líquido desde 30 minutos ANTES hasta 60 minutos DESPUÉS de la comida. Es una regla médica estricta para este paciente.
+      2. TERMINOLOGÍA: Usa siempre el término "Bio-Hack" para los consejos.
+      3. FOCO: Enfócate exclusivamente en la receta profesional, el orden de ingesta de los alimentos sólidos y cómo mitigar efectos dañinos (picos de insulina, inflamación).
+      4. TONO: Cercano, práctico y autoritario en materia de salud.
 
       SALIDA REQUERIDA (JSON PURO):
       {
         "kcal": número_estimado,
         "ingredientes": ["Cantidad - Nombre del ingrediente", "..."],
-        "preparacion": ["PASO: Explicación sencilla de qué hacer", "..."],
+        "preparacion": ["PASO: Explicación de cocina para ${mealDesc}", "..."],
         "bioHack": { 
-            "titulo": "Un nombre llamativo y simple", 
-            "pasos": ["Consejo práctico 1", "Consejo práctico 2", "..."], 
-            "explicacion": "Explica el beneficio para la salud de forma que un niño lo entienda." 
+            "titulo": "Título de Bio-Hack sobre ${mealDesc}", 
+            "pasos": ["Protocolo de ingesta de sólidos 1", "Técnica de mitigación 2", "..."], 
+            "explicacion": "Análisis de cómo este Bio-Hack protege tu metabolismo." 
         },
         "nutrientes": { "proteina": "Xg", "grasas": "Xg", "carbos": "Xg", "fibra": "Xg" },
-        "sugerencia": "Un tip extra master para que quede más rico.",
-        "notaPro": "Cómo te sentirás después de comer esto (más energía, saciado, etc.).",
+        "sugerencia": "Tip extra para la preparación.",
+        "notaPro": "Efecto esperado en tu energía y saciedad.",
         "imageUrl": "URL_PLACEHOLDER"
       }`;
 
@@ -153,38 +153,38 @@ export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: 
         return parsed;
       }
     } catch (e) {
-      console.error("Gemini Humanization Error:", e);
+      console.error("Gemini Medical Rules Error:", e);
     }
   }
 
-  // 2. FALLBACK HUMANO v21.0
+  // 2. FALLBACK MÉDICO v22.0 (Sin Líquidos)
   const isDrink = /té|te|cafe|café|infusión|agua|jugo|batido/i.test(mealDesc);
 
   return {
     kcal: isDrink ? 15 : 320,
     ingredientes: [
-      `Base: Una ración normal de ${mealDesc}.`,
-      "Toque fresco: Un poco de verduras o ensalada rápida.",
-      "Grasa rica: Una cucharadita de aceite de oliva virgen.",
-      "Para acompañar: Un vaso de agua con limón."
+      `Base sólida: Porción controlada de ${mealDesc}.`,
+      "Protección: Verduras de hoja verde para el inicio.",
+      "Grasa funcional: Aceite de Oliva para ralentizar la digestión.",
+      "Sazonado: Sal del Himalaya y especias naturales."
     ],
     preparacion: [
-      `PRIMERO: Ten listo todo para tu "${mealDesc}" a mano.`,
-      "EN LA COCINA: Prepáralo con poco fuego para que no pierda sus nutrientes.",
-      "AL SERVIR: Combina los ingredientes en el plato para que se vea apetitoso.",
-      "DISFRUTA: Cómelo con calma disfrutando cada bocado."
+      `PASO 1: Organizar los componentes de ${mealDesc}.`,
+      "COCINADO: Preparar respetando los tiempos para evitar compuestos tóxicos.",
+      `ORDEN: Servir primero la fibra, luego la proteína y finalmente el carbohidrato de ${mealDesc}.`,
+      "POST-COMIDA: Esperar 60 minutos antes de ingerir cualquier líquido."
     ],
     bioHack: {
-      titulo: `El mejor truco para comer ${mealDesc}`,
+      titulo: `Protección Metabólica para ${mealDesc}`,
       pasos: [
-        `1. Come la ensalada antes que el "${mealDesc}"`,
-        "2. Bebe agua durante el día",
-        "3. Camina 5 minutos después de comer"
+        `1. Consume la fibra de tu ${mealDesc} primero`,
+        "2. Mastica cada bocado hasta que sea líquido",
+        "3. Respeta la ventana de no líquidos (30 min antes / 60 min después)"
       ],
-      explicacion: `Si comes primero la fibra (las verduras), tu cuerpo procesará el "${mealDesc}" mucho mejor, dándote energía estable sin que te sientas pesado después.`
+      explicacion: `Evitar líquidos con el "${mealDesc}" previene la dilución de los jugos gástricos, asegurando una digestión perfecta y máxima absorción de nutrientes sin picos de insulina.`
     },
     nutrientes: { proteina: isDrink ? "0g" : "20g", grasas: isDrink ? "0g" : "10g", carbos: isDrink ? "2g" : "25g", fibra: "4g" },
-    sugerencia: `Prueba a ponerle un toque de limón a tu "${mealDesc}" para realzar el sabor naturalmente.`,
-    notaPro: `Este plato te dará energía constante por varias horas y no te sentirás inflamado.`
+    sugerencia: `No olvides que el primer paso para digerir bien el "${mealDesc}" empieza en la boca con la masticación.`,
+    notaPro: "Energía garantizada sin pesadez estomacal gracias al protocolo de líquidos."
   };
 };

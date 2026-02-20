@@ -348,7 +348,7 @@ const RecipeModal: React.FC<{
               <div className="mx-6 mt-4 mb-32 bg-[#ebf1ff] rounded-[48px] p-8 border border-blue-100/50 shadow-sm shadow-blue-50">
                 <div className="flex items-center gap-3 mb-5">
                   <span className="material-symbols-outlined text-blue-600 text-2xl fill-1">bolt</span>
-                  <h4 className="text-[12px] font-black text-blue-600 tracking-wider uppercase">EL TRUCO DEL CHEF: {details.bioHack.titulo}</h4>
+                  <h4 className="text-[12px] font-black text-blue-600 tracking-wider uppercase">BIO-HACK: {details.bioHack.titulo}</h4>
                 </div>
                 <p className="text-[13px] font-bold text-slate-500 leading-relaxed mb-8 italic">"{details.bioHack.explicacion}"</p>
                 <div className="flex flex-wrap gap-3">
