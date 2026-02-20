@@ -48,7 +48,7 @@ const App: React.FC = () => {
       <main className={`flex-1 overflow-y-auto ${currentView !== 'welcome' ? 'pb-20' : ''}`}>
         {renderView()}
       </main>
-      {currentView !== 'shopping' && currentView !== 'welcome' && (
+      {currentView !== 'welcome' && (
         <BottomNav currentView={currentView} setCurrentView={setCurrentView} />
       )}
     </div>

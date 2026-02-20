@@ -126,9 +126,6 @@ const ShoppingView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
                 className="sticky top-0 z-20 bg-white px-4 py-3 flex items-center justify-between shadow-sm select-none active:bg-slate-50 transition-colors"
             >
                 <div className="flex items-center gap-4">
-                    <button onClick={() => setView('home')} className="p-2 -ml-2 rounded-full hover:bg-slate-100 text-slate-700">
-                        <span className="material-symbols-outlined">arrow_back</span>
-                    </button>
                     <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
                         MN-NutriApp Pro
                         <span className={`material-symbols-outlined text-sm ${locks.compras ? 'text-blue-500' : 'text-slate-300'}`}>

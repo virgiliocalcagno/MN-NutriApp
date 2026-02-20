@@ -60,11 +60,6 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
   const menuForDay = getMenuForDay();
   const mealItems = sortMeals(menuForDay);
 
-  const macros = [
-    { label: 'PROTEÍNA', value: '85g', target: '120', color: 'bg-primary', percentage: 70 },
-    { label: 'CARBOS', value: '150g', target: '200', color: 'bg-emerald-500', percentage: 75 },
-    { label: 'GRASAS', value: '45g', target: '65', color: 'bg-orange-500', percentage: 69 },
-  ];
 
   return (
     <div className="flex flex-col bg-slate-50 min-h-screen pb-32 animate-in fade-in duration-700">
@@ -96,7 +91,7 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
       </header>
 
       <div className="px-6 space-y-6 pt-2">
-        <section onClick={() => setView('progress')} className="relative overflow-hidden rounded-[24px] bg-[#1e60f1] p-6 flex items-center gap-5 shadow-lg shadow-blue-200 cursor-pointer active:scale-[0.98] transition-all group">
+        <section onClick={() => setView('fitness')} className="relative overflow-hidden rounded-[24px] bg-[#1e60f1] p-6 flex items-center gap-5 shadow-lg shadow-blue-200 cursor-pointer active:scale-[0.98] transition-all group">
           <div className="size-14 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/30 text-white shrink-0">
             <span className="material-symbols-outlined text-3xl">filter_center_focus</span>
           </div>
@@ -116,20 +111,6 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
           ))}
         </section>
 
-        <section className="grid grid-cols-3 gap-3">
-          {macros.map((macro, idx) => (
-            <div key={idx} className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm space-y-2">
-              <span className="text-[10px] font-black text-slate-400 tracking-widest">{macro.label}</span>
-              <div className="flex items-baseline gap-1">
-                <span className="text-sm font-black text-slate-800">{macro.value}</span>
-                <span className="text-[10px] font-bold text-slate-300">/ {macro.target}</span>
-              </div>
-              <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                <div className={`h-full ${macro.color} rounded-full`} style={{ width: `${macro.percentage}%` }}></div>
-              </div>
-            </div>
-          ))}
-        </section>
 
         <section className="space-y-6 pt-4 relative">
           <div className="absolute left-[15px] top-6 bottom-0 w-[2px] bg-slate-100 z-0"></div>
