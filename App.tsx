@@ -43,11 +43,11 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto bg-white min-h-screen shadow-2xl relative flex flex-col overflow-x-hidden">
+    <div className="max-w-md mx-auto bg-white h-screen shadow-2xl relative flex flex-col overflow-hidden">
       {currentView !== 'shopping' && currentView !== 'welcome' && (
         <TopNav currentView={currentView} setCurrentView={setCurrentView} />
       )}
-      <main className={`flex-1 overflow-y-auto ${currentView !== 'welcome' ? 'pb-20' : ''}`}>
+      <main className={`flex-1 overflow-y-auto no-scrollbar ${currentView !== 'welcome' ? 'pb-4' : ''}`}>
         {renderView()}
       </main>
       {currentView !== 'welcome' && (

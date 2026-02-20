@@ -113,7 +113,7 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
         />
       )}
 
-      <header className="px-6 pt-8 pb-4 flex items-center justify-between sticky top-0 bg-white/80 backdrop-blur-md z-30">
+      <header className="px-6 pt-8 pb-4 flex items-center justify-between bg-white/50 border-b border-slate-50">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-800 tracking-tight">Menú de Hoy</h1>
           <p className="text-slate-400 font-medium text-sm capitalize">{selectedDay.toLowerCase()}, {new Date().getDate()} de {new Intl.DateTimeFormat('es-ES', { month: 'long' }).format(new Date())}</p>

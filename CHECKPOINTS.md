@@ -24,7 +24,8 @@ Este archivo es tu **"Botón de Pánico"**. Aquí guardo los momentos en los que
 | `CP012` | 20/02/2026 | `0a68091` | **MN-NutriApp v32.2**: Dedicated NutriScan View & Navigation Refactor. | ✅ Estable |
 | `CP013` | 20/02/2026 | `a9d9dea` | **MN-NutriApp v32.3**: Dual Mode Capture (Camera/Gallery) in NutriScan. | ✅ Estable |
 | `CP017` | 20/02/2026 | `2c9cedf` | **MN-NutriApp v32.7**: Isolated Scheduler Reset & UI Fixes. | ✅ Estable |
-| `CP018` | 20/02/2026 | `44569ce` | **MN-NutriApp v32.8**: HomeView Refactor & Nutrition Scheduler Modal. | 🚀 Activo |
+| `CP018` | 20/02/2026 | `ee76c22` | **MN-NutriApp v32.8**: HomeView Refactor & Nutrition Scheduler Modal. | ✅ Estable |
+| `CP019` | 20/02/2026 | `79956ba` | **MN-NutriApp v32.9**: Fixed Navigation Bar & Layout Refactor. | 🚀 Activo |
 
 ---
 > [!IMPORTANT]
