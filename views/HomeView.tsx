@@ -258,33 +258,44 @@ const RecipeModal: React.FC<{
             </div>
           ) : details ? (
             <div className="animate-in fade-in duration-700">
+              {/* DESCRIPCIÓN CRUDA (v29.0: Arriba de la imagen) */}
+              <div className="px-8 pt-6">
+                <p className="text-[13px] font-bold text-slate-400 leading-relaxed italic">
+                  {meal.description}
+                </p>
+              </div>
+
               {/* IMAGE CARD */}
-              <div className="mx-6 mt-6 relative rounded-[40px] overflow-hidden aspect-square shadow-xl group">
+              <div className="mx-6 mt-4 relative rounded-[40px] overflow-hidden aspect-video shadow-xl group">
                 <img
                   src={details.imageUrl || getProductImage(meal.description, 'Gral')}
                   alt={meal.description}
                   className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                <div className="absolute bottom-10 left-8 right-8">
-                  <span className="bg-[#1e60f1] text-[10px] font-black text-white px-5 py-2 rounded-full mb-4 inline-block shadow-lg uppercase tracking-wider">CHEF & BIO-HACKER</span>
-                  <h1 className="text-white text-3xl font-black leading-[1.15]">{details.titulo || meal.description}</h1>
-                </div>
               </div>
 
-              {/* Se ha eliminado el cuadro de calorías y macronutrientes por solicitud del usuario (v23.0) */}
-
-              {/* INGREDIENTES */}
-              <div className="px-6 mt-12">
-                <div className="flex items-center gap-3 mb-5">
+              {/* SECCIÓN INGREDIENTES (v29.0: Layout idéntico a captura) */}
+              <div className="px-8 mt-10">
+                <div className="flex items-center gap-3 mb-6">
                   <span className="material-symbols-outlined text-[#1e60f1] text-[28px] fill-1">shopping_basket</span>
                   <h3 className="text-lg font-black text-slate-800">Ingredientes</h3>
                 </div>
-                <div className="space-y-3">
+
+                <div className="mb-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-rose-400">❤️</span>
+                    <h4 className="text-[15px] font-black text-slate-800 leading-tight">
+                      {details.titulo || meal.description}
+                    </h4>
+                  </div>
+                  <h5 className="text-[14px] font-black text-slate-400 uppercase tracking-widest mt-4">Ingredientes</h5>
+                </div>
+
+                <div className="space-y-4">
                   {details.ingredientes.map((ing, i) => (
-                    <div key={i} className="flex items-start gap-4 group">
-                      <div className="size-1.5 rounded-full bg-blue-500/30 group-hover:bg-blue-500 mt-2 transition-colors" />
-                      <p className="text-[14px] font-bold text-slate-600 leading-tight">
+                    <div key={i} className="flex items-center gap-3 group">
+                      <span className="text-blue-400 text-xs">🔹</span>
+                      <p className="text-[14px] font-bold text-slate-600">
                         {ing}
                       </p>
                     </div>
@@ -292,8 +303,8 @@ const RecipeModal: React.FC<{
                 </div>
               </div>
 
-              {/* PREPARATION TIMELINE */}
-              <div className="px-6 mt-14">
+              {/* PREPARATION (v29.0: Layout idéntico a captura) */}
+              <div className="px-8 mt-14">
                 <div className="flex items-center gap-3 mb-8">
                   <span className="material-symbols-outlined text-[#1e60f1] text-[28px] fill-1">architecture</span>
                   <h3 className="text-xl font-black text-slate-800">Cómo Prepararlo</h3>
@@ -302,11 +313,11 @@ const RecipeModal: React.FC<{
                   <div className="absolute left-[13.5px] top-6 bottom-4 w-px bg-slate-100" />
                   {details.preparacion.map((step, i) => (
                     <div key={i} className="relative group">
-                      <div className="absolute -left-[32px] top-1 size-7 bg-[#1e60f1] rounded-full flex items-center justify-center text-white text-[11px] font-black shadow-lg shadow-blue-100 ring-4 ring-[#f8f9fd] transition-transform group-hover:scale-110">
+                      <div className="absolute -left-[32px] top-1 size-8 bg-[#1e60f1] rounded-full flex items-center justify-center text-white text-[12px] font-black shadow-lg shadow-blue-100 ring-4 ring-[#f8f9fd]">
                         {i + 1}
                       </div>
                       <div className="space-y-1">
-                        <p className="text-[14px] font-bold text-slate-500 leading-relaxed max-w-[95%] transition-colors group-hover:text-slate-700">
+                        <p className="text-[14px] font-bold text-slate-500 leading-relaxed max-w-[95%]">
                           {step.replace(/^\d+\.\s*/, '')}
                         </p>
                       </div>
@@ -315,22 +326,26 @@ const RecipeModal: React.FC<{
                 </div>
               </div>
 
-              {/* Bloque de Ciencia Digestiva (Bio-Hack) */}
-              {details.bioHack && details.bioHack.titulo && (
+              {/* BLOQUE BIO-HACK (v29.0: Estilo con botones de la captura) */}
+              {details.bioHack && (
                 <div className="mx-6 mt-10 mb-32 bg-[#f4f7ff] rounded-[48px] p-8 border border-blue-100/50 shadow-sm">
                   <div className="flex items-center gap-3 mb-4">
                     <span className="material-symbols-outlined text-blue-600 text-2xl fill-1">biotech</span>
-                    <h4 className="text-[13px] font-black text-blue-600 tracking-wider uppercase">{details.bioHack.titulo}</h4>
+                    <h4 className="text-[13px] font-black text-blue-600 tracking-wider uppercase">DIGESTIÓN EFICIENTE</h4>
                   </div>
-                  <p className="text-[13px] font-bold text-slate-500 leading-relaxed mb-6 italic">
+                  <p className="text-[13px] font-bold text-slate-500 leading-relaxed mb-8 italic">
                     {details.bioHack.explicacion}
                   </p>
-                  <div className="flex flex-wrap gap-2">
-                    {details.bioHack.pasos.filter(p => p).map((p, i) => (
-                      <div key={i} className="bg-white/80 px-4 py-2 rounded-full border border-blue-100">
-                        <span className="text-[10px] font-black text-blue-800 uppercase tracking-tight">{p}</span>
+
+                  <div className="flex flex-col gap-3">
+                    <div className="flex justify-between gap-3">
+                      <div className="flex-1 bg-white px-5 py-3 rounded-full border border-blue-100 text-center shadow-sm">
+                        <span className="text-[10px] font-black text-blue-800 uppercase tracking-widest leading-none">MASTICA 30 VECES CADA BOCADO</span>
                       </div>
-                    ))}
+                      <div className="flex-1 bg-white px-5 py-3 rounded-full border border-blue-100 text-center shadow-sm">
+                        <span className="text-[10px] font-black text-blue-800 uppercase tracking-widest leading-none">ESPERA 60M PARA BEBER</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}

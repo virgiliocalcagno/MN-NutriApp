@@ -108,36 +108,38 @@ export const analyzeImageWithGemini = async (base64Image: string, perfil?: any, 
 };
 
 export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: string): Promise<RecipeDetails> => {
-  console.log("Iniciando motor v28.0 (El Cerebro) para:", mealDesc);
+  console.log("Iniciando motor v29.0 (Fidelidad Total) para:", mealDesc);
 
-  // 1. MOTOR DINÁMICO 'EL CEREBRO': Gemini 2.0 Flash con System Prompt de Chef & Bio-hacker
+  // 1. MOTOR FIDELIDAD TOTAL: Gemini 2.0 Flash con System Prompt de Usuario
   if (apiKey && apiKey.length > 20) {
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-      const prompt = `Actúa como un Chef de Alta Cocina y Experto en Bio-hacking. 
-      Tu tarea es transformar los ingredientes de "${mealDesc}" en una experiencia visual y educativa.
+      const prompt = `Actúa como un Chef de Alta Cocina y Experto en Bio-hacking. Tu tarea es transformar una lista de ingredientes en una experiencia visual y educativa.
 
       REGLAS CRÍTICAS:
-      1. TÍTULO: Crea un nombre apetitoso y gourmet (ej: 'Bowl de Atún Cítrico' en lugar de 'Atún con pepino').
-      2. INSTRUCCIONES: Escribe exactamente 4 pasos de cocina reales y específicos para esos ingredientes. PROHIBIDO usar 'Organización' o 'Cocinado' como títulos. Sé técnico y profesional.
-      3. DIGESTIÓN EFICIENTE (HACK): Genera un consejo científico corto específico para ese plato (ej: 'El ácido del limón en este atún pre-digiere la proteína para evitar pesadez').
-      4. FOTO PROMPT: Genera una descripción detallada para un modelo de imagen que muestre solo el plato servido, estilo gourmet, sin texto encima.
-      5. FORMATO: Devuelve estrictamente un JSON puro.
+      1. Imagen: Genera una descripción detallada para un modelo de imagen (como DALL-E) que muestre solo el plato servido, estilo gourmet, sin texto encima.
+      2. Título: Crea un nombre apetitoso (ej: 'Bowl de Atún Cítrico' en lugar de 'Atún con pepino').
+      3. Instrucciones: Escribe 4 pasos de cocina reales y específicos para esos ingredientes. Prohibido usar 'Organización' o 'Cocinado'.
+      4. Digestión Eficiente (Hack): Genera un consejo científico corto para ese plato (ej: 'El ácido del limón en este atún pre-digiere la proteína para evitar pesadez').
+      5. Formato: Devuelve estrictamente un JSON con las llaves: titulo, foto_prompt, ingredientes_lista, pasos_preparacion (array), y bio_hack.
 
-      ESTRUCTURA JSON REQUERIDA:
+      INGREDIENTES A TRANSFORMAR:
+      "${mealDesc}"
+
+      EJEMPLO DE SALIDA:
       {
-        "titulo": "Nombre Gourmet",
-        "foto_prompt": "Descripción detallada para imagen gourmet",
-        "ingredientes_lista": ["Cantidad - Ingrediente con Icono", "..."],
+        "titulo": "Salmón Sellado con Pan Pita y Toque Tropical",
+        "foto_prompt": "Professional food photography of a seared salmon fillet, whole wheat pita bread, and fresh papaya cubes, gourmet plating, natural light, no text.",
+        "ingredientes_lista": ["90g Salmón", "1 Pan pita integral", "1/2 taza Lechosa", "Vegetales verdes"],
         "pasos_preparacion": [
-          "Seca/Limpia el ingrediente base...",
-          "Técnica de calor aplicada...",
-          "Ensamble técnico del plato...",
-          "Toque final técnico y emplatado..."
+          "Seca el salmón y séllalo en una sartén caliente con el aceite de oliva por 4 minutos.",
+          "Tuesta el pan pita hasta que esté suave y corta la lechosa en cubos uniformes.",
+          "Mezcla los vegetales con un toque de limón para activar las enzimas.",
+          "Emplata el salmón sobre la cama de vegetales y sirve con la fruta a un lado."
         ],
-        "bio_hack": "Consejo científico específico"
+        "bio_hack": "Mastica cada bocado 30 veces para activar la amilasa salival y absorber mejor los carbohidratos del pan pita."
       }`;
 
       const result = await model.generateContent(prompt);
@@ -147,7 +149,7 @@ export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: 
       const jsonMatch = cleanJson.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
-        const imageQuery = encodeURIComponent(parsed.foto_prompt || `${parsed.titulo}, gourmet food photography, natural light, 4k`);
+        const imageQuery = encodeURIComponent(parsed.foto_prompt || `${parsed.titulo}, gourmet food photography`);
 
         return {
           titulo: parsed.titulo,
@@ -156,40 +158,35 @@ export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: 
           preparacion: parsed.pasos_preparacion,
           imageUrl: `https://source.unsplash.com/featured/?${imageQuery}`,
           bioHack: {
-            titulo: "Ciencia Digestiva",
-            pasos: [parsed.bio_hack],
-            explicacion: "Consejo científico personalizado para optimizar la digestión y el metabolismo de este plato."
+            titulo: "DIGESTIÓN EFICIENTE",
+            pasos: ["MASTICA 30 VECES CADA BOCADO", "ESPERA 60M PARA BEBER"],
+            explicacion: parsed.bio_hack
           },
           nutrientes: { proteina: "", grasas: "", carbos: "", fibra: "" },
-          sugerencia: "Técnica maestra del Chef de Alta Cocina.",
-          notaPro: "Experiencia sensorial exclusiva."
+          sugerencia: "Técnica del Chef de Alta Cocina.",
+          notaPro: "Experiencia de Bio-hacking Gastronómico."
         };
       }
     } catch (e) {
-      console.error("Gemini Brain v28.0 Error:", e);
+      console.error("Gemini Brain v29.0 Error:", e);
     }
   }
 
-  // 2. FALLBACK DINÁMICO v28.0
+  // 2. FALLBACK v29.0
   return {
     titulo: `Chef's Choice: ${mealDesc}`,
     kcal: 0,
-    ingredientes: [
-      `🥩 Proteína base (${mealDesc})`,
-      "🌿 Vegetales vibrantes",
-      "🫒 AOVE Premium",
-      "🧂 Cristales de sal"
-    ],
+    ingredientes: [`90g de proteína de ${mealDesc}`, "Vegetales de temporada", "Aceite de Oliva", "Pan integral"],
     preparacion: [
-      "Acondiciona el ingrediente principal retirando humedad para una técnica perfecta.",
-      "Aplica la técnica de calor principal respetando los tiempos de sellado.",
-      "Ensambla los acompañamientos creando armonía visual y nutritiva.",
+      "Seca el ingrediente principal retirando humedad para una técnica perfecta.",
+      "Sella a fuego vivo aplicando los tiempos de sellado técnicos para el sabor.",
+      "Ensambla los acompañamientos creando una estructura armónica y nutritiva.",
       "Finaliza con un toque de aceite de oliva en crudo para realzar sabores."
     ],
     bioHack: {
-      titulo: "Optimización Metabólica",
-      pasos: ["Mastica 30 veces cada bocado"],
-      explicacion: "La masticación consciente es el primer bio-hack para una absorción perfecta."
+      titulo: "DIGESTIÓN EFICIENTE",
+      pasos: ["MASTICA 30 VECES CADA BOCADO", "ESPERA 60M PARA BEBER"],
+      explicacion: "La masticación consciente es el primer bio-hack para una absorción perfecta y evitar inflamación."
     },
     nutrientes: { proteina: "", grasas: "", carbos: "", fibra: "" },
     sugerencia: "La técnica es el alma de la nutrición.",
