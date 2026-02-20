@@ -107,37 +107,33 @@ export const analyzeImageWithGemini = async (base64Image: string, perfil?: any, 
 };
 
 export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: string): Promise<RecipeDetails> => {
-  console.log("Iniciando motor v22.0 (Restricción Líquidos) para:", mealDesc);
+  console.log("Iniciando motor v23.0 (Cocina Pura) para:", mealDesc);
 
-  // 1. MOTOR TITÁNICO: Gemini 2.0 Flash con Restricciones Médicas Estrictas
+  // 1. MOTOR DE COCINA: Gemini 2.0 Flash enfocado en preparación didáctica
   if (apiKey && apiKey.length > 20) {
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-      const prompt = `Actúa como un Nutricionista Jefe y Especialista en Bio-Hacking.
+      const prompt = `Actúa como un Chef Profesional que imparte una mini clase de cocina ultra clara.
 
-      TU TAREA: Explicar cómo preparar este plato y dar consejos de Bio-Hack: "${mealDesc}"
+      TAREA: Explicar ingredientes y preparación para: "${mealDesc}"
       
-      REGLAS MÉDICAS CRÍTICAS (NO NEGOCIABLES):
-      1. RESTRICCIÓN DE LÍQUIDOS: NUNCA recomiendes beber agua, jugos, té o cualquier líquido desde 30 minutos ANTES hasta 60 minutos DESPUÉS de la comida. Es una regla médica estricta para este paciente.
-      2. TERMINOLOGÍA: Usa siempre el término "Bio-Hack" para los consejos.
-      3. FOCO: Enfócate exclusivamente en la receta profesional, el orden de ingesta de los alimentos sólidos y cómo mitigar efectos dañinos (picos de insulina, inflamación).
-      4. TONO: Cercano, práctico y autoritario en materia de salud.
+      REGLAS DE ORO:
+      1. SÓLO INGREDIENTES Y PREPARACIÓN. No menciones calorías, macros ni bio-hacks.
+      2. RESTRICCIÓN MÉDICA: NUNCA menciones ingerir líquidos. No hables de agua, jugos ni te.
+      3. TONO: Didáctico, claro y práctico. Como una clase de cocina para alguien que quiere cocinar rico y rápido.
+      4. PREPARACIÓN: Divide en pasos lógicos guiados (Paso 1, Paso 2, etc.).
 
-      SALIDA REQUERIDA (JSON PURO):
+      SALIDA REQUERIDA (JSON):
       {
-        "kcal": número_estimado,
-        "ingredientes": ["Cantidad - Nombre del ingrediente", "..."],
-        "preparacion": ["PASO: Explicación de cocina para ${mealDesc}", "..."],
-        "bioHack": { 
-            "titulo": "Título de Bio-Hack sobre ${mealDesc}", 
-            "pasos": ["Protocolo de ingesta de sólidos 1", "Técnica de mitigación 2", "..."], 
-            "explicacion": "Análisis de cómo este Bio-Hack protege tu metabolismo." 
-        },
-        "nutrientes": { "proteina": "Xg", "grasas": "Xg", "carbos": "Xg", "fibra": "Xg" },
-        "sugerencia": "Tip extra para la preparación.",
-        "notaPro": "Efecto esperado en tu energía y saciedad.",
+        "ingredientes": ["Nombre del ingrediente", "..."],
+        "preparacion": ["PASO 1: Qué hacer con los ingredientes", "..."],
+        "kcal": 0,
+        "bioHack": { "titulo": "", "pasos": [], "explicacion": "" },
+        "nutrientes": { "proteina": "", "grasas": "", "carbos": "", "fibra": "" },
+        "sugerencia": "Tip maestro de cocina.",
+        "notaPro": "Cómo quedará el plato al final.",
         "imageUrl": "URL_PLACEHOLDER"
       }`;
 
@@ -148,43 +144,33 @@ export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: 
       const jsonMatch = cleanJson.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
-        const imageQuery = encodeURIComponent(mealDesc + " delicious food photography");
+        const imageQuery = encodeURIComponent(mealDesc + " professional plating gourmet");
         parsed.imageUrl = `https://source.unsplash.com/featured/?${imageQuery}`;
         return parsed;
       }
     } catch (e) {
-      console.error("Gemini Medical Rules Error:", e);
+      console.error("Gemini Cooking Class Error:", e);
     }
   }
 
-  // 2. FALLBACK MÉDICO v22.0 (Sin Líquidos)
-  const isDrink = /té|te|cafe|café|infusión|agua|jugo|batido/i.test(mealDesc);
-
+  // 2. FALLBACK DE COCINA v23.0
   return {
-    kcal: isDrink ? 15 : 320,
+    kcal: 0,
     ingredientes: [
-      `Base sólida: Porción controlada de ${mealDesc}.`,
-      "Protección: Verduras de hoja verde para el inicio.",
-      "Grasa funcional: Aceite de Oliva para ralentizar la digestión.",
-      "Sazonado: Sal del Himalaya y especias naturales."
+      `Ingrediente principal para ${mealDesc}.`,
+      "Condimentos naturales al gusto.",
+      "Base de acompañamiento sugerida."
     ],
     preparacion: [
-      `PASO 1: Organizar los componentes de ${mealDesc}.`,
-      "COCINADO: Preparar respetando los tiempos para evitar compuestos tóxicos.",
-      `ORDEN: Servir primero la fibra, luego la proteína y finalmente el carbohidrato de ${mealDesc}.`,
-      "POST-COMIDA: Esperar 60 minutos antes de ingerir cualquier líquido."
+      `PASO 1: Organizar y lavar los ingredientes para "${mealDesc}".`,
+      "PASO 2: Cocinar a fuego controlado según la técnica preferida.",
+      "PASO 3: Emplatar de forma atractiva.",
+      "PASO 4: Servir y disfrutar inmediatamente (recordar no beber hasta 60 min después)."
     ],
-    bioHack: {
-      titulo: `Protección Metabólica para ${mealDesc}`,
-      pasos: [
-        `1. Consume la fibra de tu ${mealDesc} primero`,
-        "2. Mastica cada bocado hasta que sea líquido",
-        "3. Respeta la ventana de no líquidos (30 min antes / 60 min después)"
-      ],
-      explicacion: `Evitar líquidos con el "${mealDesc}" previene la dilución de los jugos gástricos, asegurando una digestión perfecta y máxima absorción de nutrientes sin picos de insulina.`
-    },
-    nutrientes: { proteina: isDrink ? "0g" : "20g", grasas: isDrink ? "0g" : "10g", carbos: isDrink ? "2g" : "25g", fibra: "4g" },
-    sugerencia: `No olvides que el primer paso para digerir bien el "${mealDesc}" empieza en la boca con la masticación.`,
-    notaPro: "Energía garantizada sin pesadez estomacal gracias al protocolo de líquidos."
+    bioHack: { titulo: "", pasos: [], explicacion: "" },
+    nutrientes: { proteina: "", grasas: "", carbos: "", fibra: "" },
+    sugerencia: `La frescura es la clave para un buen "${mealDesc}".`,
+    notaPro: `Receta lista para disfrutar con todo el sabor natural del ingrediente.`,
+    imageUrl: `https://via.placeholder.com/600x600.png?text=${encodeURIComponent(mealDesc)}`
   };
 };

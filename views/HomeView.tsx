@@ -272,35 +272,7 @@ const RecipeModal: React.FC<{
                 </div>
               </div>
 
-              {/* MACROS TILES */}
-              <div className="grid grid-cols-2 gap-4 px-6 mt-6">
-                <div className="bg-white rounded-[28px] p-6 flex flex-col items-center shadow-sm border border-slate-100/30">
-                  <span className="text-[9px] font-black text-slate-300 tracking-[0.2em] uppercase mb-1.5 text-center">CALORÍAS</span>
-                  <span className="text-2xl font-black text-[#1e60f1]">{details.kcal}</span>
-                  <span className="text-[9px] font-bold text-slate-300 -mt-0.5">kcal</span>
-                </div>
-                <div className="bg-white rounded-[28px] p-6 flex flex-col items-center shadow-sm border border-slate-100/30">
-                  <span className="text-[9px] font-black text-slate-300 tracking-[0.2em] uppercase mb-1.5 text-center">PROTEÍNA</span>
-                  <span className="text-2xl font-black text-slate-800 mb-2.5">{details.nutrientes.proteina}</span>
-                  <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-500" style={{ width: '70%' }}></div>
-                  </div>
-                </div>
-                <div className="bg-white rounded-[28px] p-6 flex flex-col items-center shadow-sm border border-slate-100/30">
-                  <span className="text-[9px] font-black text-slate-300 tracking-[0.2em] uppercase mb-1.5 text-center">CARBOS</span>
-                  <span className="text-2xl font-black text-slate-800 mb-2.5">{details.nutrientes.carbos}</span>
-                  <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-orange-400" style={{ width: '45%' }}></div>
-                  </div>
-                </div>
-                <div className="bg-white rounded-[28px] p-6 flex flex-col items-center shadow-sm border border-slate-100/30">
-                  <span className="text-[9px] font-black text-slate-300 tracking-[0.2em] uppercase mb-1.5 text-center">GRASAS</span>
-                  <span className="text-2xl font-black text-slate-800 mb-2.5">{details.nutrientes.grasas}</span>
-                  <div className="w-full h-1 bg-emerald-400 rounded-full overflow-hidden">
-                    <div className="h-full bg-emerald-400" style={{ width: '35%' }}></div>
-                  </div>
-                </div>
-              </div>
+              {/* Se ha eliminado el cuadro de calorías y macronutrientes por solicitud del usuario (v23.0) */}
 
               {/* INGREDIENTES */}
               <div className="px-6 mt-12">
@@ -344,22 +316,7 @@ const RecipeModal: React.FC<{
                 </div>
               </div>
 
-              {/* BIO-HACK BOX */}
-              <div className="mx-6 mt-4 mb-32 bg-[#ebf1ff] rounded-[48px] p-8 border border-blue-100/50 shadow-sm shadow-blue-50">
-                <div className="flex items-center gap-3 mb-5">
-                  <span className="material-symbols-outlined text-blue-600 text-2xl fill-1">bolt</span>
-                  <h4 className="text-[12px] font-black text-blue-600 tracking-wider uppercase">BIO-HACK: {details.bioHack.titulo}</h4>
-                </div>
-                <p className="text-[13px] font-bold text-slate-500 leading-relaxed mb-8 italic">"{details.bioHack.explicacion}"</p>
-                <div className="flex flex-wrap gap-3">
-                  {details.bioHack.pasos.map((p, i) => (
-                    <div key={i} className="bg-white rounded-full py-2.5 px-6 flex items-center gap-3 border border-blue-100/20 shadow-sm hover:scale-105 transition-transform">
-                      <div className={`size-2.5 rounded-full ${i === 0 ? 'bg-emerald-400' : i === 1 ? 'bg-blue-500' : 'bg-orange-400'}`} />
-                      <span className="text-[11px] font-black text-slate-700">{i + 1}. {p}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              {/* Se ha eliminado la sección de Bio-Hacks por solicitud del usuario (v23.0) */}
 
               {/* FIXED FOOTER BUTTON */}
               <div className="fixed bottom-10 left-0 right-0 flex justify-center z-50 pointer-events-none pb-8">
