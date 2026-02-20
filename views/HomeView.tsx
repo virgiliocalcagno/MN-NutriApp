@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useStore } from '../src/context/StoreContext';
 import { sortMeals, getProductImage } from '../src/utils/helpers';
 import { getRecipeDetails, RecipeDetails } from '../src/utils/ai';
+import { firebaseConfig } from '../src/firebase';
 
 const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
   const { store, saveStore } = useStore();
@@ -208,7 +209,7 @@ const RecipeModal: React.FC<{
 
     const fetchDetails = async () => {
       try {
-        const data = await getRecipeDetails(meal.description, perfil, perfil?.apiKey);
+        const data = await getRecipeDetails(meal.description, perfil, firebaseConfig.geminiApiKey);
         if (isMounted) {
           setDetails(data);
           setLoading(false);
