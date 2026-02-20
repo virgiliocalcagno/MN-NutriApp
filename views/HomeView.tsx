@@ -240,24 +240,42 @@ const RecipeModal: React.FC<{
             </div>
           ) : details ? (
             <div className="animate-in fade-in duration-700">
-              {/* TÍTULO + BADGE ARRIBA */}
-              <div className="px-6 pt-6 pb-4">
-                <span className="inline-block bg-[#1e60f1] text-white text-[9px] font-black tracking-[0.2em] uppercase px-3 py-1.5 rounded-full mb-3">
-                  PRO NUTRICIÓN
-                </span>
-                <h2 className="text-[20px] font-black text-slate-800 leading-tight">
+              {/* TÍTULO + BADGES ARRIBA */}
+              <div className="px-6 pt-8 pb-4">
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <span className="bg-blue-600 text-white text-[9px] font-black tracking-[0.2em] uppercase px-3 py-1.5 rounded-full">
+                    PRO NUTRICIÓN
+                  </span>
+                  {details.tiempo && (
+                    <span className="bg-slate-100 text-slate-500 text-[9px] font-black tracking-[0.2em] uppercase px-3 py-1.5 rounded-full flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[10px]">schedule</span>
+                      {details.tiempo}
+                    </span>
+                  )}
+                  {details.dificultad && (
+                    <span className="bg-slate-100 text-slate-500 text-[9px] font-black tracking-[0.2em] uppercase px-3 py-1.5 rounded-full flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[10px]">stairs</span>
+                      {details.dificultad}
+                    </span>
+                  )}
+                </div>
+                <h2 className="text-[26px] font-black text-slate-900 leading-[1.1] tracking-tight">
                   {details.titulo || meal.description}
                 </h2>
               </div>
 
-              {/* IMAGEN LIMPIA */}
-              <div className="mx-5 rounded-3xl overflow-hidden aspect-[4/3] shadow-lg">
+              {/* IMAGEN LIMPIA CON OVERLAY DE KCAL */}
+              <div className="mx-6 rounded-[32px] overflow-hidden aspect-[16/10] shadow-2xl relative group bg-slate-100">
                 <img
                   src={details.imageUrl || getProductImage(meal.description, 'Gral')}
                   alt={details.titulo || meal.description}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
                   onError={(e) => { (e.target as HTMLImageElement).src = getProductImage(meal.description, 'Gral'); }}
                 />
+                <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md px-4 py-2 rounded-2xl shadow-lg border border-white/20">
+                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter text-center">Energía</p>
+                  <p className="text-xl font-black text-slate-900 leading-none">{details.kcal} <span className="text-[10px] text-slate-400">kcal</span></p>
+                </div>
               </div>
 
               {/* INGREDIENTES */}
