@@ -107,38 +107,37 @@ export const analyzeImageWithGemini = async (base64Image: string, perfil?: any, 
 };
 
 export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: string): Promise<RecipeDetails> => {
-  console.log("Iniciando motor v20.0 (Saneamiento Total) para:", mealDesc);
+  console.log("Iniciando motor v21.0 (Humanizado) para:", mealDesc);
 
-  // 1. MOTOR TITÁNICO: Gemini 2.0 Flash con Hyper-Prompt Ultra-Estricto
+  // 1. MOTOR TITÁNICO: Gemini 2.0 Flash con Tono Cercano
   if (apiKey && apiKey.length > 20) {
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-      const prompt = `Actúa como una entidad de Inteligencia Nutricional de Grado Médico. 
+      const prompt = `Actúa como un nutricionista y amigo experto, con un lenguaje sencillo, cálido y práctico que cualquier persona pueda entender perfectamente.
 
-      TAREA: Generar un protocolo de preparación para el plato EXACTO descrito: "${mealDesc}"
+      TU TAREA: Explicar cómo preparar este plato: "${mealDesc}"
       
-      REGLAS CRÍTICAS:
-      1. IGNORE cualquier contexto previo. Solo importa "${mealDesc}".
-      2. Si "${mealDesc}" es una bebida (ej. Té, Café, Agua), adapte el formato a una preparación de infusión experta.
-      3. INGREDIENTES: Desglose biológico detallado centrado en "${mealDesc}".
-      4. PREPARACIÓN: 4-5 fases técnicas de alta cocina para "${mealDesc}".
-      5. BIO-HACKS: Proporcione hacks exclusivos sobre absorción de nutrientes y picos de glucosa específicos para los ingredientes de "${mealDesc}".
+      REGLAS DE ORO (LENGUAJE CERCANO):
+      1. NO uses palabras científicas complejas (como polimerización, bioquímica, síntesis, etc.).
+      2. Título de Bio-Hack: Cámbialo por "El Truco del Chef" o "Consejo Útil".
+      3. Preparación: Usa instrucciones claras como "Calienta la sartén", "Corta en trozos", etc.
+      4. Ingredientes: Nombres comunes y fáciles de reconocer.
 
-      SALIDA REQUERIDA (JSON PURO, SIN TEXTO ADICIONAL):
+      SALIDA REQUERIDA (JSON PURO):
       {
         "kcal": número_estimado,
-        "ingredientes": ["Clase: Cantidad - Detalle Gourmet de ${mealDesc}", "..."],
-        "preparacion": ["FASE: Instrucción técnica para ${mealDesc}", "..."],
+        "ingredientes": ["Cantidad - Nombre del ingrediente", "..."],
+        "preparacion": ["PASO: Explicación sencilla de qué hacer", "..."],
         "bioHack": { 
-            "titulo": "Título Médico de Impacto para ${mealDesc}", 
-            "pasos": ["Protocolo 1", "Protocolo 2", "..."], 
-            "explicacion": "Análisis bioquímico real." 
+            "titulo": "Un nombre llamativo y simple", 
+            "pasos": ["Consejo práctico 1", "Consejo práctico 2", "..."], 
+            "explicacion": "Explica el beneficio para la salud de forma que un niño lo entienda." 
         },
         "nutrientes": { "proteina": "Xg", "grasas": "Xg", "carbos": "Xg", "fibra": "Xg" },
-        "sugerencia": "Tip de experto nutricional.",
-        "notaPro": "Análisis hormonal de la ingesta.",
+        "sugerencia": "Un tip extra master para que quede más rico.",
+        "notaPro": "Cómo te sentirás después de comer esto (más energía, saciado, etc.).",
         "imageUrl": "URL_PLACEHOLDER"
       }`;
 
@@ -149,46 +148,43 @@ export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: 
       const jsonMatch = cleanJson.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
-        // Búsqueda de imagen dinámica de alta calidad
-        const imageQuery = encodeURIComponent(mealDesc + " professional food photography hyper-realistic");
+        const imageQuery = encodeURIComponent(mealDesc + " delicious food photography");
         parsed.imageUrl = `https://source.unsplash.com/featured/?${imageQuery}`;
         return parsed;
       }
     } catch (e) {
-      console.error("Gemini 2.0 Critical failure:", e);
+      console.error("Gemini Humanization Error:", e);
     }
   }
 
-  // 2. PROTOCOLO DE RESCATE DINÁMICO v20.0 (Fallback Experto)
-  console.warn("Ejecutando protocolo de rescate dinámico para:", mealDesc);
-
+  // 2. FALLBACK HUMANO v21.0
   const isDrink = /té|te|cafe|café|infusión|agua|jugo|batido/i.test(mealDesc);
 
   return {
     kcal: isDrink ? 15 : 320,
     ingredientes: [
-      `Componente Core: Porción base de ${mealDesc}.`,
-      "Optimización: Micronutrientes esenciales de origen orgánico.",
-      "Catalizador: Ácidos grasos esenciales (si aplica) o polifenoles base.",
-      "Vía de Hidratación: Agua alcalina o base acuosa termorregulada."
+      `Base: Una ración normal de ${mealDesc}.`,
+      "Toque fresco: Un poco de verduras o ensalada rápida.",
+      "Grasa rica: Una cucharadita de aceite de oliva virgen.",
+      "Para acompañar: Un vaso de agua con limón."
     ],
     preparacion: [
-      `FASE DE ACTIVACIÓN: Preparar la base de "${mealDesc}" controlando la temperatura para preservar fitonutrientes.`,
-      "EXTRACCIÓN MOLECULAR: Procesar con técnicas que minimicen la oxidación biológica.",
-      "ESTRUCTURACIÓN: Combinar los elementos para maximizar la biodisponibilidad.",
-      "FINALIZACIÓN: Servir inmediatamente para aprovechar el pico de frescura enzimática."
+      `PRIMERO: Ten listo todo para tu "${mealDesc}" a mano.`,
+      "EN LA COCINA: Prepáralo con poco fuego para que no pierda sus nutrientes.",
+      "AL SERVIR: Combina los ingredientes en el plato para que se vea apetitoso.",
+      "DISFRUTA: Cómelo con calma disfrutando cada bocado."
     ],
     bioHack: {
-      titulo: `Optimización Post-Prandial de ${mealDesc}`,
+      titulo: `El mejor truco para comer ${mealDesc}`,
       pasos: [
-        `1. Ingerir fibra previa a "${mealDesc}"`,
-        "2. Mantener hidratación continua",
-        "3. Respiración diafragmática post-ingesta"
+        `1. Come la ensalada antes que el "${mealDesc}"`,
+        "2. Bebe agua durante el día",
+        "3. Camina 5 minutos después de comer"
       ],
-      explicacion: `El consumo de "${mealDesc}" requiere un entorno metabólico estable. La secuenciación recomendada minimiza el impacto en la curva de glucosa y optimiza la señalización de saciedad leptínica.`
+      explicacion: `Si comes primero la fibra (las verduras), tu cuerpo procesará el "${mealDesc}" mucho mejor, dándote energía estable sin que te sientas pesado después.`
     },
     nutrientes: { proteina: isDrink ? "0g" : "20g", grasas: isDrink ? "0g" : "10g", carbos: isDrink ? "2g" : "25g", fibra: "4g" },
-    sugerencia: `Priorice la calidad del origen de ${mealDesc} para evitar pesticidas o antinutrientes.`,
-    notaPro: `Energía limpia y sin picos de cortisol tras el consumo de este protocolo.`
+    sugerencia: `Prueba a ponerle un toque de limón a tu "${mealDesc}" para realzar el sabor naturalmente.`,
+    notaPro: `Este plato te dará energía constante por varias horas y no te sentirás inflamado.`
   };
 };

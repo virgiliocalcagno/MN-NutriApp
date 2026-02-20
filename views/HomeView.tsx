@@ -254,7 +254,7 @@ const RecipeModal: React.FC<{
                   <span className="material-symbols-outlined text-4xl animate-pulse">nutrition</span>
                 </div>
               </div>
-              <p className="text-[#1e60f1] font-black text-[12px] tracking-[0.3em] uppercase animate-pulse">Optimizando Protocolo Nutricional...</p>
+              <p className="text-[#1e60f1] font-black text-[12px] tracking-[0.3em] uppercase animate-pulse">Cocinando tu receta saludable...</p>
             </div>
           ) : details ? (
             <div className="animate-in fade-in duration-700">
@@ -322,7 +322,7 @@ const RecipeModal: React.FC<{
               <div className="px-6 mt-14">
                 <div className="flex items-center gap-3 mb-8">
                   <span className="material-symbols-outlined text-[#1e60f1] text-[28px] fill-1">architecture</span>
-                  <h3 className="text-xl font-black text-slate-800">Preparación Profesional</h3>
+                  <h3 className="text-xl font-black text-slate-800">Cómo Prepararlo</h3>
                 </div>
                 <div className="space-y-12 relative pl-8 pb-4">
                   <div className="absolute left-[13.5px] top-6 bottom-4 w-px bg-slate-100" />
@@ -348,7 +348,7 @@ const RecipeModal: React.FC<{
               <div className="mx-6 mt-4 mb-32 bg-[#ebf1ff] rounded-[48px] p-8 border border-blue-100/50 shadow-sm shadow-blue-50">
                 <div className="flex items-center gap-3 mb-5">
                   <span className="material-symbols-outlined text-blue-600 text-2xl fill-1">bolt</span>
-                  <h4 className="text-[12px] font-black text-blue-600 tracking-wider uppercase">BIO-HACK: {details.bioHack.titulo}</h4>
+                  <h4 className="text-[12px] font-black text-blue-600 tracking-wider uppercase">EL TRUCO DEL CHEF: {details.bioHack.titulo}</h4>
                 </div>
                 <p className="text-[13px] font-bold text-slate-500 leading-relaxed mb-8 italic">"{details.bioHack.explicacion}"</p>
                 <div className="flex flex-wrap gap-3">
@@ -372,7 +372,7 @@ const RecipeModal: React.FC<{
           ) : (
             <div className="flex flex-col items-center justify-center py-40 px-12 text-center opacity-50">
               <span className="material-symbols-outlined text-red-400 text-6xl mb-4">gpp_maybe</span>
-              <p className="font-black text-slate-400 uppercase tracking-widest text-sm text-center">Error de Protocolo Nutricional</p>
+              <p className="font-black text-slate-400 uppercase tracking-widest text-sm text-center">No pudimos cargar la receta</p>
               <button onClick={onClose} className="mt-4 text-blue-600 font-bold underline active:scale-95">REINTENTAR</button>
             </div>
           )}
