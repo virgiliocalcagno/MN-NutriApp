@@ -107,38 +107,38 @@ export const analyzeImageWithGemini = async (base64Image: string, perfil?: any, 
 };
 
 export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: string): Promise<RecipeDetails> => {
-  console.log("Iniciando motor v25.0 (Chef de Nutrición) para:", mealDesc);
+  console.log("Iniciando motor v26.0 (Chef Ejecutivo) para:", mealDesc);
 
-  // 1. MOTOR CHEF TÉCNICO: Gemini 2.0 Flash con Precisión Culinaria
+  // 1. MOTOR CHEF EJECUTIVO: Gemini 2.0 Flash con Tono Motivador y Técnica Real
   if (apiKey && apiKey.length > 20) {
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-      const prompt = `Actúa como un Chef de Nutrición experto. 
-      Analiza los ingredientes de "${mealDesc}" y genera una receta técnica.
+      const prompt = `Actúa como un Chef Ejecutivo Profesional y Motivador. 
+      Transforma los ingredientes de "${mealDesc}" en una receta real que inspire excelencia.
       
-      REGLAS CRÍTICAS:
-      1. PROHIBIDO usar frases genéricas como "Organización", "Cocinado", "Preparación" o "Servicio" como títulos.
-      2. INGREDIENTES: Lista con iconos al inicio (ej: "🥩 90g de Salmón", "🥬 Vegetales libres").
-      3. PREPARACIÓN: Exactamente 4 pasos cortos, técnicos y directos. Sin introducciones.
-      4. BIO-HACK: Debe ser un consejo científico específico para mejorar la digestión de este plato exacto.
-      5. LÍQUIDOS: Mantener restricción médica (no mencionar beber nada 30min antes/60min después).
+      REGLAS DE ORO:
+      1. TONO: Profesional, directo y altamente motivador. Haz que el usuario se sienta un pro en la cocina.
+      2. PASOS: Máximo 4 pasos numerados. Usa verbos de cocina auténticos (ej: "Sella", "Tuesta", "Carameliza", "Reduce", "Emplata").
+      3. INGREDIENTES: Lista con iconos técnicos (ej: "🥩 90g de Proteína", "🌿 Vegetales frescos").
+      4. BIO-HACK: Enfócate en un beneficio metabólico o energético potente al terminar.
+      5. LÍQUIDOS: Mantener restricción médica (no beber 30min antes / 60min después).
 
       SALIDA REQUERIDA (JSON PURO):
       {
-        "titulo": "Título técnico y corto del plato",
+        "titulo": "Nombre Gourmet e Inspirador",
         "ingredientes": ["Icono Cantidad - Nombre", "..."],
-        "preparacion": ["Verbo en imperativo: Acción técnica directa", "..."],
+        "preparacion": ["1. [Verbo de acción]: Descripción técnica y motivadora", "2. ...", "3. ...", "4. ..."],
         "bioHack": { 
-            "titulo": "Digestión Eficiente", 
-            "pasos": ["Consejo científico 1", "Consejo científico 2"], 
-            "explicacion": "Explicación breve del proceso bioquímico/digestivo del consejo." 
+            "titulo": "Impulso Metabólico", 
+            "pasos": ["Acción metabólica clave"], 
+            "explicacion": "Explicación de cómo este plato optimiza tu energía o metabolismo." 
         },
         "kcal": 0,
         "nutrientes": { "proteina": "", "grasas": "", "carbos": "", "fibra": "" },
-        "sugerencia": "Tip de chef para el punto exacto de cocción.",
-        "notaPro": "Resultado sensorial esperado.",
+        "sugerencia": "El secreto del Chef Ejecutivo para el éxito del plato.",
+        "notaPro": "Cómo se siente comer este plato (textura, energía, satisfacción).",
         "imageUrl": "URL_PLACEHOLDER"
       }`;
 
@@ -149,39 +149,39 @@ export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: 
       const jsonMatch = cleanJson.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
-        // Query de imagen ultra-realista solicitada por el usuario
-        const imageQuery = encodeURIComponent(`Fotografía gastronómica profesional, primer plano, estilo gourmet, plato de ${parsed.titulo}, ingredientes frescos de ${parsed.ingredientes.join(", ")}, luz natural de día, fondo de madera clara, 4k, ultra realista`);
+        // Nuevo prompt automático solicitado por el usuario para estética minimalista y saludable
+        const imageQuery = encodeURIComponent(`Fotografía gourmet de ${parsed.titulo}, primer plano, luz natural, estilo minimalista y saludable, 4k`);
         parsed.imageUrl = `https://source.unsplash.com/featured/?${imageQuery}`;
         return parsed;
       }
     } catch (e) {
-      console.error("Gemini Chef Tech Error:", e);
+      console.error("Gemini Chef Executive Error:", e);
     }
   }
 
-  // 2. FALLBACK CHEF v25.0
+  // 2. FALLBACK CHEF EJECUTIVO v26.0
   return {
     kcal: 0,
     ingredientes: [
-      `🥩 Porción técnica de ${mealDesc}`,
-      "🥬 Vegetales frescos seleccionados",
-      "🫒 Aceite de Oliva Virgen Extra",
-      "🧂 Sal marina y especias"
+      `🥩 Proteína de alta calidad (${mealDesc})`,
+      "🌿 Mix de vegetales frescos vibrantes",
+      "🫒 Oro líquido (Aceite de Oliva)",
+      "🧂 Cristales de sal y especias"
     ],
     preparacion: [
-      `Acondiciona ${mealDesc} retirando humedad excesiva para el sellado.`,
-      "Aplica técnica de cocción directa a temperatura media hasta punto óptimo.",
-      "Integra los vegetales con un toque de limón para preservar enzimas.",
-      "Emplata de forma limpia, añadiendo el aceite de oliva en crudo al final."
+      "1. Sella el ingrediente principal a fuego vivo para capturar todos los jugos y nutrientes.",
+      "2. Saltea los vegetales suavemente para mantener su textura crocante y enzimas intactas.",
+      "3. Tuesta los carbohidratos ligeramente si aplica para despertar su sabor natural.",
+      "4. Emplata con orgullo, añadiendo el toque de aceite de oliva en crudo para brillar."
     ],
     bioHack: {
-      titulo: "Digestión Eficiente",
-      pasos: ["Mastica 30 veces cada bocado", "Espera 60 min para beber"],
-      explicacion: "La masticación prolongada activa la amilasa salival, pre-digiriendo el plato para una absorción sin inflamación."
+      titulo: "Activación Metabólica",
+      pasos: ["Camina 10-15 min después de comer"],
+      explicacion: "El movimiento post-prandial sincroniza la glucosa con tus músculos, optimizando tu energía para el resto del día."
     },
     nutrientes: { proteina: "", grasas: "", carbos: "", fibra: "" },
-    sugerencia: "El reposo de 2 minutos post-cocción mantiene los jugos internos.",
-    notaPro: "Textura equilibrada con perfiles de sabor limpios.",
+    sugerencia: "La confianza en la cocina es el ingrediente que no se compra.",
+    notaPro: "Un plato equilibrado que te dejará satisfecho y lleno de claridad mental.",
     imageUrl: `https://via.placeholder.com/600x600.png?text=${encodeURIComponent(mealDesc)}`
   };
 };

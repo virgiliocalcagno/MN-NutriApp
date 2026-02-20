@@ -307,7 +307,7 @@ const RecipeModal: React.FC<{
                       </div>
                       <div className="space-y-1">
                         <p className="text-[14px] font-bold text-slate-500 leading-relaxed max-w-[95%] transition-colors group-hover:text-slate-700">
-                          {step}
+                          {step.replace(/^\d+\.\s*/, '')}
                         </p>
                       </div>
                     </div>
