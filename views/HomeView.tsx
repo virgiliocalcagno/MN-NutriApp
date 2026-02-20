@@ -267,8 +267,8 @@ const RecipeModal: React.FC<{
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                 <div className="absolute bottom-10 left-8 right-8">
-                  <span className="bg-[#1e60f1] text-[10px] font-black text-white px-5 py-2 rounded-full mb-4 inline-block shadow-lg uppercase tracking-wider">PRO NUTRICIÓN</span>
-                  <h1 className="text-white text-3xl font-black leading-[1.15]">{meal.description}</h1>
+                  <span className="bg-[#1e60f1] text-[10px] font-black text-white px-5 py-2 rounded-full mb-4 inline-block shadow-lg uppercase tracking-wider">CHEF & BIO-HACKER</span>
+                  <h1 className="text-white text-3xl font-black leading-[1.15]">{details.titulo || meal.description}</h1>
                 </div>
               </div>
 

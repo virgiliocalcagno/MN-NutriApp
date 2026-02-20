@@ -10,6 +10,7 @@ export interface AIResponse {
 }
 
 export interface RecipeDetails {
+  titulo?: string; // Título creativo generado por la IA
   kcal: number;
   ingredientes: string[];
   preparacion: string[];
@@ -107,50 +108,36 @@ export const analyzeImageWithGemini = async (base64Image: string, perfil?: any, 
 };
 
 export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: string): Promise<RecipeDetails> => {
-  console.log("Iniciando motor v27.0 (Mapeo de Precisión) para:", mealDesc);
+  console.log("Iniciando motor v28.0 (El Cerebro) para:", mealDesc);
 
-  // 1. MOTOR DE PRECISIÓN: Gemini 2.0 Flash con Mapeo Lógico de 4 Pasos
+  // 1. MOTOR DINÁMICO 'EL CEREBRO': Gemini 2.0 Flash con System Prompt de Chef & Bio-hacker
   if (apiKey && apiKey.length > 20) {
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-      const prompt = `Actúa como un Chef Ejecutivo de alto nivel. 
-      Genera una receta de PRECISIÓN para: "${mealDesc}".
-      
-      ESTRUCTURA DE PREPARACIÓN OBLIGATORIA (4 PASOS):
-      Paso 1: Preparación Base (ej: "Seca, limpia o acondiciona los ingredientes base").
-      Paso 2: Técnica de Calor (ej: "Sella, tuesta o cocina la proteína a fuego exacto").
-      Paso 3: Ensamble (ej: "Une los acompañamientos, vegetales y carbohidratos").
-      Paso 4: Toque Final (ej: "Finaliza con el aceite de oliva, especias y emplatado").
+      const prompt = `Actúa como un Chef de Alta Cocina y Experto en Bio-hacking. 
+      Tu tarea es transformar los ingredientes de "${mealDesc}" en una experiencia visual y educativa.
 
-      REGLAS:
-      - TONO: Profesional y Motivador.
-      - INGREDIENTES: Usa iconos técnicos (ej: "🥩 90g de Proteína").
-      - PASOS: Cada paso debe ser una acción culinaria REAL y profesional. Sin rellenos genéricos.
-      - BIO-HACK: Consejo metabólico científico para la energía post-comida.
-      - LÍQUIDOS: No menciones beber nada (restricción: -30min/+60min).
+      REGLAS CRÍTICAS:
+      1. TÍTULO: Crea un nombre apetitoso y gourmet (ej: 'Bowl de Atún Cítrico' en lugar de 'Atún con pepino').
+      2. INSTRUCCIONES: Escribe exactamente 4 pasos de cocina reales y específicos para esos ingredientes. PROHIBIDO usar 'Organización' o 'Cocinado' como títulos. Sé técnico y profesional.
+      3. DIGESTIÓN EFICIENTE (HACK): Genera un consejo científico corto específico para ese plato (ej: 'El ácido del limón en este atún pre-digiere la proteína para evitar pesadez').
+      4. FOTO PROMPT: Genera una descripción detallada para un modelo de imagen que muestre solo el plato servido, estilo gourmet, sin texto encima.
+      5. FORMATO: Devuelve estrictamente un JSON puro.
 
-      SALIDA REQUERIDA (JSON PURO):
+      ESTRUCTURA JSON REQUERIDA:
       {
-        "titulo": "Nombre Premium del Plato",
-        "ingredientes": ["Icono Cantidad - Nombre", "..."],
-        "preparacion": [
-            "1. [Acción Base]: Descripción técnica",
-            "2. [Acción Calor]: Descripción técnica",
-            "3. [Acción Ensamble]: Descripción técnica",
-            "4. [Acción Final]: Descripción técnica"
+        "titulo": "Nombre Gourmet",
+        "foto_prompt": "Descripción detallada para imagen gourmet",
+        "ingredientes_lista": ["Cantidad - Ingrediente con Icono", "..."],
+        "pasos_preparacion": [
+          "Seca/Limpia el ingrediente base...",
+          "Técnica de calor aplicada...",
+          "Ensamble técnico del plato...",
+          "Toque final técnico y emplatado..."
         ],
-        "bioHack": { 
-            "titulo": "Optimización Metabólica", 
-            "pasos": ["Recomendación técnica"], 
-            "explicacion": "Explicación científica de la mejora energética." 
-        },
-        "kcal": 0,
-        "nutrientes": { "proteina": "", "grasas": "", "carbos": "", "fibra": "" },
-        "sugerencia": "Secreto del Chef para el punto de cocción.",
-        "notaPro": "Experiencia sensorial y energética esperada.",
-        "imageUrl": "URL_PLACEHOLDER"
+        "bio_hack": "Consejo científico específico"
       }`;
 
       const result = await model.generateContent(prompt);
@@ -160,39 +147,53 @@ export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: 
       const jsonMatch = cleanJson.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
-        // Prompt fotográfico minimalista v26.0 (Mantenido por su alta calidad)
-        const imageQuery = encodeURIComponent(`Fotografía gourmet de ${parsed.titulo}, primer plano, luz natural, estilo minimalista y saludable, 4k`);
-        parsed.imageUrl = `https://source.unsplash.com/featured/?${imageQuery}`;
-        return parsed;
+        const imageQuery = encodeURIComponent(parsed.foto_prompt || `${parsed.titulo}, gourmet food photography, natural light, 4k`);
+
+        return {
+          titulo: parsed.titulo,
+          kcal: 0,
+          ingredientes: parsed.ingredientes_lista,
+          preparacion: parsed.pasos_preparacion,
+          imageUrl: `https://source.unsplash.com/featured/?${imageQuery}`,
+          bioHack: {
+            titulo: "Ciencia Digestiva",
+            pasos: [parsed.bio_hack],
+            explicacion: "Consejo científico personalizado para optimizar la digestión y el metabolismo de este plato."
+          },
+          nutrientes: { proteina: "", grasas: "", carbos: "", fibra: "" },
+          sugerencia: "Técnica maestra del Chef de Alta Cocina.",
+          notaPro: "Experiencia sensorial exclusiva."
+        };
       }
     } catch (e) {
-      console.error("Gemini Precision Mapping Error:", e);
+      console.error("Gemini Brain v28.0 Error:", e);
     }
   }
 
-  // 2. FALLBACK DE PRECISIÓN v27.0
+  // 2. FALLBACK DINÁMICO v28.0
   return {
+    titulo: `Chef's Choice: ${mealDesc}`,
     kcal: 0,
     ingredientes: [
-      `🥩 Proteína técnica para "${mealDesc}"`,
-      "🌿 Vegetales frescos de temporada",
-      "🫒 Aceite de Oliva Premium",
-      "🧂 Sazón equilibrada"
+      `🥩 Proteína base (${mealDesc})`,
+      "🌿 Vegetales vibrantes",
+      "🫒 AOVE Premium",
+      "🧂 Cristales de sal"
     ],
     preparacion: [
-      "1. Preparación: Limpia y retira el exceso de humedad del ingrediente principal para un sellado perfecto.",
-      "2. Cocción: Sella a fuego alto para caramelizar la superficie y mantener el interior jugoso.",
-      "3. Ensamble: Integra los vegetales frescos y los carbohidratos en una base armónica.",
-      "4. Finalización: Corona con el aceite de oliva en crudo para aportar brillo y ácidos grasos esenciales."
+      "Acondiciona el ingrediente principal retirando humedad para una técnica perfecta.",
+      "Aplica la técnica de calor principal respetando los tiempos de sellado.",
+      "Ensambla los acompañamientos creando armonía visual y nutritiva.",
+      "Finaliza con un toque de aceite de oliva en crudo para realzar sabores."
     ],
     bioHack: {
-      titulo: "Activación Metabólica",
-      pasos: ["Movimiento post-prandial (10 min)"],
-      explicacion: "Caminar suavemente después de este plato ayuda a que la glucosa se distribuya eficientemente en tus células."
+      titulo: "Optimización Metabólica",
+      pasos: ["Mastica 30 veces cada bocado"],
+      explicacion: "La masticación consciente es el primer bio-hack para una absorción perfecta."
     },
     nutrientes: { proteina: "", grasas: "", carbos: "", fibra: "" },
-    sugerencia: "El reposo es clave para que los sabores se asienten.",
-    notaPro: "Un plato limpio, técnico y cargado de vitalidad.",
+    sugerencia: "La técnica es el alma de la nutrición.",
+    notaPro: "Un balance perfecto centrado en la excelencia.",
     imageUrl: `https://via.placeholder.com/600x600.png?text=${encodeURIComponent(mealDesc)}`
   };
 };
