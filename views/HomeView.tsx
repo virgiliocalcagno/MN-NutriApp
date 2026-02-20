@@ -91,7 +91,7 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
       </header>
 
       <div className="px-6 space-y-6 pt-2">
-        <section onClick={() => setView('fitness')} className="relative overflow-hidden rounded-[24px] bg-[#1e60f1] p-6 flex items-center gap-5 shadow-lg shadow-blue-200 cursor-pointer active:scale-[0.98] transition-all group">
+        <section onClick={() => setView('scan')} className="relative overflow-hidden rounded-[24px] bg-[#1e60f1] p-6 flex items-center gap-5 shadow-lg shadow-blue-200 cursor-pointer active:scale-[0.98] transition-all group">
           <div className="size-14 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/30 text-white shrink-0">
             <span className="material-symbols-outlined text-3xl">filter_center_focus</span>
           </div>

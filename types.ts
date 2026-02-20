@@ -1,5 +1,5 @@
 
-export type View = 'welcome' | 'home' | 'fitness' | 'progress' | 'profile' | 'shopping';
+export type View = 'welcome' | 'home' | 'fitness' | 'progress' | 'profile' | 'shopping' | 'scan';
 
 export interface Exercise {
   id: string;

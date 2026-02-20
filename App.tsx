@@ -10,6 +10,7 @@ import ShoppingView from './views/ShoppingView';
 import LoginScreen from './src/components/LoginScreen';
 import { useStore } from './src/context/StoreContext';
 import BottomNav from './components/BottomNav';
+import NutriScanView from './views/NutriScanView';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>('welcome');
@@ -36,6 +37,7 @@ const App: React.FC = () => {
       case 'shopping': return <ShoppingView setView={setCurrentView} />;
       case 'profile': return <ProfileView setView={setCurrentView} />;
       case 'progress': return <ProgressView />;
+      case 'scan': return <NutriScanView setView={setCurrentView} />;
       default: return <HomeView setView={setCurrentView} />;
     }
   };
