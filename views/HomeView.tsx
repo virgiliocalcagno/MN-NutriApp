@@ -200,6 +200,10 @@ const RecipeModal: React.FC<{
   const [details, setDetails] = React.useState<RecipeDetails | null>(null);
 
   React.useEffect(() => {
+    // v19.0: Reset states before fetching to avoid showing old data
+    setLoading(true);
+    setDetails(null);
+
     const fetchDetails = async () => {
       try {
         const data = await getRecipeDetails(meal.description, perfil, perfil?.apiKey);

@@ -117,16 +117,16 @@ export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: 
 
       const prompt = `Actúa como una entidad de Inteligencia Nutricional de Élite. Tu objetivo es transformar una simple descripción de comida en un protocolo de nutrición de precisión.
       
-      PLATO A ANALIZAR: "${mealDesc}"
+      ES CRÍTICO QUE LA RECETA CORRESPONDA EXACTAMENTE A: "${mealDesc}"
       
       INSTRUCCIONES DE SISTEMA (GOLD STANDARD):
-      1. INGREDIENTES: Desglose quirúrgico. Clasifica cada componente por su función biológica. No escatimes en descripciones premium.
+      1. INGREDIENTES: Desglose quirúrgico. Clasifica cada componente por su función biológica. No escatimes en descripciones premium basándote en "${mealDesc}".
       
-      2. PREPARACIÓN PROFESIONAL: Describe un proceso de cocina de alto nivel. Divide en FASES TÉCNICAS con nombres impactantes (ej. "Activación Térmica", "Polimerización de Sabores").
+      2. PREPARACIÓN PROFESIONAL: Describe un proceso de cocina de alto nivel para "${mealDesc}". Divide en FASES TÉCNICAS con nombres impactantes (ej. "Activación Térmica", "Polimerización de Sabores").
       
       3. BIO-HACKS BIOQUÍMICOS: 
          - "Secuenciación Metabólica": Define el orden exacto de ingesta (Vegetales > Proteínas/Grasas > Carbohidratos).
-         - Bio-hacks sobre la matriz de fibra, oxidación lipídica y picos de insulina.
+         - Bio-hacks sobre la matriz de fibra, oxidación lipídica y picos de insulina específicos para esta comida.
       
       4. IMPACTO METABÓLICO: En la Nota Pro, describe con lenguaje científico la duración de la energía y saciedad.
 
@@ -153,8 +153,8 @@ export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: 
       const jsonMatch = cleanJson.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
-        // Generar URL de imagen realista basada en la descripción (Usando Unsplash o similar para demo premium)
-        const imageQuery = encodeURIComponent(mealDesc + " professional food photography gourmet");
+        // Generar URL de imagen realista basada en la descripción
+        const imageQuery = encodeURIComponent(mealDesc + " professional gourmet food photography");
         parsed.imageUrl = `https://source.unsplash.com/featured/?${imageQuery}`;
         return parsed;
       }
@@ -163,33 +163,30 @@ export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: 
     }
   }
 
-  // 2. FALLBACK DE ALTA RESOLUCIÓN (Si el API falla)
-  console.warn("Utilizando protocolo de rescate clínico v15.0");
-  const isEggBase = mealDesc.toLowerCase().includes('huevo');
+  // 2. FALLBACK DINÁMICO (Si el API falla o no hay key)
+  console.warn("Utilizando protocolo de rescate dinámico v19.0 para:", mealDesc);
 
   return {
-    kcal: isEggBase ? 410 : 380,
+    kcal: 350,
     ingredientes: [
-      "Proteína Completa: 3 claras + 1 huevo entero (Máxima síntesis proteica).",
-      "Lácteo: 30g Queso Mozzarella de alta calidad.",
-      "Carbohidrato Complejo: 1 Tortilla integral de grano entero.",
-      "Grasa Saludable: 1 cdita Aceite de Oliva virgen extra.",
-      "Fruta: 1 Naranja entera con su matriz de fibra intacta."
+      `Base: 200g de ${mealDesc} preparado con técnicas de nutrición de precisión.`,
+      "Acompañamiento: Vegetales de temporada con alta densidad de micronutrientes.",
+      "Grasa: Aceite de Oliva Virgen Extra (prensado en frío).",
+      "Hidratación: Agua mineral o infusión antioxidante."
     ],
     preparacion: [
-      "FASE EL BATIDO: Integra las claras y el huevo con una pizca de especias termogénicas.",
-      "COCCIÓN TÉRMICA: Calienta el aceite a fuego medio. Cocina el huevo preservando la cremosidad de la yema para evitar la oxidación de la colina.",
-      "EL FUNDIDO MAESTRO: Coloca el queso y la tortilla encima. Deja que el calor residual funda el lácteo.",
-      "EL GIRO: Voltea y tuesta ligeramente la tortilla por 20 segundos para polimerizar los azúcares naturales.",
-      "SERVICIO: Acompaña con la naranja cortada en gajos, nunca exprimida."
+      `FASE DE ACTIVACIÓN: Prepara los ingredientes de "${mealDesc}" asegurando la integridad de sus enzimas.`,
+      "COCCIÓN CONTROLADA: Utiliza calor medio para evitar la formación de compuestos pro-inflamatorios.",
+      "SAZONADO FUNCIONAL: Agrega sal marina y especias ricas en polifenoles.",
+      "EMPLATADO TÉCNICO: Organiza el plato para maximizar la experiencia sensorial."
     ],
     bioHack: {
-      titulo: "Control Insulínico y Cortisol",
-      pasos: ["1. Vegetales Crudos", "2. Wrap de Proteína/Grasa", "3. Naranja al final"],
-      explicacion: "Consumir la fruta al final permite que la fibra y la proteína del huevo actúen como un 'freno metabólico', impidiendo picos de insulina y protegiendo el hígado."
+      titulo: "Sincronización de Macronutrientes",
+      pasos: ["1. Iniciar con los vegetales", "2. Consumir la fuente de proteína", `3. Finalizar con "${mealDesc}"`],
+      explicacion: "Este orden garantiza que la fibra prepare el tracto digestivo, ralentizando la absorción de glucosa y minimizando la respuesta de la insulina."
     },
-    nutrientes: { proteina: "30g", grasas: "15g", carbos: "35g", fibra: "8g" },
-    sugerencia: "Agrega cúrcuma para potenciar el efecto antiinflamatorio del desayuno.",
-    notaPro: "Energía sostenida garantizada por 3.5 a 4 horas. Saciedad máxima vía leptina."
+    nutrientes: { proteina: "25g", grasas: "12g", carbos: "30g", fibra: "6g" },
+    sugerencia: `Asegúrate de masticar cada bocado de "${mealDesc}" al menos 20 veces para una digestión óptima.`,
+    notaPro: "Este protocolo asegura una curva glucémica estable y previene el 'bajón' post-prandial."
   };
 };
