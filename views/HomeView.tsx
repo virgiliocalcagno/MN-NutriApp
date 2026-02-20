@@ -16,6 +16,13 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
   const todayName = diasSemana[todayIndex];
   const selectedDay = store.selectedDay || todayName;
 
+  // v17.0: Sincronización automática con el día actual al entrar en la pestaña
+  React.useEffect(() => {
+    if (store.selectedDay !== todayName) {
+      saveStore({ ...store, selectedDay: todayName });
+    }
+  }, []);
+
   const getWeekDays = () => {
     const week = [];
     const now = new Date();
