@@ -8,6 +8,7 @@ import { firebaseConfig } from '../src/firebase';
 const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
   const { store, saveStore } = useStore();
   const [selectedMeal, setSelectedMeal] = useState<{ id: string; type: string; description: string } | null>(null);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [breakfastTime, setBreakfastTime] = useState("08:00");
 
   const generateSchedule = () => {
@@ -125,6 +126,9 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
             </svg>
             <span className="absolute text-[11px] font-bold text-slate-700">70%</span>
           </div>
+          <button onClick={() => setShowScheduleModal(true)} className="bg-slate-100 p-2.5 rounded-full text-slate-600 hover:bg-slate-200 transition-colors">
+            <span className="material-symbols-outlined text-2xl">schedule</span>
+          </button>
           <button className="bg-slate-100 p-2.5 rounded-full text-slate-600 hover:bg-slate-200 transition-colors">
             <span className="material-symbols-outlined text-2xl">notifications</span>
           </button>
@@ -132,6 +136,15 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
       </header>
 
       <div className="px-6 space-y-6 pt-2">
+        {showScheduleModal && (
+          <ScheduleModal
+            breakfastTime={breakfastTime}
+            setBreakfastTime={setBreakfastTime}
+            onGenerate={generateSchedule}
+            onReset={resetSchedule}
+            onClose={() => setShowScheduleModal(false)}
+          />
+        )}
         <section onClick={() => setView('scan')} className="relative overflow-hidden rounded-[24px] bg-[#1e60f1] p-6 flex items-center gap-5 shadow-lg shadow-blue-200 cursor-pointer active:scale-[0.98] transition-all group">
           <div className="size-14 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/30 text-white shrink-0">
             <span className="material-symbols-outlined text-3xl">filter_center_focus</span>
@@ -150,45 +163,6 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
               <span className="text-lg font-black mt-0.5">{day.date}</span>
             </button>
           ))}
-        </section>
-
-        {/* ⏰ Generar Horario Nutricional */}
-        <section className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-100 animate-in slide-in-from-bottom duration-500">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-xl">⏰</span>
-            <h3 className="text-[15px] font-black text-slate-800 uppercase tracking-tight">Generar Horario Nutricional</h3>
-          </div>
-          <p className="text-[12px] text-slate-500 mb-6 leading-relaxed font-medium">
-            Establece la hora de tu **Desayuno** para generar automáticamente los horarios de comidas y las tomas de agua, respetando la regla médica.
-          </p>
-
-          <div className="flex items-center justify-between gap-4 mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-100/50">
-            <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Hora de Desayuno:</span>
-            <div className="relative flex-1 max-w-[140px]">
-              <input
-                type="time"
-                value={breakfastTime}
-                onChange={(e) => setBreakfastTime(e.target.value)}
-                className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/20 [color-scheme:light] [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3"
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 text-lg pointer-events-none">schedule</span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={generateSchedule}
-              className="bg-[#1e60f1] hover:bg-[#1a56d9] text-white font-black py-4 rounded-2xl text-[10px] uppercase tracking-[0.15em] shadow-lg shadow-blue-100 active:scale-95 transition-all"
-            >
-              Generar Horario
-            </button>
-            <button
-              onClick={resetSchedule}
-              className="bg-slate-100 hover:bg-slate-200 text-slate-400 font-black py-4 rounded-2xl text-[10px] uppercase tracking-[0.15em] active:scale-95 transition-all"
-            >
-              Limpiar Horario
-            </button>
-          </div>
         </section>
 
 
@@ -433,6 +407,68 @@ const RecipeModal: React.FC<{
             </div>
           )}
         </div>
+      </div>
+    </div>
+  );
+};
+
+const ScheduleModal: React.FC<{
+  breakfastTime: string;
+  setBreakfastTime: (t: string) => void;
+  onGenerate: () => void;
+  onReset: () => void;
+  onClose: () => void;
+}> = ({ breakfastTime, setBreakfastTime, onGenerate, onReset, onClose }) => {
+  return (
+    <div className="fixed inset-0 z-[100] flex items-end justify-center animate-in fade-in duration-300">
+      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose}></div>
+      <div className="relative w-full max-w-lg bg-white rounded-t-[40px] p-8 space-y-6 animate-in slide-in-from-bottom duration-500 shadow-[0_-10px_40px_rgba(0,0,0,0.1)]">
+
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">⏰</span>
+            <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Programar Horario</h3>
+          </div>
+          <button onClick={onClose} className="size-10 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 active:scale-90 transition-all">
+            <span className="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <p className="text-[13px] text-slate-500 leading-relaxed font-medium">
+          Establece la hora de tu **Desayuno** para generar automáticamente los horarios de comidas y las tomas de agua, respetando la regla médica.
+        </p>
+
+        <div className="flex items-center justify-between gap-4 p-5 bg-slate-50 rounded-3xl border border-slate-100/50">
+          <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Hora de Desayuno:</span>
+          <div className="relative flex-1 max-w-[140px]">
+            <input
+              type="time"
+              value={breakfastTime}
+              onChange={(e) => setBreakfastTime(e.target.value)}
+              className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3 text-base font-black text-slate-900 focus:outline-none focus:ring-4 focus:ring-primary/10 [color-scheme:light] [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3"
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 pointer-events-none">schedule</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3">
+          <button
+            onClick={() => { onGenerate(); onClose(); }}
+            className="w-full bg-[#1e60f1] text-white font-black py-5 rounded-[24px] text-xs uppercase tracking-[0.2em] shadow-xl shadow-blue-200 active:scale-[0.98] transition-all"
+          >
+            Generar Horario Automático
+          </button>
+          <button
+            onClick={() => { onReset(); onClose(); }}
+            className="w-full bg-white border-2 border-slate-100 text-slate-400 font-black py-5 rounded-[24px] text-xs uppercase tracking-[0.2em] active:scale-[0.98] transition-all"
+          >
+            Limpiar Horario Actual
+          </button>
+        </div>
+
+        <button onClick={onClose} className="w-full py-2 text-slate-300 font-black text-[10px] tracking-[0.4em] uppercase">
+          Cancelar
+        </button>
       </div>
     </div>
   );
