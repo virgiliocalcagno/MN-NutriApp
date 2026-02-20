@@ -105,9 +105,10 @@ export const analyzeImageWithGemini = async (base64Image: string, perfil?: any, 
 };
 
 export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: string): Promise<RecipeDetails> => {
-  console.log("Iniciando motor v31.0 (Recetas Pro) para:", mealDesc);
+  console.log("Iniciando motor v31.1 (Recetas Pro) para:", mealDesc);
 
   const effectiveApiKey = apiKey || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
+  console.log("Motor AI: API Key presente:", effectiveApiKey ? "SI (Largo: " + effectiveApiKey.length + ")" : "NO");
 
   if (effectiveApiKey && effectiveApiKey.length > 20) {
     try {
@@ -176,11 +177,14 @@ REGLAS:
         };
       }
     } catch (e) {
-      console.error("Gemini v31.0 Error:", e);
+      console.error("Gemini v31.1 Error Crítico:", e);
+      if (e instanceof Error) {
+        console.error("Mensaje Error:", e.message);
+      }
     }
   }
 
-  // FALLBACK v31.0
+  // FALLBACK v31.1
   return {
     titulo: mealDesc,
     kcal: 0,
