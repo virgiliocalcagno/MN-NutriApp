@@ -112,7 +112,7 @@ export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: 
   if (effectiveApiKey && effectiveApiKey.length > 20) {
     try {
       const genAI = new GoogleGenerativeAI(effectiveApiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
       const prompt = `Eres un Chef de Alta Cocina y Experto en Bio-hacking Nutricional.
 Transforma estos ingredientes en una receta profesional con datos nutricionales reales.
