@@ -13,6 +13,7 @@ export interface RecipeDetails {
   kcal: number;
   ingredientes: string[];
   preparacion: string[];
+  imageUrl?: string; // Nueva propiedad para la imagen generada
   bioHack: {
     titulo: string;
     pasos: string[];
