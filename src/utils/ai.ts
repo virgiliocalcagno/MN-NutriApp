@@ -41,10 +41,8 @@ export const processPdfWithGemini = async (
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-      const p = perfil || {};
-      let promptText = `Actúa como procesador médico experto para MN-NutriApp. 
-                
-                IMPORTANTE: Extrae la información directamente de los documentos PDF.
+      const promptText = `Actúa como procesador médico experto para MN-NutriApp. 
+                Extrae la información directamente de los documentos PDF adjuntos.
                 
                 RESPONDE ÚNICAMENTE CON ESTE FORMATO JSON:
                 {
@@ -64,7 +62,7 @@ export const processPdfWithGemini = async (
       if (jsonMatch) return JSON.parse(jsonMatch[0]) as AIResponse;
       throw new Error("Formato inválido");
     } catch (e: any) {
-      console.warn("Gemini 2.0 falló, intentando Cloud Function...");
+      console.warn("Gemini 2.0 falló, intentando Fallback...");
     }
   }
 
