@@ -40,18 +40,13 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
     alert("✅ Horario nutricional generado exitosamente.");
   };
 
-  const resetGlobal = () => {
-    if (confirm("¿Estás seguro de reiniciar todos los contadores diarios?")) {
+  const resetSchedule = () => {
+    if (confirm("¿Estás seguro de limpiar el horario programado?")) {
       saveStore({
         ...store,
-        calories: 0,
-        water: 0,
-        doneEx: {},
-        lastScan: null,
-        schedule: null,
-        lastUpdateDate: new Date().toISOString().split('T')[0]
+        schedule: null
       });
-      alert("✅ Contadores reiniciados.");
+      alert("✅ Horarios limpiados.");
     }
   };
 
@@ -174,8 +169,9 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
                 type="time"
                 value={breakfastTime}
                 onChange={(e) => setBreakfastTime(e.target.value)}
-                className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/20 [color-scheme:light] [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3"
               />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 text-lg pointer-events-none">schedule</span>
             </div>
           </div>
 
@@ -187,10 +183,10 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
               Generar Horario
             </button>
             <button
-              onClick={resetGlobal}
-              className="bg-[#ef4444] hover:bg-[#dc2626] text-white font-black py-4 rounded-2xl text-[10px] uppercase tracking-[0.15em] shadow-lg shadow-red-100 active:scale-95 transition-all"
+              onClick={resetSchedule}
+              className="bg-slate-100 hover:bg-slate-200 text-slate-400 font-black py-4 rounded-2xl text-[10px] uppercase tracking-[0.15em] active:scale-95 transition-all"
             >
-              Reiniciar Global
+              Limpiar Horario
             </button>
           </div>
         </section>

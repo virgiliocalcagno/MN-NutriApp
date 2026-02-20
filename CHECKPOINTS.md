@@ -23,8 +23,8 @@ Este archivo es tu **"Botón de Pánico"**. Aquí guardo los momentos en los que
 | `CP011` | 20/02/2026 | `aacca1a` | **MN-NutriApp v32.1**: Masterpiece Professionalization. | ✅ Estable |
 | `CP012` | 20/02/2026 | `0a68091` | **MN-NutriApp v32.2**: Dedicated NutriScan View & Navigation Refactor. | ✅ Estable |
 | `CP013` | 20/02/2026 | `a9d9dea` | **MN-NutriApp v32.3**: Dual Mode Capture (Camera/Gallery) in NutriScan. | ✅ Estable |
-| `CP014` | 20/02/2026 | `0bc11b2` | **MN-NutriApp v32.4**: Automatic Daily Reset at Midnight. | ✅ Estable |
-| `CP015` | 20/02/2026 | `ba86e56` | **MN-NutriApp v32.5**: Nutrition Scheduler & Global Reset. | 🚀 Activo |
+| `CP015` | 20/02/2026 | `ba86e56` | **MN-NutriApp v32.5**: Nutrition Scheduler & Global Reset. | ✅ Estable |
+| `CP016` | 20/02/2026 | `03fed1d` | **MN-NutriApp v32.6**: Scheduler Refinement (12h format & Reset fix). | 🚀 Activo |
 
 ---
 > [!IMPORTANT]
