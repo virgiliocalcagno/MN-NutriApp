@@ -6,7 +6,7 @@ import { getRecipeDetails, RecipeDetails } from '../src/utils/ai';
 
 const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
   const { store, saveStore } = useStore();
-  const [selectedMeal, setSelectedMeal] = useState<{ type: string; description: string } | null>(null);
+  const [selectedMeal, setSelectedMeal] = useState<{ id: string; type: string; description: string } | null>(null);
 
   const normalize = (str: string) =>
     str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
@@ -141,7 +141,7 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
                 title={meal.description}
                 kcal={`${meal.kcal || '---'} kcal`}
                 status={idx === 0 ? 'completed' : idx === 1 ? 'active' : 'pending'}
-                onViewRecipe={() => setSelectedMeal({ type: meal.name, description: meal.description })}
+                onViewRecipe={() => setSelectedMeal({ id: `${meal.name}-${idx}`, type: meal.name, description: meal.description })}
               />
             ))
           ) : (
@@ -192,7 +192,7 @@ const MealCard: React.FC<MealCardProps> = ({ type, time, title, kcal, status, on
 };
 
 const RecipeModal: React.FC<{
-  meal: { type: string; description: string };
+  meal: { id: string; type: string; description: string };
   perfil: any;
   onClose: () => void;
 }> = ({ meal, perfil, onClose }) => {
@@ -200,22 +200,31 @@ const RecipeModal: React.FC<{
   const [details, setDetails] = React.useState<RecipeDetails | null>(null);
 
   React.useEffect(() => {
-    // v19.0: Reset states before fetching to avoid showing old data
+    // v20.0: Atomic reset of loading/details when ID changes
     setLoading(true);
     setDetails(null);
+
+    let isMounted = true;
 
     const fetchDetails = async () => {
       try {
         const data = await getRecipeDetails(meal.description, perfil, perfil?.apiKey);
-        setDetails(data);
+        if (isMounted) {
+          setDetails(data);
+          setLoading(false);
+        }
       } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
+        console.error("Critical Recipe Loading Error:", e);
+        if (isMounted) setLoading(false);
       }
     };
+
     fetchDetails();
-  }, [meal.description]);
+
+    return () => {
+      isMounted = false; // Cleanup to prevent state updates on unmounted component
+    };
+  }, [meal.id]); // Target the unique ID
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden">
