@@ -72,13 +72,8 @@ export const processPdfWithGemini = async (
     const response = await fetch(CLOUD_FUNCTION_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        perfil: JSON.stringify(perfil),
-        pdfPlan: cleanPlan,
-        pdfEval: cleanEval
-      })
+      body: JSON.stringify({ perfil: JSON.stringify(perfil), pdfPlan: cleanPlan, pdfEval: cleanEval })
     });
-    if (!response.ok) throw new Error("Error Servidor Cloud");
     return await response.json();
   } catch (error: any) {
     console.error("AI Critical Error:", error);
@@ -92,19 +87,17 @@ export const analyzeImageWithGemini = async (base64Image: string, perfil?: any, 
     if (apiKey && apiKey !== 'AIzaSyAF5rs3cJFs_E6S7ouibqs7B2fgVRDLzc0') {
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-      const prompt = "Analiza esta comida. Detecta ingredientes, calorías, macros y bio-hacks. Responde en JSON.";
+      const prompt = "Analiza esta comida. Detecta ingredientes, calorías, macros y bio-hacks bioquímicos profundos. Responde en JSON.";
       const result = await model.generateContent([{ inlineData: { mimeType: "image/jpeg", data: cleanBase64 } }, { text: prompt }]);
       const text = result.response.text();
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) return JSON.parse(jsonMatch[0]);
     }
-
     const response = await fetch('https://us-central1-mn-nutriapp.cloudfunctions.net/analizarComida', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ imagenBase64: cleanBase64, perfilPaciente: perfil })
     });
-    if (!response.ok) throw new Error("Error en servidor de análisis");
     return await response.json();
   } catch (error) {
     console.error("Error NutriScan:", error);
