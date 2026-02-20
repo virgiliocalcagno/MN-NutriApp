@@ -259,94 +259,100 @@ const RecipeModal: React.FC<{
             </div>
           ) : details ? (
             <div className="animate-in fade-in duration-700">
-              {/* DESCRIPCIÓN CRUDA (v29.0: Arriba de la imagen) */}
-              <div className="px-8 pt-6">
-                <p className="text-[13px] font-bold text-slate-400 leading-relaxed italic">
-                  {meal.description}
-                </p>
-              </div>
-
-              {/* IMAGE CARD */}
-              <div className="mx-6 mt-4 relative rounded-[40px] overflow-hidden aspect-video shadow-xl group">
+              {/* IMAGE WITH OVERLAY */}
+              <div className="relative overflow-hidden aspect-[4/3]">
                 <img
                   src={details.imageUrl || getProductImage(meal.description, 'Gral')}
                   alt={meal.description}
-                  className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
+                  className="w-full h-full object-cover"
                 />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-6 pb-8">
+                  <span className="inline-block bg-[#1e60f1] text-white text-[9px] font-black tracking-[0.2em] uppercase px-3 py-1.5 rounded-full mb-3">
+                    PRO NUTRICIÓN
+                  </span>
+                  <h2 className="text-white text-[22px] font-black leading-tight">
+                    {details.titulo || meal.description}
+                  </h2>
+                </div>
               </div>
 
-              {/* SECCIÓN INGREDIENTES (v29.0: Layout idéntico a captura) */}
-              <div className="px-8 mt-10">
-                <div className="flex items-center gap-3 mb-6">
-                  <span className="material-symbols-outlined text-[#1e60f1] text-[28px] fill-1">shopping_basket</span>
-                  <h3 className="text-lg font-black text-slate-800">Ingredientes</h3>
+              {/* MACROS GRID 2x2 */}
+              <div className="grid grid-cols-2 gap-3 px-6 -mt-4 relative z-10">
+                <div className="bg-white rounded-2xl p-4 text-center shadow-md border border-slate-100">
+                  <p className="text-[10px] font-black text-slate-400 tracking-wider uppercase mb-1">Calorías</p>
+                  <p className="text-2xl font-black text-[#1e60f1]">{details.kcal || '---'}</p>
+                  <p className="text-[9px] font-bold text-slate-300 uppercase">kcal</p>
                 </div>
-
-                <div className="mb-6">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-rose-400">❤️</span>
-                    <h4 className="text-[15px] font-black text-slate-800 leading-tight">
-                      {details.titulo || meal.description}
-                    </h4>
-                  </div>
-                  <h5 className="text-[14px] font-black text-slate-400 uppercase tracking-widest mt-4">Ingredientes</h5>
+                <div className="bg-white rounded-2xl p-4 text-center shadow-md border border-slate-100">
+                  <p className="text-[10px] font-black text-slate-400 tracking-wider uppercase mb-1">Proteína</p>
+                  <p className="text-2xl font-black text-[#1e60f1]">{details.nutrientes?.proteina || '---'}</p>
                 </div>
+                <div className="bg-white rounded-2xl p-4 text-center shadow-md border border-slate-100">
+                  <p className="text-[10px] font-black text-slate-400 tracking-wider uppercase mb-1">Carbos</p>
+                  <p className="text-2xl font-black text-[#1e60f1]">{details.nutrientes?.carbos || '---'}</p>
+                </div>
+                <div className="bg-white rounded-2xl p-4 text-center shadow-md border border-slate-100">
+                  <p className="text-[10px] font-black text-slate-400 tracking-wider uppercase mb-1">Grasas</p>
+                  <p className="text-2xl font-black text-[#1e60f1]">{details.nutrientes?.grasas || '---'}</p>
+                </div>
+              </div>
 
-                <div className="space-y-4">
+              {/* INGREDIENTES */}
+              <div className="px-6 mt-8">
+                <div className="flex items-center gap-3 mb-5">
+                  <span className="material-symbols-outlined text-[#1e60f1] text-[24px] fill-1">shopping_basket</span>
+                  <h3 className="text-[17px] font-black text-slate-800">Ingredientes</h3>
+                </div>
+                <div className="space-y-3">
                   {details.ingredientes.map((ing, i) => (
-                    <div key={i} className="flex items-center gap-3 group">
-                      <span className="text-blue-400 text-xs">🔹</span>
-                      <p className="text-[14px] font-bold text-slate-600">
-                        {ing}
-                      </p>
+                    <div key={i} className="flex items-start gap-3 py-2 border-b border-slate-50 last:border-0">
+                      <span className="mt-1.5 size-2 bg-slate-300 rounded-full shrink-0"></span>
+                      <p className="text-[14px] font-semibold text-slate-600">{ing}</p>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* PREPARATION (v29.0: Layout idéntico a captura) */}
-              <div className="px-8 mt-14">
-                <div className="flex items-center gap-3 mb-8">
-                  <span className="material-symbols-outlined text-[#1e60f1] text-[28px] fill-1">architecture</span>
-                  <h3 className="text-xl font-black text-slate-800">Cómo Prepararlo</h3>
+              {/* PREPARACIÓN PROFESIONAL */}
+              <div className="px-6 mt-10">
+                <div className="flex items-center gap-3 mb-6">
+                  <span className="material-symbols-outlined text-[#1e60f1] text-[24px] fill-1">restaurant</span>
+                  <h3 className="text-[17px] font-black text-slate-800">Preparación Profesional</h3>
                 </div>
-                <div className="space-y-12 relative pl-8 pb-4">
-                  <div className="absolute left-[13.5px] top-6 bottom-4 w-px bg-slate-100" />
+                <div className="space-y-6 pl-2">
                   {details.preparacion.map((step, i) => (
-                    <div key={i} className="relative group">
-                      <div className="absolute -left-[32px] top-1 size-8 bg-[#1e60f1] rounded-full flex items-center justify-center text-white text-[12px] font-black shadow-lg shadow-blue-100 ring-4 ring-[#f8f9fd]">
+                    <div key={i} className="flex gap-4">
+                      <div className="shrink-0 size-8 bg-[#1e60f1] rounded-full flex items-center justify-center text-white text-[13px] font-black shadow-lg shadow-blue-200 mt-0.5">
                         {i + 1}
                       </div>
-                      <div className="space-y-1">
-                        <p className="text-[14px] font-bold text-slate-500 leading-relaxed max-w-[95%]">
-                          {step.replace(/^\d+\.\s*/, '')}
-                        </p>
+                      <div className="flex-1 space-y-1">
+                        <h4 className="text-[14px] font-black text-slate-800">{step.titulo}</h4>
+                        <p className="text-[13px] font-medium text-slate-500 leading-relaxed">{step.descripcion}</p>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* BLOQUE BIO-HACK (v29.0: Estilo con botones de la captura) */}
+              {/* BIO-HACK SECUENCIACIÓN */}
               {details.bioHack && (
-                <div className="mx-6 mt-10 mb-32 bg-[#f4f7ff] rounded-[48px] p-8 border border-blue-100/50 shadow-sm">
-                  <div className="flex items-center gap-3 mb-4">
-                    <span className="material-symbols-outlined text-blue-600 text-2xl fill-1">biotech</span>
-                    <h4 className="text-[13px] font-black text-blue-600 tracking-wider uppercase">DIGESTIÓN EFICIENTE</h4>
+                <div className="mx-5 mt-10 mb-32 bg-gradient-to-br from-[#eef2ff] to-[#e8f0fe] rounded-3xl p-7 border border-blue-100">
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className="material-symbols-outlined text-[#1e60f1] text-2xl fill-1">biotech</span>
+                    <h4 className="text-[12px] font-black text-slate-800 tracking-wider uppercase">
+                      BIO-HACK: {details.bioHack.titulo}
+                    </h4>
                   </div>
-                  <p className="text-[13px] font-bold text-slate-500 leading-relaxed mb-8 italic">
+                  <p className="text-[13px] font-medium text-slate-500 leading-relaxed mb-5">
                     {details.bioHack.explicacion}
                   </p>
-
-                  <div className="flex flex-col gap-3">
-                    <div className="flex justify-between gap-3">
-                      <div className="flex-1 bg-white px-5 py-3 rounded-full border border-blue-100 text-center shadow-sm">
-                        <span className="text-[10px] font-black text-blue-800 uppercase tracking-widest leading-none">MASTICA 30 VECES CADA BOCADO</span>
+                  <div className="space-y-2">
+                    {details.bioHack.pasos.map((paso, i) => (
+                      <div key={i} className="bg-white/80 px-4 py-2.5 rounded-xl border border-blue-100/50">
+                        <span className="text-[12px] font-bold text-slate-700">{paso}</span>
                       </div>
-                      <div className="flex-1 bg-white px-5 py-3 rounded-full border border-blue-100 text-center shadow-sm">
-                        <span className="text-[10px] font-black text-blue-800 uppercase tracking-widest leading-none">ESPERA 60M PARA BEBER</span>
-                      </div>
-                    </div>
+                    ))}
                   </div>
                 </div>
               )}

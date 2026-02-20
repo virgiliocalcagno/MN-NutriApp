@@ -10,11 +10,11 @@ export interface AIResponse {
 }
 
 export interface RecipeDetails {
-  titulo?: string; // Título creativo generado por la IA
+  titulo?: string;
   kcal: number;
   ingredientes: string[];
-  preparacion: string[];
-  imageUrl?: string; // Nueva propiedad para la imagen generada
+  preparacion: { titulo: string; descripcion: string }[];
+  imageUrl?: string;
   bioHack: {
     titulo: string;
     pasos: string[];
@@ -24,10 +24,7 @@ export interface RecipeDetails {
     proteina: string;
     grasas: string;
     carbos: string;
-    fibra: string;
   };
-  sugerencia: string;
-  notaPro: string;
 }
 
 const CLOUD_FUNCTION_URL = 'https://us-central1-mn-nutriapp.cloudfunctions.net/procesarNutricion';
@@ -108,9 +105,8 @@ export const analyzeImageWithGemini = async (base64Image: string, perfil?: any, 
 };
 
 export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: string): Promise<RecipeDetails> => {
-  console.log("Iniciando motor v30.0 para:", mealDesc);
+  console.log("Iniciando motor v31.0 (Recetas Pro) para:", mealDesc);
 
-  // v30.0: API key from param, env, or firebase config
   const effectiveApiKey = apiKey || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
 
   if (effectiveApiKey && effectiveApiKey.length > 20) {
@@ -118,31 +114,36 @@ export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: 
       const genAI = new GoogleGenerativeAI(effectiveApiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-      const prompt = `Actúa como un Chef de Alta Cocina y Experto en Bio-hacking. Tu tarea es transformar una lista de ingredientes en una experiencia visual y educativa.
+      const prompt = `Eres un Chef de Alta Cocina y Experto en Bio-hacking Nutricional.
+Transforma estos ingredientes en una receta profesional con datos nutricionales reales.
 
-      REGLAS CRÍTICAS:
-      1. Imagen: Genera una descripción detallada para un modelo de imagen (como DALL-E) que muestre solo el plato servido, estilo gourmet, sin texto encima.
-      2. Título: Crea un nombre apetitoso (ej: 'Bowl de Atún Cítrico' en lugar de 'Atún con pepino').
-      3. Instrucciones: Escribe 4 pasos de cocina reales y específicos para esos ingredientes. Prohibido usar 'Organización' o 'Cocinado'.
-      4. Digestión Eficiente (Hack): Genera un consejo científico corto para ese plato (ej: 'El ácido del limón en este atún pre-digiere la proteína para evitar pesadez').
-      5. Formato: Devuelve estrictamente un JSON con las llaves: titulo, foto_prompt, ingredientes_lista, pasos_preparacion (array), y bio_hack.
+INGREDIENTES: "${mealDesc}"
 
-      INGREDIENTES A TRANSFORMAR:
-      "${mealDesc}"
+RESPONDE ÚNICAMENTE con un JSON puro (sin markdown, sin backticks) con esta estructura EXACTA:
+{
+  "titulo": "Nombre gourmet del plato",
+  "foto_prompt": "Descripción en inglés para generar foto gourmet del plato, natural light, no text overlay",
+  "kcal": 620,
+  "nutrientes": { "proteina": "45g", "grasas": "18g", "carbos": "30g" },
+  "ingredientes_lista": ["150g Salmón fresco", "1/2 taza Quinoa cocida", "6 espárragos trigueros", "1 cdita aceite de oliva, limón, sal y pimienta"],
+  "pasos_preparacion": [
+    { "titulo": "Limpieza y marinado", "descripcion": "Lavar bien el salmón y marinar con zumo de limón fresco, sal marina y pimienta negra recién molida." },
+    { "titulo": "Cocción técnica del salmón", "descripcion": "Cocinar a fuego medio. Colocar primero por el lado de la piel para obtener una textura crujiente y sellar jugos." },
+    { "titulo": "Salteado rápido", "descripcion": "Saltear los espárragos a fuego alto con un poco de aceite de oliva durante 3-4 minutos para mantener el color verde vibrante y clorofila." }
+  ],
+  "bio_hack": {
+    "titulo": "SECUENCIACIÓN METABÓLICA",
+    "explicacion": "Para optimizar la curva de glucosa y mejorar la respuesta insulínica, consume los ingredientes en este orden:",
+    "pasos": ["1. Espárragos (Fibra)", "2. Salmón (Prot/Grasa)", "3. Quinoa (Almidón)"]
+  }
+}
 
-      EJEMPLO DE SALIDA:
-      {
-        "titulo": "Salmón Sellado con Pan Pita y Toque Tropical",
-        "foto_prompt": "Professional food photography of a seared salmon fillet, whole wheat pita bread, and fresh papaya cubes, gourmet plating, natural light, no text.",
-        "ingredientes_lista": ["90g Salmón", "1 Pan pita integral", "1/2 taza Lechosa", "Vegetales verdes"],
-        "pasos_preparacion": [
-          "Seca el salmón y séllalo en una sartén caliente con el aceite de oliva por 4 minutos.",
-          "Tuesta el pan pita hasta que esté suave y corta la lechosa en cubos uniformes.",
-          "Mezcla los vegetales con un toque de limón para activar las enzimas.",
-          "Emplata el salmón sobre la cama de vegetales y sirve con la fruta a un lado."
-        ],
-        "bio_hack": "Mastica cada bocado 30 veces para activar la amilasa salival y absorber mejor los carbohidratos del pan pita."
-      }`;
+REGLAS:
+- kcal debe ser un número REAL estimado (no 0).
+- nutrientes con valores reales estimados.
+- pasos_preparacion: cada paso es un OBJETO con "titulo" y "descripcion". Mínimo 3 pasos.
+- bio_hack.pasos: secuencia óptima de consumo de los ingredientes del plato.
+- Prohibido usar "Organización" o "Cocinado" como título de paso.`;
 
       const result = await model.generateContent(prompt);
       const text = result.response.text();
@@ -155,44 +156,46 @@ export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: 
 
         return {
           titulo: parsed.titulo,
-          kcal: 0,
-          ingredientes: parsed.ingredientes_lista,
-          preparacion: parsed.pasos_preparacion,
+          kcal: parsed.kcal || 0,
+          ingredientes: parsed.ingredientes_lista || [],
+          preparacion: (parsed.pasos_preparacion || []).map((p: any) =>
+            typeof p === 'string' ? { titulo: "Paso", descripcion: p } : { titulo: p.titulo, descripcion: p.descripcion }
+          ),
           imageUrl: `https://source.unsplash.com/featured/?${imageQuery}`,
           bioHack: {
-            titulo: "DIGESTIÓN EFICIENTE",
-            pasos: ["MASTICA 30 VECES CADA BOCADO", "ESPERA 60M PARA BEBER"],
-            explicacion: parsed.bio_hack
+            titulo: parsed.bio_hack?.titulo || "BIO-HACK",
+            pasos: parsed.bio_hack?.pasos || [],
+            explicacion: parsed.bio_hack?.explicacion || ""
           },
-          nutrientes: { proteina: "", grasas: "", carbos: "", fibra: "" },
-          sugerencia: "Técnica del Chef de Alta Cocina.",
-          notaPro: "Experiencia de Bio-hacking Gastronómico."
+          nutrientes: {
+            proteina: parsed.nutrientes?.proteina || "",
+            grasas: parsed.nutrientes?.grasas || "",
+            carbos: parsed.nutrientes?.carbos || ""
+          }
         };
       }
     } catch (e) {
-      console.error("Gemini v30.0 Error:", e);
+      console.error("Gemini v31.0 Error:", e);
     }
   }
 
-  // FALLBACK v30.0
+  // FALLBACK v31.0
   return {
-    titulo: `Chef's Choice: ${mealDesc}`,
+    titulo: mealDesc,
     kcal: 0,
-    ingredientes: [`90g de proteína de ${mealDesc}`, "Vegetales de temporada", "Aceite de Oliva", "Pan integral"],
+    ingredientes: ["Ingredientes del plato"],
     preparacion: [
-      "Seca el ingrediente principal retirando humedad para una técnica perfecta.",
-      "Sella a fuego vivo aplicando los tiempos de sellado técnicos para el sabor.",
-      "Ensambla los acompañamientos creando una estructura armónica y nutritiva.",
-      "Finaliza con un toque de aceite de oliva en crudo para realzar sabores."
+      { titulo: "Preparación base", descripcion: "Acondiciona el ingrediente principal retirando humedad." },
+      { titulo: "Cocción", descripcion: "Aplica la técnica de calor principal respetando los tiempos." },
+      { titulo: "Ensamble", descripcion: "Integra los acompañamientos en una base armónica." },
+      { titulo: "Finalización", descripcion: "Toque de aceite de oliva en crudo para realzar sabores." }
     ],
     bioHack: {
-      titulo: "DIGESTIÓN EFICIENTE",
-      pasos: ["MASTICA 30 VECES CADA BOCADO", "ESPERA 60M PARA BEBER"],
-      explicacion: "La masticación consciente es el primer bio-hack para una absorción perfecta y evitar inflamación."
+      titulo: "SECUENCIACIÓN METABÓLICA",
+      pasos: ["1. Vegetales (Fibra)", "2. Proteína", "3. Carbohidratos"],
+      explicacion: "Consume en este orden para optimizar tu curva de glucosa."
     },
-    nutrientes: { proteina: "", grasas: "", carbos: "", fibra: "" },
-    sugerencia: "La técnica es el alma de la nutrición.",
-    notaPro: "Un balance perfecto centrado en la excelencia.",
-    imageUrl: `https://via.placeholder.com/600x600.png?text=${encodeURIComponent(mealDesc)}`
+    nutrientes: { proteina: "", grasas: "", carbos: "" },
+    imageUrl: `https://via.placeholder.com/600x400.png?text=${encodeURIComponent(mealDesc)}`
   };
 };
