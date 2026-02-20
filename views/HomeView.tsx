@@ -282,9 +282,16 @@ const RecipeModal: React.FC<{
                 </div>
                 <div className="space-y-3">
                   {details.ingredientes.map((ing, i) => (
-                    <div key={i} className="bg-white rounded-2xl p-6 flex items-center justify-between shadow-sm border border-slate-50 group hover:border-blue-100 transition-all">
-                      <span className="text-[15px] font-bold text-slate-600">{ing}</span>
-                      <span className="material-symbols-outlined text-slate-200 text-xl font-black group-hover:text-emerald-400 transition-colors">check_circle</span>
+                    <div key={i} className="flex items-center gap-4 group">
+                      <div className="size-1.5 rounded-full bg-blue-500/30 group-hover:bg-blue-500 transition-colors" />
+                      <p className="text-[13.5px] font-bold text-slate-500 leading-tight">
+                        {ing.startsWith('**') ? (
+                          <>
+                            <span className="text-slate-800 font-black">{ing.match(/\*\*(.*?)\*\*/)?.[1]}</span>
+                            {ing.split('**')[2]}
+                          </>
+                        ) : ing}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -305,10 +312,10 @@ const RecipeModal: React.FC<{
                       </div>
                       <div className="space-y-1.5">
                         <h4 className="text-[15px] font-black text-slate-800 uppercase tracking-tight">
-                          {step.includes(':') ? step.split(':')[0] : `Fase ${i + 1}`}
+                          {step.startsWith('**') ? step.match(/\*\*(.*?)\*\*/)?.[1] : `Paso ${i + 1}`}
                         </h4>
-                        <p className="text-[13px] font-bold text-slate-400 leading-relaxed max-w-[92%] transition-colors group-hover:text-slate-500">
-                          {step.includes(':') ? step.split(':')[1].trim() : step}
+                        <p className="text-[14px] font-bold text-slate-400 leading-relaxed max-w-[92%] transition-colors group-hover:text-slate-500">
+                          {step.startsWith('**') ? step.split('**')[2].replace(/^:\s*/, '').trim() : step}
                         </p>
                       </div>
                     </div>

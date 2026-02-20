@@ -107,33 +107,36 @@ export const analyzeImageWithGemini = async (base64Image: string, perfil?: any, 
 };
 
 export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: string): Promise<RecipeDetails> => {
-  console.log("Iniciando motor v23.0 (Cocina Pura) para:", mealDesc);
+  console.log("Iniciando motor v24.0 (High-Fidelity) para:", mealDesc);
 
-  // 1. MOTOR DE COCINA: Gemini 2.0 Flash enfocado en preparación didáctica
+  // 1. MOTOR GOURMET: Gemini 2.0 Flash con Estructura Detallada
   if (apiKey && apiKey.length > 20) {
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-      const prompt = `Actúa como un Chef Profesional que imparte una mini clase de cocina ultra clara.
-
-      TAREA: Explicar ingredientes y preparación para: "${mealDesc}"
+      const prompt = `Actúa como un Chef de Alta Cocina y Nutricionista. 
       
-      REGLAS DE ORO:
-      1. SÓLO INGREDIENTES Y PREPARACIÓN. No menciones calorías, macros ni bio-hacks.
-      2. RESTRICCIÓN MÉDICA: NUNCA menciones ingerir líquidos. No hables de agua, jugos ni te.
-      3. TONO: Didáctico, claro y práctico. Como una clase de cocina para alguien que quiere cocinar rico y rápido.
-      4. PREPARACIÓN: Divide en pasos lógicos guiados (Paso 1, Paso 2, etc.).
+      TU TAREA: Generar una receta de ALTA FIDELIDAD para: "${mealDesc}"
+      
+      REGLAS DE ORO DE ESTRUCTURA:
+      1. INGREDIENTES: Categorízalos por tipo usando negritas (ej: "**Proteína:** 90g de...", "**Vegetales:** 1 taza de...", "**Grasas:** 1 cdita de...").
+      2. PREPARACIÓN: Divide el proceso en SECCIONES claras:
+         - **1. Prepara la Fruta y Vegetales:** (Pasos iniciales)
+         - **2. Cocina el [Ingrediente Principal]:** (Técnica de fuego)
+         - **3. Monta el Plato:** (Instrucciones finales de emplatado)
+      3. RESTRICCIÓN MÉDICA: NUNCA menciones ingerir líquidos. No hables de agua ni hidratación.
+      4. TONO: Profesional, didáctico y centrado en la excelencia culinaria.
 
-      SALIDA REQUERIDA (JSON):
+      SALIDA REQUERIDA (JSON PURO):
       {
-        "ingredientes": ["Nombre del ingrediente", "..."],
-        "preparacion": ["PASO 1: Qué hacer con los ingredientes", "..."],
+        "ingredientes": ["**Categoría:** Cantidad - Nombre", "..."],
+        "preparacion": ["**SECCIÓN:** Explicación detallada y clara del paso", "..."],
         "kcal": 0,
         "bioHack": { "titulo": "", "pasos": [], "explicacion": "" },
         "nutrientes": { "proteina": "", "grasas": "", "carbos": "", "fibra": "" },
-        "sugerencia": "Tip maestro de cocina.",
-        "notaPro": "Cómo quedará el plato al final.",
+        "sugerencia": "Un secreto de chef para este plato.",
+        "notaPro": "Descripción de la textura y sabor final esperados.",
         "imageUrl": "URL_PLACEHOLDER"
       }`;
 
@@ -144,33 +147,35 @@ export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: 
       const jsonMatch = cleanJson.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
-        const imageQuery = encodeURIComponent(mealDesc + " professional plating gourmet");
+        // Query de imagen premium similar al ejemplo del cliente
+        const imageQuery = encodeURIComponent(mealDesc + " gourmet plate professional food photography neutral background sunlight");
         parsed.imageUrl = `https://source.unsplash.com/featured/?${imageQuery}`;
         return parsed;
       }
     } catch (e) {
-      console.error("Gemini Cooking Class Error:", e);
+      console.error("Gemini High-Fidelity Error:", e);
     }
   }
 
-  // 2. FALLBACK DE COCINA v23.0
+  // 2. FALLBACK GOURMET v24.0
   return {
     kcal: 0,
     ingredientes: [
-      `Ingrediente principal para ${mealDesc}.`,
-      "Condimentos naturales al gusto.",
-      "Base de acompañamiento sugerida."
+      `**Proteína:** Porción adecuada de ${mealDesc}.`,
+      "**Vegetales:** Combinación de hojas verdes y vegetales frescos.",
+      "**Grasas Saludables:** Aceite de oliva virgen extra o aguacate.",
+      "**Sabor:** Especias naturales, limón y sal marina."
     ],
     preparacion: [
-      `PASO 1: Organizar y lavar los ingredientes para "${mealDesc}".`,
-      "PASO 2: Cocinar a fuego controlado según la técnica preferida.",
-      "PASO 3: Emplatar de forma atractiva.",
-      "PASO 4: Servir y disfrutar inmediatamente (recordar no beber hasta 60 min después)."
+      `**1. Organización:** Ten a mano todos los ingredientes para tu "${mealDesc}".`,
+      "**2. Cocinado:** Prepáralo respetando la técnica ideal (sellado, vapor o crudo según aplique).",
+      "**3. Toque Final:** Combina los sabores y utiliza el aceite de oliva al final.",
+      "**4. Servicio:** Emplata de forma limpia y disfruta tu creación (recuerda esperar 60 min para beber)."
     ],
     bioHack: { titulo: "", pasos: [], explicacion: "" },
     nutrientes: { proteina: "", grasas: "", carbos: "", fibra: "" },
-    sugerencia: `La frescura es la clave para un buen "${mealDesc}".`,
-    notaPro: `Receta lista para disfrutar con todo el sabor natural del ingrediente.`,
+    sugerencia: `La calidad del ingrediente principal es el 90% del éxito en este "${mealDesc}".`,
+    notaPro: `El resultado será un plato equilibrado, lleno de texturas y colores vibrantes.`,
     imageUrl: `https://via.placeholder.com/600x600.png?text=${encodeURIComponent(mealDesc)}`
   };
 };
