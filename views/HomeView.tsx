@@ -23,7 +23,11 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
 
     mealKeys.forEach((standardKey, idx) => {
       const mealDate = new Date(date.getTime() + idx * 3 * 60 * 60 * 1000);
-      const timeStr = mealDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+      const timeStr = mealDate.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
 
       // Find the key in the menu that matches this standard slot
       const matchingKey = currentMenuKeys.find(k => k.toUpperCase().replace(/\s+/g, '_') === standardKey);
@@ -44,6 +48,7 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
         water: 0,
         doneEx: {},
         lastScan: null,
+        schedule: null,
         lastUpdateDate: new Date().toISOString().split('T')[0]
       });
       alert("✅ Contadores reiniciados.");
@@ -169,9 +174,8 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
                 type="time"
                 value={breakfastTime}
                 onChange={(e) => setBreakfastTime(e.target.value)}
-                className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none"
+                className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 text-lg pointer-events-none">schedule</span>
             </div>
           </div>
 
