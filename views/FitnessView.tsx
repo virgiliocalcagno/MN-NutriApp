@@ -141,12 +141,11 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
           setScanResult({
             ...result,
             image: base64,
-            // Mapping fields if they don't match
-            plato: result.platos ? result.platos.join(", ") : result.plato,
-            impacto: result.semaforo || result.impacto,
-            hack: result.analisis || result.hack,
-            tip: result.bioHack || result.tip,
-            kcal: result.totalCalorias || result.kcal || (result.macros?.kcal)
+            plato: result.platos ? result.platos.join(", ") : (result.plato || "Alimento Detectado"),
+            impacto: result.semaforo || result.impacto || "VERDE",
+            hack: result.analisis || result.hack || "Análisis metabólico listo...",
+            tip: result.bioHack || result.tip || "Consejo experto para tu comida...",
+            kcal: result.totalCalorias || result.kcal || (result.macros?.kcal) || "---"
           });
 
           setIsScanning(false);
@@ -309,9 +308,17 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
               <input type="file" ref={fileInputRef} onChange={handleScan} accept="image/*" className="hidden" />
 
               {isScanning ? (
-                <div className="absolute inset-0 bg-black/60 z-20 flex flex-col items-center justify-center gap-4 backdrop-blur-sm">
-                  <div className="size-20 border-[6px] border-white/20 border-t-white rounded-full animate-spin"></div>
-                  <p className="text-white font-black text-sm tracking-widest uppercase animate-pulse">Analizando plato...</p>
+                <div className="absolute inset-0 bg-slate-900/40 z-20 flex flex-col items-center justify-center gap-6 backdrop-blur-xl border border-white/20">
+                  <div className="relative size-24">
+                    <div className="absolute inset-0 border-[6px] border-white/10 border-t-blue-400 rounded-full animate-spin"></div>
+                    <div className="absolute inset-0 flex items-center justify-center opacity-40">
+                      <span className="material-symbols-outlined text-4xl text-white">biotech</span>
+                    </div>
+                  </div>
+                  <div className="text-center space-y-1">
+                    <p className="text-white font-black text-xs tracking-[0.3em] uppercase animate-pulse">Iniciando Análisis</p>
+                    <p className="text-blue-200/60 text-[10px] font-bold uppercase tracking-widest italic">Motor Metabólico v32.1</p>
+                  </div>
                 </div>
               ) : null}
 
@@ -373,13 +380,14 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
                 {/* Macros Grid */}
                 <div className="grid grid-cols-4 gap-3">
                   {[
-                    { l: 'KCAL', v: scanResult.kcal || scanResult.totalCalorias || '---' },
-                    { l: 'PROT', v: (scanResult.macros?.p || '---') },
-                    { l: 'CARB', v: (scanResult.macros?.c || '---') },
-                    { l: 'GRASA', v: (scanResult.macros?.f || '---') }
+                    { l: 'KCAL', v: scanResult.kcal || scanResult.totalCalorias || '---', i: 'local_fire_department', c: 'text-orange-500' },
+                    { l: 'PROT', v: (scanResult.macros?.p || '---'), i: 'set_meal', c: 'text-blue-500' },
+                    { l: 'CARB', v: (scanResult.macros?.c || '---'), i: 'grain', c: 'text-amber-500' },
+                    { l: 'GRASA', v: (scanResult.macros?.f || '---'), i: 'oil_barrel', c: 'text-emerald-500' }
                   ].map((m, i) => (
-                    <div key={i} className="bg-white p-4 rounded-[24px] border border-slate-100 shadow-sm flex flex-col items-center">
-                      <p className="text-lg font-black text-slate-900">{m.v}</p>
+                    <div key={i} className="bg-white p-4 rounded-[28px] border border-slate-100 shadow-sm flex flex-col items-center transition-all hover:scale-105">
+                      <span className={`material-symbols-outlined text-sm mb-2 ${m.c}`}>{m.i}</span>
+                      <p className="text-base font-black text-slate-900">{m.v}</p>
                       <p className="text-[8px] text-slate-400 font-black uppercase tracking-tighter">{m.l}</p>
                     </div>
                   ))}

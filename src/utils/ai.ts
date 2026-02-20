@@ -15,6 +15,8 @@ export interface RecipeDetails {
   ingredientes: string[];
   preparacion: { titulo: string; descripcion: string }[];
   imageUrl?: string;
+  tiempo?: string;
+  dificultad?: string;
   bioHack: {
     titulo: string;
     pasos: string[];
@@ -86,12 +88,36 @@ export const analyzeImageWithGemini = async (base64Image: string, perfil?: any, 
     if (apiKey && apiKey !== 'AIzaSyAF5rs3cJFs_E6S7ouibqs7B2fgVRDLzc0') {
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-      const prompt = "Analiza esta comida. Detecta ingredientes, calorías, macros y bio-hacks bioquímicos profundos. Responde en JSON.";
+
+      const prompt = `Actúa como una Eminencia en Nutrición Clínica y Bio-hacking Metabólico. 
+Analiza esta imagen de comida para el paciente: ${perfil?.paciente || 'Usuario'}.
+Contexto del Paciente:
+- Objetivos: ${perfil?.objetivo || 'General'}
+- Condiciones/Alergias: ${perfil?.condiciones || 'Ninguna'}
+
+Tu tarea es:
+1. Identificar con precisión el/los plato(s).
+2. Determinar el impacto metabólico (VERDE, AMARILLO, ROJO) considerando el perfil del paciente.
+3. Proporcionar un análisis bioquímico profundo sobre cómo afecta este plato a sus objetivos.
+4. Entregar un Bio-Hack técnico (ej. orden de consumo para aplanar curva de glucosa, suplemento recomendado, o ajuste de porciones).
+5. Calcular macros (p, c, f en gramos) y calorías totales de forma realista.
+
+RESPONDE ÚNICAMENTE EN ESTE FORMATO JSON PURO:
+{
+  "platos": ["Nombre detallado"],
+  "semaforo": "VERDE | AMARILLO | ROJO",
+  "analisis": "Texto breve pero técnico...",
+  "bioHack": "Consejo experto...",
+  "macros": { "p": "30g", "c": "20g", "f": "15g" },
+  "totalCalorias": 350
+}`;
+
       const result = await model.generateContent([{ inlineData: { mimeType: "image/jpeg", data: cleanBase64 } }, { text: prompt }]);
       const text = result.response.text();
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) return JSON.parse(jsonMatch[0]);
     }
+
     const response = await fetch('https://us-central1-mn-nutriapp.cloudfunctions.net/analizarComida', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -105,7 +131,7 @@ export const analyzeImageWithGemini = async (base64Image: string, perfil?: any, 
 };
 
 export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: string): Promise<RecipeDetails> => {
-  console.log("Iniciando motor v31.1 (Recetas Pro) para:", mealDesc);
+  console.log("Iniciando motor v32.0 (NutriScan Pro) para:", mealDesc);
 
   const effectiveApiKey = apiKey || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
   console.log("Motor AI: API Key presente:", effectiveApiKey ? "SI (Largo: " + effectiveApiKey.length + ")" : "NO");
@@ -113,7 +139,7 @@ export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: 
   if (effectiveApiKey && effectiveApiKey.length > 20) {
     try {
       const genAI = new GoogleGenerativeAI(effectiveApiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
       const prompt = `Eres un Chef de Alta Cocina y Experto en Bio-hacking Nutricional.
 Transforma estos ingredientes en una receta profesional con datos nutricionales reales.
@@ -123,28 +149,26 @@ INGREDIENTES: "${mealDesc}"
 RESPONDE ÚNICAMENTE con un JSON puro (sin markdown, sin backticks) con esta estructura EXACTA:
 {
   "titulo": "Nombre gourmet del plato",
-  "foto_prompt": "Descripción en inglés para generar foto gourmet del plato, natural light, no text overlay",
+  "foto_prompt": "English query for high-end food photography, clean background, 4k",
+  "tiempo": "25 min",
+  "dificultad": "Media",
   "kcal": 620,
   "nutrientes": { "proteina": "45g", "grasas": "18g", "carbos": "30g" },
-  "ingredientes_lista": ["150g Salmón fresco", "1/2 taza Quinoa cocida", "6 espárragos trigueros", "1 cdita aceite de oliva, limón, sal y pimienta"],
+  "ingredientes_lista": ["150g Salmón fresco", "1/2 taza Quinoa cocida", "6 espárragos trigueros"],
   "pasos_preparacion": [
-    { "titulo": "Limpieza y marinado", "descripcion": "Lavar bien el salmón y marinar con zumo de limón fresco, sal marina y pimienta negra recién molida." },
-    { "titulo": "Cocción técnica del salmón", "descripcion": "Cocinar a fuego medio. Colocar primero por el lado de la piel para obtener una textura crujiente y sellar jugos." },
-    { "titulo": "Salteado rápido", "descripcion": "Saltear los espárragos a fuego alto con un poco de aceite de oliva durante 3-4 minutos para mantener el color verde vibrante y clorofila." }
+    { "titulo": "Sellado Técnico", "descripcion": "Aplica calor directo para caramelizar la superficie y sellar jugos." }
   ],
   "bio_hack": {
     "titulo": "SECUENCIACIÓN METABÓLICA",
-    "explicacion": "Para optimizar la curva de glucosa y mejorar la respuesta insulínica, consume los ingredientes en este orden:",
-    "pasos": ["1. Espárragos (Fibra)", "2. Salmón (Prot/Grasa)", "3. Quinoa (Almidón)"]
+    "explicacion": "Consume en este orden para optimizar glucosa:",
+    "pasos": ["1. Fibra", "2. Proteína", "3. Carbohidrato"]
   }
 }
 
 REGLAS:
-- kcal debe ser un número REAL estimado (no 0).
-- nutrientes con valores reales estimados.
-- pasos_preparacion: cada paso es un OBJETO con "titulo" y "descripcion". Mínimo 3 pasos.
-- bio_hack.pasos: secuencia óptima de consumo de los ingredientes del plato.
-- Prohibido usar "Organización" o "Cocinado" como título de paso.`;
+- tiempo: Estimado realista.
+- dificultad: Baja, Media o Alta.
+- foto_prompt: Keywords en inglés para Unsplash.`;
 
       const result = await model.generateContent(prompt);
       const text = result.response.text();
@@ -153,12 +177,14 @@ REGLAS:
       const jsonMatch = cleanJson.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
-        const foodKeyword = encodeURIComponent((parsed.titulo || mealDesc).split(' ').slice(0, 2).join(' '));
-        const imageUrl = `https://loremflickr.com/600/400/food,${foodKeyword}`;
+        const keyword = encodeURIComponent(parsed.foto_prompt || parsed.titulo || mealDesc);
+        const imageUrl = `https://loremflickr.com/800/600/food,gourmet,${keyword}`;
 
         return {
           titulo: parsed.titulo,
           kcal: parsed.kcal || 0,
+          tiempo: parsed.tiempo || "20 min",
+          dificultad: parsed.dificultad || "Baja",
           ingredientes: parsed.ingredientes_lista || [],
           preparacion: (parsed.pasos_preparacion || []).map((p: any) =>
             typeof p === 'string' ? { titulo: "Paso", descripcion: p } : { titulo: p.titulo, descripcion: p.descripcion }
