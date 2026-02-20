@@ -259,43 +259,24 @@ const RecipeModal: React.FC<{
             </div>
           ) : details ? (
             <div className="animate-in fade-in duration-700">
-              {/* IMAGE WITH OVERLAY */}
-              <div className="relative overflow-hidden aspect-[4/3]">
-                <img
-                  src={details.imageUrl || getProductImage(meal.description, 'Gral')}
-                  alt={meal.description}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 p-6 pb-8">
-                  <span className="inline-block bg-[#1e60f1] text-white text-[9px] font-black tracking-[0.2em] uppercase px-3 py-1.5 rounded-full mb-3">
-                    PRO NUTRICIÓN
-                  </span>
-                  <h2 className="text-white text-[22px] font-black leading-tight">
-                    {details.titulo || meal.description}
-                  </h2>
-                </div>
+              {/* TÍTULO + BADGE ARRIBA */}
+              <div className="px-6 pt-6 pb-4">
+                <span className="inline-block bg-[#1e60f1] text-white text-[9px] font-black tracking-[0.2em] uppercase px-3 py-1.5 rounded-full mb-3">
+                  PRO NUTRICIÓN
+                </span>
+                <h2 className="text-[20px] font-black text-slate-800 leading-tight">
+                  {details.titulo || meal.description}
+                </h2>
               </div>
 
-              {/* MACROS GRID 2x2 */}
-              <div className="grid grid-cols-2 gap-3 px-6 -mt-4 relative z-10">
-                <div className="bg-white rounded-2xl p-4 text-center shadow-md border border-slate-100">
-                  <p className="text-[10px] font-black text-slate-400 tracking-wider uppercase mb-1">Calorías</p>
-                  <p className="text-2xl font-black text-[#1e60f1]">{details.kcal || '---'}</p>
-                  <p className="text-[9px] font-bold text-slate-300 uppercase">kcal</p>
-                </div>
-                <div className="bg-white rounded-2xl p-4 text-center shadow-md border border-slate-100">
-                  <p className="text-[10px] font-black text-slate-400 tracking-wider uppercase mb-1">Proteína</p>
-                  <p className="text-2xl font-black text-[#1e60f1]">{details.nutrientes?.proteina || '---'}</p>
-                </div>
-                <div className="bg-white rounded-2xl p-4 text-center shadow-md border border-slate-100">
-                  <p className="text-[10px] font-black text-slate-400 tracking-wider uppercase mb-1">Carbos</p>
-                  <p className="text-2xl font-black text-[#1e60f1]">{details.nutrientes?.carbos || '---'}</p>
-                </div>
-                <div className="bg-white rounded-2xl p-4 text-center shadow-md border border-slate-100">
-                  <p className="text-[10px] font-black text-slate-400 tracking-wider uppercase mb-1">Grasas</p>
-                  <p className="text-2xl font-black text-[#1e60f1]">{details.nutrientes?.grasas || '---'}</p>
-                </div>
+              {/* IMAGEN LIMPIA */}
+              <div className="mx-5 rounded-3xl overflow-hidden aspect-[4/3] shadow-lg">
+                <img
+                  src={details.imageUrl || getProductImage(meal.description, 'Gral')}
+                  alt={details.titulo || meal.description}
+                  className="w-full h-full object-cover"
+                  onError={(e) => { (e.target as HTMLImageElement).src = getProductImage(meal.description, 'Gral'); }}
+                />
               </div>
 
               {/* INGREDIENTES */}

@@ -152,7 +152,8 @@ REGLAS:
       const jsonMatch = cleanJson.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
-        const imageQuery = encodeURIComponent(parsed.foto_prompt || `${parsed.titulo}, gourmet food photography`);
+        const foodKeyword = encodeURIComponent((parsed.titulo || mealDesc).split(' ').slice(0, 2).join(' '));
+        const imageUrl = `https://loremflickr.com/600/400/food,${foodKeyword}`;
 
         return {
           titulo: parsed.titulo,
@@ -161,7 +162,7 @@ REGLAS:
           preparacion: (parsed.pasos_preparacion || []).map((p: any) =>
             typeof p === 'string' ? { titulo: "Paso", descripcion: p } : { titulo: p.titulo, descripcion: p.descripcion }
           ),
-          imageUrl: `https://source.unsplash.com/featured/?${imageQuery}`,
+          imageUrl: imageUrl,
           bioHack: {
             titulo: parsed.bio_hack?.titulo || "BIO-HACK",
             pasos: parsed.bio_hack?.pasos || [],
