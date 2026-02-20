@@ -38,32 +38,14 @@ export const processPdfWithGemini = async (
 ): Promise<AIResponse> => {
   if (apiKey && apiKey !== 'AIzaSyAF5rs3cJFs_E6S7ouibqs7B2fgVRDLzc0') {
     try {
-      console.log("Intentando procesamiento directo con Gemini 2.0 Flash...");
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
       const p = perfil || {};
       let promptText = `Actúa como procesador médico experto para MN-NutriApp. 
                 
-                CONTEXTO PACIENTE ACTUAL (PARA REFERENCIA):
-                - Nombre: ${p.paciente || 'Nuevo Paciente'}
-                - Médico: ${p.doctor || 'No asignado'}
+                IMPORTANTE: Extrae la información directamente de los documentos PDF.
                 
-                IMPORTANTE: Ignora el contexto actual si el PDF contiene datos de una persona diferente. Extrae siempre la información directamente de los documentos adjuntos.
-                
-                DATOS DISPONIBLES:
-                ${pdfPlanBase64 ? '- Se adjunta Plan Nutricional en PDF.' : '- NO hay PDF de plan.'}
-                ${pdfEvalBase64 ? '- Se adjunta Evaluación Médica en PDF.' : '- NO hay PDF de evaluación.'}
-
-                TAREAS:
-                1. EXTRAE Y RELLENA EL PERFIL: Analiza los documentos PDF y extrae REALMENTE: Nombre del Paciente, Doctor, Edad, Peso, Estatura, Cintura, Objetivos, Comorbilidades, Tipo de Sangre y Alergias.
-                2. MENÚ DE 7 DÍAS: Transcribe el menú para CADA DÍA encontrado en el PDF.
-                3. RUTINA DE EJERCICIOS DIARIA: Crea una rutina específica para CADA DÍA.
-                   - Incluye enlaces de 'eresfitness.com/ejercicios' o YouTube.
-                4. LISTA DE MERCADO DOMINICANA:
-                   - Convierte a Libras (Lb) o Onzas (Oz).
-                   - ESTRUCTURA JSON: ["Nombre", "Cantidad", NivelStock, "Categoría", "Pasillo"]
-
                 RESPONDE ÚNICAMENTE CON ESTE FORMATO JSON:
                 {
                   "perfilAuto": { "paciente": "...", "doctor": "...", "edad": "...", "peso": "...", "estatura": "...", "cintura": "...", "sangre": "...", "alergias": "...", "objetivos": [], "comorbilidades": [] },
@@ -80,9 +62,9 @@ export const processPdfWithGemini = async (
       const responseText = result.response.text();
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       if (jsonMatch) return JSON.parse(jsonMatch[0]) as AIResponse;
-      throw new Error("Formato de respuesta inválido");
+      throw new Error("Formato inválido");
     } catch (e: any) {
-      console.warn("Gemini 2.0 falló, intentando Fallback (Cloud Function)...", e.message);
+      console.warn("Gemini 2.0 falló, intentando Cloud Function...");
     }
   }
 
@@ -109,11 +91,10 @@ export const processPdfWithGemini = async (
 export const analyzeImageWithGemini = async (base64Image: string, perfil?: any, apiKey?: string) => {
   try {
     const cleanBase64 = base64Image.replace(/^data:image\/\w+;base64,/, "");
-
     if (apiKey && apiKey !== 'AIzaSyAF5rs3cJFs_E6S7ouibqs7B2fgVRDLzc0') {
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-      const prompt = "Analiza esta comida. Detecta ingredientes, calorías estimadas, macronutrientes y da 3 bio-hacks científicos. Responde en JSON.";
+      const prompt = "Analiza esta comida. Detecta ingredientes, calorías, macros y bio-hacks. Responde en JSON.";
       const result = await model.generateContent([{ inlineData: { mimeType: "image/jpeg", data: cleanBase64 } }, { text: prompt }]);
       const text = result.response.text();
       const jsonMatch = text.match(/\{[\s\S]*\}/);
