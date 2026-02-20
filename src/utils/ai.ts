@@ -108,13 +108,15 @@ export const analyzeImageWithGemini = async (base64Image: string, perfil?: any, 
 };
 
 export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: string): Promise<RecipeDetails> => {
-  console.log("Iniciando motor v29.0 (Fidelidad Total) para:", mealDesc);
+  console.log("Iniciando motor v30.0 para:", mealDesc);
 
-  // 1. MOTOR FIDELIDAD TOTAL: Gemini 2.0 Flash con System Prompt de Usuario
-  if (apiKey && apiKey.length > 20) {
+  // v30.0: API key from param, env, or firebase config
+  const effectiveApiKey = apiKey || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
+
+  if (effectiveApiKey && effectiveApiKey.length > 20) {
     try {
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+      const genAI = new GoogleGenerativeAI(effectiveApiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
       const prompt = `Actúa como un Chef de Alta Cocina y Experto en Bio-hacking. Tu tarea es transformar una lista de ingredientes en una experiencia visual y educativa.
 
@@ -168,11 +170,11 @@ export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: 
         };
       }
     } catch (e) {
-      console.error("Gemini Brain v29.0 Error:", e);
+      console.error("Gemini v30.0 Error:", e);
     }
   }
 
-  // 2. FALLBACK v29.0
+  // FALLBACK v30.0
   return {
     titulo: `Chef's Choice: ${mealDesc}`,
     kcal: 0,
