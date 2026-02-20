@@ -8,6 +8,47 @@ import { firebaseConfig } from '../src/firebase';
 const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
   const { store, saveStore } = useStore();
   const [selectedMeal, setSelectedMeal] = useState<{ id: string; type: string; description: string } | null>(null);
+  const [breakfastTime, setBreakfastTime] = useState("08:00");
+
+  const generateSchedule = () => {
+    const [hours, minutes] = breakfastTime.split(':').map(Number);
+    const date = new Date();
+    date.setHours(hours, minutes, 0);
+
+    const newSchedule: Record<string, string> = { ...store.schedule };
+    const mealKeys = ["DESAYUNO", "MERIENDA_AM", "ALMUERZO", "MERIENDA_PM", "CENA"];
+
+    // Match existing menu keys to the standard intervals
+    const currentMenuKeys = Object.keys(menuForDay);
+
+    mealKeys.forEach((standardKey, idx) => {
+      const mealDate = new Date(date.getTime() + idx * 3 * 60 * 60 * 1000);
+      const timeStr = mealDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+
+      // Find the key in the menu that matches this standard slot
+      const matchingKey = currentMenuKeys.find(k => k.toUpperCase().replace(/\s+/g, '_') === standardKey);
+      if (matchingKey) {
+        newSchedule[matchingKey] = timeStr;
+      }
+    });
+
+    saveStore({ ...store, schedule: newSchedule });
+    alert("✅ Horario nutricional generado exitosamente.");
+  };
+
+  const resetGlobal = () => {
+    if (confirm("¿Estás seguro de reiniciar todos los contadores diarios?")) {
+      saveStore({
+        ...store,
+        calories: 0,
+        water: 0,
+        doneEx: {},
+        lastScan: null,
+        lastUpdateDate: new Date().toISOString().split('T')[0]
+      });
+      alert("✅ Contadores reiniciados.");
+    }
+  };
 
   const normalize = (str: string) =>
     str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
@@ -109,6 +150,45 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
               <span className="text-lg font-black mt-0.5">{day.date}</span>
             </button>
           ))}
+        </section>
+
+        {/* ⏰ Generar Horario Nutricional */}
+        <section className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-100 animate-in slide-in-from-bottom duration-500">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-xl">⏰</span>
+            <h3 className="text-[15px] font-black text-slate-800 uppercase tracking-tight">Generar Horario Nutricional</h3>
+          </div>
+          <p className="text-[12px] text-slate-500 mb-6 leading-relaxed font-medium">
+            Establece la hora de tu **Desayuno** para generar automáticamente los horarios de comidas y las tomas de agua, respetando la regla médica.
+          </p>
+
+          <div className="flex items-center justify-between gap-4 mb-6 bg-slate-50 p-4 rounded-2xl border border-slate-100/50">
+            <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Hora de Desayuno:</span>
+            <div className="relative flex-1 max-w-[140px]">
+              <input
+                type="time"
+                value={breakfastTime}
+                onChange={(e) => setBreakfastTime(e.target.value)}
+                className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/20 appearance-none"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 text-lg pointer-events-none">schedule</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={generateSchedule}
+              className="bg-[#1e60f1] hover:bg-[#1a56d9] text-white font-black py-4 rounded-2xl text-[10px] uppercase tracking-[0.15em] shadow-lg shadow-blue-100 active:scale-95 transition-all"
+            >
+              Generar Horario
+            </button>
+            <button
+              onClick={resetGlobal}
+              className="bg-[#ef4444] hover:bg-[#dc2626] text-white font-black py-4 rounded-2xl text-[10px] uppercase tracking-[0.15em] shadow-lg shadow-red-100 active:scale-95 transition-all"
+            >
+              Reiniciar Global
+            </button>
+          </div>
         </section>
 
 
