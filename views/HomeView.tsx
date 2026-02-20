@@ -196,189 +196,138 @@ const RecipeModal: React.FC<{
   perfil: any;
   onClose: () => void;
 }> = ({ meal, perfil, onClose }) => {
-  const [loading, setLoading] = React.useState(true);
-  const [details, setDetails] = React.useState<RecipeDetails | null>(null);
-
-  React.useEffect(() => {
-    const fetchDetails = async () => {
-      try {
-        const data = await getRecipeDetails(meal.description, perfil, perfil?.apiKey);
-        setDetails(data);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchDetails();
-  }, [meal.description]);
+  // v18.0: Stitch Exact Replication (f408c132)
+  const dummyTitle = "Salmón a la plancha con Quinoa y Espárragos";
+  const dummyImageUrl = "https://images.unsplash.com/photo-1467003909585-2f8a72700288?q=80&w=2000&auto=format&fit=crop";
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden">
-      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose} />
+      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose} />
 
-      <div className="relative w-full max-w-lg bg-[#f8f9fd] rounded-[48px] overflow-hidden shadow-2xl animate-in slide-in-from-bottom duration-500 h-full max-h-[96vh] flex flex-col mx-4 my-8">
+      <div className="relative w-full max-w-lg bg-white overflow-hidden shadow-2xl animate-in slide-in-from-bottom duration-500 h-full flex flex-col">
 
-        {/* TOP BAR CUSTOM (REPLACING NAV) */}
-        <div className="absolute top-8 left-8 right-8 z-20 flex justify-between items-center">
-          <button onClick={onClose} className="size-11 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center text-white border border-white/30 active:scale-95 transition-all">
-            <span className="material-symbols-outlined text-2xl">arrow_back</span>
+        {/* HEADER: White Background + Centered Title */}
+        <div className="flex items-center justify-between px-6 h-20 bg-white border-b border-slate-50 shrink-0">
+          <button onClick={onClose} className="text-blue-600">
+            <span className="material-symbols-outlined text-2xl font-black">arrow_back</span>
           </button>
-          <h4 className="text-white text-[11px] font-black tracking-[0.2em] uppercase opacity-80">Detalle de Almuerzo</h4>
-          <button className="size-11 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center text-white border border-white/30 active:scale-95 transition-all">
-            <span className="material-symbols-outlined text-2xl">share</span>
+          <h4 className="text-[11px] font-black tracking-[0.25em] text-slate-400 text-center uppercase">DETALLE DE ALMUERZO</h4>
+          <button className="text-blue-600">
+            <span className="material-symbols-outlined text-2xl font-black">share</span>
           </button>
         </div>
 
-        {/* Scrollable Area */}
-        <div className="flex-1 overflow-y-auto no-scrollbar">
+        {/* CONTENT AREA: Light Gray Background */}
+        <div className="flex-1 overflow-y-auto bg-[#f8f9fd] no-scrollbar">
 
-          {/* HEADER IMAGE & TITLE */}
-          <div className="relative h-[420px] shrink-0">
-            <img
-              src={details?.imageUrl || getProductImage(meal.description, 'Gral')}
-              alt={meal.description}
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#f8f9fd] via-transparent to-black/40" />
-
+          {/* IMAGE CARD */}
+          <div className="mx-6 mt-6 relative rounded-[40px] overflow-hidden aspect-square shadow-xl">
+            <img src={dummyImageUrl} alt={dummyTitle} className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
             <div className="absolute bottom-10 left-8 right-8">
-              <span className="bg-[#1e60f1] text-[9px] font-black text-white px-4 py-1.5 rounded-full tracking-widest uppercase mb-4 inline-block">PRO NUTRICIÓN</span>
-              <h1 className="text-white text-4xl font-black leading-[1.1] [text-shadow:_0_4px_12px_rgba(0,0,0,0.5)]">{meal.description}</h1>
+              <span className="bg-[#1e60f1] text-[10px] font-black text-white px-5 py-2 rounded-full mb-4 inline-block shadow-lg uppercase tracking-wider">PRO NUTRICIÓN</span>
+              <h1 className="text-white text-3xl font-black leading-[1.15]">{dummyTitle}</h1>
             </div>
           </div>
 
-          {!loading && details ? (
-            <div className="px-8 pb-32 -mt-6 relative z-10 space-y-10">
-
-              {/* MACROS CARDS GRID (Stitch Style) */}
-              <div className="grid grid-cols-2 gap-4">
-                {/* CALORÍAS */}
-                <div className="bg-white rounded-[32px] p-6 shadow-sm border border-slate-100/50 flex flex-col items-center text-center">
-                  <span className="text-[10px] font-black text-slate-300 tracking-widest uppercase mb-2">CALORÍAS</span>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-black text-[#1e60f1]">{details.kcal}</span>
-                    <span className="text-[10px] font-bold text-slate-300 lowercase">kcal</span>
-                  </div>
-                </div>
-                {/* PROTEÍNA */}
-                <div className="bg-white rounded-[32px] p-6 shadow-sm border border-slate-100/50 flex flex-col items-center">
-                  <span className="text-[10px] font-black text-slate-300 tracking-widest uppercase mb-2">PROTEÍNA</span>
-                  <span className="text-2xl font-black text-slate-800 mb-3">{details.nutrientes.proteina}</span>
-                  <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-500 rounded-full" style={{ width: '75%' }}></div>
-                  </div>
-                </div>
-                {/* CARBOHIDRATOS */}
-                <div className="bg-white rounded-[32px] p-6 shadow-sm border border-slate-100/50 flex flex-col items-center">
-                  <span className="text-[10px] font-black text-slate-300 tracking-widest uppercase mb-2">CARBOS</span>
-                  <span className="text-2xl font-black text-slate-800 mb-3">{details.nutrientes.carbos}</span>
-                  <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-orange-500 rounded-full" style={{ width: '45%' }}></div>
-                  </div>
-                </div>
-                {/* GRASAS */}
-                <div className="bg-white rounded-[32px] p-6 shadow-sm border border-slate-100/50 flex flex-col items-center">
-                  <span className="text-[10px] font-black text-slate-300 tracking-widest uppercase mb-2">GRASAS</span>
-                  <span className="text-2xl font-black text-slate-800 mb-3">{details.nutrientes.grasas}</span>
-                  <div className="w-full h-1.5 bg-emerald-400 rounded-full overflow-hidden">
-                    <div className="h-full bg-emerald-400 rounded-full" style={{ width: '35%' }}></div>
-                  </div>
-                </div>
-              </div>
-
-              {/* INGREDIENTES (Stitch List) */}
-              <section className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className="bg-[#1e60f1] size-8 rounded-xl flex items-center justify-center text-white">
-                    <span className="material-symbols-outlined text-[18px]">shopping_basket</span>
-                  </div>
-                  <h3 className="text-lg font-black text-slate-800">Ingredientes</h3>
-                </div>
-                <div className="space-y-3">
-                  {details.ingredientes.map((ing, i) => (
-                    <div key={i} className="bg-white rounded-2xl p-5 shadow-sm border border-slate-50 flex items-center justify-between group">
-                      <p className="text-sm font-bold text-slate-600">{ing}</p>
-                      <div className="size-6 bg-slate-100 rounded-full flex items-center justify-center text-slate-300 group-hover:bg-blue-50 group-hover:text-[#1e60f1] transition-all">
-                        <span className="material-symbols-outlined text-sm font-black">check_circle</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              {/* PREPARACIÓN PROFESIONAL */}
-              <section className="space-y-6">
-                <div className="flex items-center gap-3">
-                  <div className="bg-[#1e60f1] size-8 rounded-xl flex items-center justify-center text-white">
-                    <span className="material-symbols-outlined text-[18px]">architecture</span>
-                  </div>
-                  <h3 className="text-lg font-black text-slate-800">Preparación Profesional</h3>
-                </div>
-                <div className="space-y-8 relative pl-4">
-                  <div className="absolute left-0 top-4 bottom-4 w-px bg-slate-100" />
-                  {details.preparacion.map((step, i) => (
-                    <div key={i} className="relative">
-                      <div className="absolute -left-[29px] top-1 size-7 bg-[#1e60f1] rounded-full border-4 border-[#f8f9fd] flex items-center justify-center text-white text-[10px] font-extrabold shadow-md shadow-blue-200">
-                        {i + 1}
-                      </div>
-                      <div className="space-y-1">
-                        <h4 className="text-sm font-black text-slate-800 uppercase tracking-tight">
-                          {step.includes(':') ? step.split(':')[0] : `Paso ${i + 1}`}
-                        </h4>
-                        <p className="text-[13px] font-bold text-slate-400 leading-relaxed">
-                          {step.includes(':') ? step.split(':')[1].trim() : step}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              {/* BIO-HACK: SECUENCIACIÓN METABÓLICA */}
-              <section className="bg-blue-50/50 rounded-[40px] p-8 border border-blue-100/50 space-y-6">
-                <div className="flex items-center gap-3">
-                  <div className="text-[#1e60f1]">
-                    <span className="material-symbols-outlined text-3xl fill-1">bolt</span>
-                  </div>
-                  <h3 className="text-[#1e60f1] text-[13px] font-black tracking-widest uppercase leading-tight">
-                    BIO-HACK: SECUENCIACIÓN<br />METABÓLICA
-                  </h3>
-                </div>
-
-                <p className="text-[#1e60f1]/70 text-sm font-bold leading-relaxed">
-                  {details.bioHack.explicacion}
-                </p>
-
-                <div className="space-y-3 pt-2">
-                  {details.bioHack.pasos.map((paso, i) => (
-                    <div key={i} className="bg-white rounded-full p-2.5 pl-4 pr-10 border border-blue-100/30 flex items-center gap-3 inline-flex shadow-sm">
-                      <div className={`size-2.5 rounded-full ${i === 0 ? 'bg-emerald-400' : i === 1 ? 'bg-blue-500' : 'bg-orange-400'}`}></div>
-                      <p className="text-[11px] font-black text-slate-700 whitespace-nowrap">
-                        <span className="text-slate-400 mr-2">{i + 1}.</span> {paso}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </section>
-
-              {/* FOOTER BUTTON */}
-              <div className="flex justify-center pt-8">
-                <button onClick={onClose} className="size-20 bg-[#1e60f1] rounded-full flex items-center justify-center text-white shadow-xl shadow-blue-200 active:scale-95 transition-all">
-                  <span className="material-symbols-outlined text-4xl">check</span>
-                </button>
-              </div>
-
+          {/* MACROS TILES */}
+          <div className="grid grid-cols-2 gap-4 px-6 mt-6">
+            <div className="bg-white rounded-[28px] p-6 flex flex-col items-center shadow-sm border border-slate-100/30">
+              <span className="text-[9px] font-black text-slate-300 tracking-[0.2em] uppercase mb-1.5">CALORÍAS</span>
+              <span className="text-2xl font-black text-[#1e60f1]">620</span>
+              <span className="text-[9px] font-bold text-slate-300 -mt-0.5">kcal</span>
             </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-64 space-y-6">
-              <div className="relative size-24">
-                <div className="absolute inset-0 border-4 border-slate-100 rounded-full"></div>
-                <div className="absolute inset-0 border-4 border-[#1e60f1] border-t-transparent rounded-full animate-spin"></div>
+            <div className="bg-white rounded-[28px] p-6 flex flex-col items-center shadow-sm border border-slate-100/30">
+              <span className="text-[9px] font-black text-slate-300 tracking-[0.2em] uppercase mb-1.5">PROTEÍNA</span>
+              <span className="text-2xl font-black text-slate-800 mb-2.5">45g</span>
+              <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-500" style={{ width: '70%' }}></div>
               </div>
-              <p className="text-[#1e60f1] font-black text-[10px] tracking-[0.3em] uppercase animate-pulse">Optimizando Protocolo VIP...</p>
             </div>
-          )}
+            <div className="bg-white rounded-[28px] p-6 flex flex-col items-center shadow-sm border border-slate-100/30">
+              <span className="text-[9px] font-black text-slate-300 tracking-[0.2em] uppercase mb-1.5">CARBOS</span>
+              <span className="text-2xl font-black text-slate-800 mb-2.5">30g</span>
+              <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full bg-orange-400" style={{ width: '45%' }}></div>
+              </div>
+            </div>
+            <div className="bg-white rounded-[28px] p-6 flex flex-col items-center shadow-sm border border-slate-100/30">
+              <span className="text-[9px] font-black text-slate-300 tracking-[0.2em] uppercase mb-1.5">GRASAS</span>
+              <span className="text-2xl font-black text-slate-800 mb-2.5">18g</span>
+              <div className="w-full h-1 bg-emerald-400 rounded-full overflow-hidden">
+                <div className="h-full bg-emerald-400" style={{ width: '35%' }}></div>
+              </div>
+            </div>
+          </div>
+
+          {/* INGREDIENTS */}
+          <div className="px-6 mt-12">
+            <div className="flex items-center gap-3 mb-5">
+              <span className="material-symbols-outlined text-[#1e60f1] text-[28px] fill-1">shopping_basket</span>
+              <h3 className="text-lg font-black text-slate-800">Ingredientes</h3>
+            </div>
+            <div className="space-y-3">
+              {[
+                "150g Salmón fresco",
+                "1/2 taza Quinoa cocida",
+                "6 espárragos trigueros",
+                "1 cdita aceite de oliva, limón, sal y pimienta"
+              ].map((ing, i) => (
+                <div key={i} className="bg-white rounded-2xl p-6 flex items-center justify-between shadow-sm border border-slate-50">
+                  <span className="text-[15px] font-bold text-slate-600">{ing}</span>
+                  <span className="material-symbols-outlined text-slate-200 text-xl font-black">check_circle</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* PREPARATION TIMELINE */}
+          <div className="px-6 mt-14">
+            <div className="flex items-center gap-3 mb-8">
+              <span className="material-symbols-outlined text-[#1e60f1] text-[28px] fill-1">architecture</span>
+              <h3 className="text-xl font-black text-slate-800">Preparación Profesional</h3>
+            </div>
+            <div className="space-y-12 relative pl-8 pb-4">
+              <div className="absolute left-[13.5px] top-6 bottom-4 w-px bg-slate-100" />
+              {[
+                { t: "Limpieza y marinado", d: "Lavar bien el salmón y marinar con zumo de limón fresco, sal marina y pimienta negra recién molida." },
+                { t: "Cocción técnica del salmón", d: "Cocinar a fuego medio. Colocar primero por el lado de la piel para obtener una textura crujiente y sellar jugos." },
+                { t: "Salteado rápido", d: "Saltear los espárragos a fuego alto con el aceite de oliva durante 3-4 minutos para mantener el color verde vibrante y clorofila." }
+              ].map((step, i) => (
+                <div key={i} className="relative">
+                  <div className="absolute -left-[32px] top-1 size-7 bg-[#1e60f1] rounded-full flex items-center justify-center text-white text-[11px] font-black shadow-lg shadow-blue-100">
+                    {i + 1}
+                  </div>
+                  <div className="space-y-1.5">
+                    <h4 className="text-[15px] font-black text-slate-800">{step.t}</h4>
+                    <p className="text-[13px] font-bold text-slate-400 leading-relaxed max-w-[90%]">{step.d}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* BIO-HACK BOX */}
+          <div className="mx-6 mt-4 mb-32 bg-[#ebf1ff] rounded-[48px] p-8 border border-blue-100/50 shadow-sm shadow-blue-50">
+            <div className="flex items-center gap-3 mb-5">
+              <span className="material-symbols-outlined text-blue-600 text-2xl fill-1">bolt</span>
+              <h4 className="text-[12px] font-black text-blue-600 tracking-wider">BIO-HACK: SECUENCIACIÓN METABÓLICA</h4>
+            </div>
+            <p className="text-[13px] font-bold text-slate-500 leading-relaxed mb-8">Para optimizar la curva de glucosa y mejorar la respuesta insulínica, consume los ingredientes en este orden:</p>
+            <div className="flex flex-wrap gap-3">
+              {[
+                { l: "1. Espárragos (Fibra)", c: "bg-emerald-400" },
+                { l: "2. Salmón (Prot/Grasa)", c: "bg-blue-500" },
+                { l: "3. Quinoa (Almidón)", c: "bg-orange-400" }
+              ].map((p, i) => (
+                <div key={i} className="bg-white rounded-full py-2.5 px-6 flex items-center gap-3 border border-blue-100/20 shadow-sm hover:scale-105 transition-transform">
+                  <div className={`size-2.5 rounded-full ${p.c}`} />
+                  <span className="text-[11px] font-black text-slate-700">{p.l}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
