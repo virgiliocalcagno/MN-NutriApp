@@ -282,15 +282,10 @@ const RecipeModal: React.FC<{
                 </div>
                 <div className="space-y-3">
                   {details.ingredientes.map((ing, i) => (
-                    <div key={i} className="flex items-center gap-4 group">
-                      <div className="size-1.5 rounded-full bg-blue-500/30 group-hover:bg-blue-500 transition-colors" />
-                      <p className="text-[13.5px] font-bold text-slate-500 leading-tight">
-                        {ing.startsWith('**') ? (
-                          <>
-                            <span className="text-slate-800 font-black">{ing.match(/\*\*(.*?)\*\*/)?.[1]}</span>
-                            {ing.split('**')[2]}
-                          </>
-                        ) : ing}
+                    <div key={i} className="flex items-start gap-4 group">
+                      <div className="size-1.5 rounded-full bg-blue-500/30 group-hover:bg-blue-500 mt-2 transition-colors" />
+                      <p className="text-[14px] font-bold text-slate-600 leading-tight">
+                        {ing}
                       </p>
                     </div>
                   ))}
@@ -310,12 +305,9 @@ const RecipeModal: React.FC<{
                       <div className="absolute -left-[32px] top-1 size-7 bg-[#1e60f1] rounded-full flex items-center justify-center text-white text-[11px] font-black shadow-lg shadow-blue-100 ring-4 ring-[#f8f9fd] transition-transform group-hover:scale-110">
                         {i + 1}
                       </div>
-                      <div className="space-y-1.5">
-                        <h4 className="text-[15px] font-black text-slate-800 uppercase tracking-tight">
-                          {step.startsWith('**') ? step.match(/\*\*(.*?)\*\*/)?.[1] : `Paso ${i + 1}`}
-                        </h4>
-                        <p className="text-[14px] font-bold text-slate-400 leading-relaxed max-w-[92%] transition-colors group-hover:text-slate-500">
-                          {step.startsWith('**') ? step.split('**')[2].replace(/^:\s*/, '').trim() : step}
+                      <div className="space-y-1">
+                        <p className="text-[14px] font-bold text-slate-500 leading-relaxed max-w-[95%] transition-colors group-hover:text-slate-700">
+                          {step}
                         </p>
                       </div>
                     </div>
@@ -323,7 +315,25 @@ const RecipeModal: React.FC<{
                 </div>
               </div>
 
-              {/* Se ha eliminado la sección de Bio-Hacks por solicitud del usuario (v23.0) */}
+              {/* Bloque de Ciencia Digestiva (Bio-Hack) */}
+              {details.bioHack && details.bioHack.titulo && (
+                <div className="mx-6 mt-10 mb-32 bg-[#f4f7ff] rounded-[48px] p-8 border border-blue-100/50 shadow-sm">
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="material-symbols-outlined text-blue-600 text-2xl fill-1">biotech</span>
+                    <h4 className="text-[13px] font-black text-blue-600 tracking-wider uppercase">{details.bioHack.titulo}</h4>
+                  </div>
+                  <p className="text-[13px] font-bold text-slate-500 leading-relaxed mb-6 italic">
+                    {details.bioHack.explicacion}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {details.bioHack.pasos.filter(p => p).map((p, i) => (
+                      <div key={i} className="bg-white/80 px-4 py-2 rounded-full border border-blue-100">
+                        <span className="text-[10px] font-black text-blue-800 uppercase tracking-tight">{p}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* FIXED FOOTER BUTTON */}
               <div className="fixed bottom-10 left-0 right-0 flex justify-center z-50 pointer-events-none pb-8">
