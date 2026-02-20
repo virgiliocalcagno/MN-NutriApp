@@ -107,38 +107,49 @@ export const analyzeImageWithGemini = async (base64Image: string, perfil?: any, 
 };
 
 export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: string): Promise<RecipeDetails> => {
-  console.log("Iniciando motor v26.0 (Chef Ejecutivo) para:", mealDesc);
+  console.log("Iniciando motor v27.0 (Mapeo de Precisión) para:", mealDesc);
 
-  // 1. MOTOR CHEF EJECUTIVO: Gemini 2.0 Flash con Tono Motivador y Técnica Real
+  // 1. MOTOR DE PRECISIÓN: Gemini 2.0 Flash con Mapeo Lógico de 4 Pasos
   if (apiKey && apiKey.length > 20) {
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-      const prompt = `Actúa como un Chef Ejecutivo Profesional y Motivador. 
-      Transforma los ingredientes de "${mealDesc}" en una receta real que inspire excelencia.
+      const prompt = `Actúa como un Chef Ejecutivo de alto nivel. 
+      Genera una receta de PRECISIÓN para: "${mealDesc}".
       
-      REGLAS DE ORO:
-      1. TONO: Profesional, directo y altamente motivador. Haz que el usuario se sienta un pro en la cocina.
-      2. PASOS: Máximo 4 pasos numerados. Usa verbos de cocina auténticos (ej: "Sella", "Tuesta", "Carameliza", "Reduce", "Emplata").
-      3. INGREDIENTES: Lista con iconos técnicos (ej: "🥩 90g de Proteína", "🌿 Vegetales frescos").
-      4. BIO-HACK: Enfócate en un beneficio metabólico o energético potente al terminar.
-      5. LÍQUIDOS: Mantener restricción médica (no beber 30min antes / 60min después).
+      ESTRUCTURA DE PREPARACIÓN OBLIGATORIA (4 PASOS):
+      Paso 1: Preparación Base (ej: "Seca, limpia o acondiciona los ingredientes base").
+      Paso 2: Técnica de Calor (ej: "Sella, tuesta o cocina la proteína a fuego exacto").
+      Paso 3: Ensamble (ej: "Une los acompañamientos, vegetales y carbohidratos").
+      Paso 4: Toque Final (ej: "Finaliza con el aceite de oliva, especias y emplatado").
+
+      REGLAS:
+      - TONO: Profesional y Motivador.
+      - INGREDIENTES: Usa iconos técnicos (ej: "🥩 90g de Proteína").
+      - PASOS: Cada paso debe ser una acción culinaria REAL y profesional. Sin rellenos genéricos.
+      - BIO-HACK: Consejo metabólico científico para la energía post-comida.
+      - LÍQUIDOS: No menciones beber nada (restricción: -30min/+60min).
 
       SALIDA REQUERIDA (JSON PURO):
       {
-        "titulo": "Nombre Gourmet e Inspirador",
+        "titulo": "Nombre Premium del Plato",
         "ingredientes": ["Icono Cantidad - Nombre", "..."],
-        "preparacion": ["1. [Verbo de acción]: Descripción técnica y motivadora", "2. ...", "3. ...", "4. ..."],
+        "preparacion": [
+            "1. [Acción Base]: Descripción técnica",
+            "2. [Acción Calor]: Descripción técnica",
+            "3. [Acción Ensamble]: Descripción técnica",
+            "4. [Acción Final]: Descripción técnica"
+        ],
         "bioHack": { 
-            "titulo": "Impulso Metabólico", 
-            "pasos": ["Acción metabólica clave"], 
-            "explicacion": "Explicación de cómo este plato optimiza tu energía o metabolismo." 
+            "titulo": "Optimización Metabólica", 
+            "pasos": ["Recomendación técnica"], 
+            "explicacion": "Explicación científica de la mejora energética." 
         },
         "kcal": 0,
         "nutrientes": { "proteina": "", "grasas": "", "carbos": "", "fibra": "" },
-        "sugerencia": "El secreto del Chef Ejecutivo para el éxito del plato.",
-        "notaPro": "Cómo se siente comer este plato (textura, energía, satisfacción).",
+        "sugerencia": "Secreto del Chef para el punto de cocción.",
+        "notaPro": "Experiencia sensorial y energética esperada.",
         "imageUrl": "URL_PLACEHOLDER"
       }`;
 
@@ -149,39 +160,39 @@ export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: 
       const jsonMatch = cleanJson.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
-        // Nuevo prompt automático solicitado por el usuario para estética minimalista y saludable
+        // Prompt fotográfico minimalista v26.0 (Mantenido por su alta calidad)
         const imageQuery = encodeURIComponent(`Fotografía gourmet de ${parsed.titulo}, primer plano, luz natural, estilo minimalista y saludable, 4k`);
         parsed.imageUrl = `https://source.unsplash.com/featured/?${imageQuery}`;
         return parsed;
       }
     } catch (e) {
-      console.error("Gemini Chef Executive Error:", e);
+      console.error("Gemini Precision Mapping Error:", e);
     }
   }
 
-  // 2. FALLBACK CHEF EJECUTIVO v26.0
+  // 2. FALLBACK DE PRECISIÓN v27.0
   return {
     kcal: 0,
     ingredientes: [
-      `🥩 Proteína de alta calidad (${mealDesc})`,
-      "🌿 Mix de vegetales frescos vibrantes",
-      "🫒 Oro líquido (Aceite de Oliva)",
-      "🧂 Cristales de sal y especias"
+      `🥩 Proteína técnica para "${mealDesc}"`,
+      "🌿 Vegetales frescos de temporada",
+      "🫒 Aceite de Oliva Premium",
+      "🧂 Sazón equilibrada"
     ],
     preparacion: [
-      "1. Sella el ingrediente principal a fuego vivo para capturar todos los jugos y nutrientes.",
-      "2. Saltea los vegetales suavemente para mantener su textura crocante y enzimas intactas.",
-      "3. Tuesta los carbohidratos ligeramente si aplica para despertar su sabor natural.",
-      "4. Emplata con orgullo, añadiendo el toque de aceite de oliva en crudo para brillar."
+      "1. Preparación: Limpia y retira el exceso de humedad del ingrediente principal para un sellado perfecto.",
+      "2. Cocción: Sella a fuego alto para caramelizar la superficie y mantener el interior jugoso.",
+      "3. Ensamble: Integra los vegetales frescos y los carbohidratos en una base armónica.",
+      "4. Finalización: Corona con el aceite de oliva en crudo para aportar brillo y ácidos grasos esenciales."
     ],
     bioHack: {
       titulo: "Activación Metabólica",
-      pasos: ["Camina 10-15 min después de comer"],
-      explicacion: "El movimiento post-prandial sincroniza la glucosa con tus músculos, optimizando tu energía para el resto del día."
+      pasos: ["Movimiento post-prandial (10 min)"],
+      explicacion: "Caminar suavemente después de este plato ayuda a que la glucosa se distribuya eficientemente en tus células."
     },
     nutrientes: { proteina: "", grasas: "", carbos: "", fibra: "" },
-    sugerencia: "La confianza en la cocina es el ingrediente que no se compra.",
-    notaPro: "Un plato equilibrado que te dejará satisfecho y lleno de claridad mental.",
+    sugerencia: "El reposo es clave para que los sabores se asienten.",
+    notaPro: "Un plato limpio, técnico y cargado de vitalidad.",
     imageUrl: `https://via.placeholder.com/600x600.png?text=${encodeURIComponent(mealDesc)}`
   };
 };
