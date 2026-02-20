@@ -51,6 +51,7 @@ export interface Store {
     calories: number;
     caloriesTarget: number;
     lastScan: any | null;
+    lastUpdateDate: string; // ISO date string YYYY-MM-DD
 }
 
 export const initialStore: Store = {
@@ -69,7 +70,8 @@ export const initialStore: Store = {
     historial: [],
     medals: { silver: 0, gold: 0 },
     locks: { perfil: true, compras: true, existencia: true },
-    calories: 1200,
+    calories: 0,
     caloriesTarget: 2000,
-    lastScan: null
+    lastScan: null,
+    lastUpdateDate: new Date().toISOString().split('T')[0]
 };

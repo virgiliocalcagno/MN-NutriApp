@@ -67,6 +67,23 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
         return () => unsubscribe();
     }, []);
 
+    // Daily Reset Logic
+    useEffect(() => {
+        if (!loading) {
+            const today = new Date().toISOString().split('T')[0];
+            if (!store.lastUpdateDate || store.lastUpdateDate !== today) {
+                console.log("Daily reset triggered or missing date initialized.");
+                saveStore({
+                    ...store,
+                    calories: 0,
+                    water: 0,
+                    doneEx: {},
+                    lastUpdateDate: today
+                });
+            }
+        }
+    }, [loading, store.lastUpdateDate]);
+
     const saveStore = async (newStore: Store) => {
         setStore(newStore);
         localStorage.setItem('mn_pro_clinic_v6', JSON.stringify(newStore));
