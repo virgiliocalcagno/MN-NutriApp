@@ -66,6 +66,13 @@ Para cada comida, extrae TODOS los ingredientes mencionados. Manten los nombres 
 CORRECTO: "Aceite de oliva", "Galletas de arroz", "Pan pita integral", "Aceite de coco", "Platano verde", "Platano maduro", "Queso mozzarella", "Col rizada", "Proteina en polvo"
 INCORRECTO: NO separes "Aceite de oliva" en "Aceite" y "Oliva". NO separes "Galletas de arroz" en "Galletas" y "Arroz". NO omitas ingredientes como condimentos, frutas o vegetales.
 
+PASO 2.5 - SEPARACION DE INGREDIENTES COMBINADOS:
+Si el PDF describe una comida con multiples ingredientes unidos por "y", "con", "+" o comas, SEPARALOS en productos individuales de supermercado.
+Ejemplo: "Pastrami de pavo y queso" -> DOS items: "Pastrami de pavo" y "Queso"
+Ejemplo: "Tortilla con pollo y aguacate" -> TRES items: "Tortilla", "Pollo", "Aguacate"
+Ejemplo: "Ensalada de atun con lechuga y tomate" -> TRES items: "Atun", "Lechuga", "Tomate"
+EXCEPCION: NO separes nombres propios de productos como "Aceite de oliva", "Pan pita integral", "Galletas de arroz", "Col rizada", "Proteina en polvo". Estos son UN SOLO producto.
+
 PASO 3 - CONSOLIDACION SIN DUPLICADOS:
 Agrupa ingredientes identicos en UNA SOLA entrada. Suma la cantidad total semanal. Ejemplo:
 Si "Aceite de oliva 1 cdta" aparece en 14 comidas: ["Aceite de oliva", "14 cdtas semanal", 1, "Aceites y Condimentos", "Aceites y Condimentos"]
