@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useStore } from '@/src/context/StoreContext';
 import { processPdfWithGemini } from '@/src/utils/ai';
 import { MealItem, initialStore } from '@/src/types/store';
@@ -15,11 +15,28 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { profile } = store;
+  const [showClinical, setShowClinical] = useState(false);
 
   // Sync local state when store changes
   useEffect(() => {
     setEditData({ ...store.profile });
   }, [store.profile]);
+
+  // Metabolic Age Calculation (Demo logic for v34.1)
+  const calculateMetabolicAge = () => {
+    const age = parseInt(profile.edad || '30');
+    const weight = parseInt(profile.peso || '150');
+    if (weight > 200) return age + 5;
+    if (weight < 140) return age - 2;
+    return age;
+  };
+
+  const bmi = useMemo(() => {
+    const w = parseInt(profile.peso || '0') * 0.453592; // lbs to kg
+    const h = parseInt(profile.estatura || '0') / 100; // cm to m
+    if (w > 0 && h > 0) return (w / (h * h)).toFixed(1);
+    return '--';
+  }, [profile.peso, profile.estatura]);
 
   const onLongPress = () => {
     setIsLocked(!isLocked);
@@ -52,7 +69,7 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
             const newExercises = data.ejercicios || {};
             const newItems: MealItem[] = (data.compras || []).map((c: any, idx: number) => ({
               id: Date.now() + '-' + idx,
-              n: c[0], q: c[1], lv: 4, cat: c[3] || 'Gral', p: c[3] || 'Gral', b: false
+              n: c[0], q: c[1], lv: 4, cat: c[3] || 'Gral', aisle: c[4] || 'Gral', b: false
             }));
 
             saveStore({
@@ -93,59 +110,83 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
         </div>
       )}
 
-      {/* Profile Header Block */}
-      <div className="bg-white px-6 pt-10 pb-6 rounded-b-[40px] shadow-sm border-b border-slate-100 relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/50 via-primary to-primary/50"></div>
-        <div className="flex items-center gap-6">
-          <div className="relative">
-            <div className="size-24 rounded-full bg-slate-100 flex items-center justify-center border-4 border-white shadow-xl overflow-hidden ring-4 ring-primary/5">
+      {/* Header Premium Bio-hacker (v34.1) */}
+      <div className="bg-white px-6 pt-12 pb-10 rounded-b-[48px] shadow-sm border-b border-slate-100 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-400/5 rounded-full -ml-12 -mb-12 blur-2xl"></div>
+
+        <div className="flex flex-col items-center text-center relative z-10">
+          <div className="relative mb-6">
+            <div className="size-28 rounded-[32px] bg-slate-100 flex items-center justify-center border-4 border-white shadow-2xl overflow-hidden ring-1 ring-slate-100 rotate-3 transform transition-transform hover:rotate-0 duration-500">
               {user?.photoURL ? (
                 <img src={user.photoURL} alt="User" className="w-full h-full object-cover" />
               ) : (
-                <span className="material-symbols-outlined text-4xl text-slate-300">person</span>
+                <span className="material-symbols-outlined text-5xl text-slate-300">person</span>
               )}
             </div>
-            {isLocked && (
-              <div className="absolute -bottom-1 -right-1 bg-primary text-white size-8 rounded-full flex items-center justify-center border-4 border-white shadow-lg animate-in zoom-in duration-300">
-                <span className="material-symbols-outlined text-[18px] font-fill">lock</span>
-              </div>
-            )}
+            <div className="absolute -bottom-2 -right-2 bg-[#1e60f1] text-white px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-lg border-2 border-white">
+              Elite
+            </div>
           </div>
 
-          <div className="flex-1">
-            <div className="flex items-center justify-between mb-1" {...longPressProps}>
-              <h2 className="text-2xl font-black text-slate-900 tracking-tight leading-none">
+          <div {...longPressProps} className="space-y-1">
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight flex items-center justify-center gap-2">
+              {isEditing ? (
+                <input
+                  type="text"
+                  value={editData.paciente || ''}
+                  onChange={e => setEditData({ ...editData, paciente: e.target.value })}
+                  className="bg-slate-50 border-none p-0 text-center focus:ring-0 rounded font-black max-w-[200px]"
+                />
+              ) : (profile.paciente || user?.displayName || 'Usuario')}
+              {!isLocked && <span className="material-symbols-outlined text-primary text-lg">edit</span>}
+            </h2>
+            <p className="text-[10px] text-blue-500 font-black uppercase tracking-[0.3em] mb-2">Bio-hacker Experto</p>
+            <div className="flex items-center justify-center gap-2">
+              <p className="text-[10px] font-bold text-primary bg-primary/5 px-3 py-1 rounded-full border border-primary/10">
                 {isEditing ? (
-                  <input
-                    type="text"
-                    value={editData.paciente || ''}
-                    onChange={e => setEditData({ ...editData, paciente: e.target.value })}
-                    className="bg-slate-50 border-none p-0 w-full focus:ring-0 rounded font-black"
-                  />
-                ) : (profile.paciente || user?.displayName || 'Usuario')}
-              </h2>
-              <button onClick={() => setShowLogout(!showLogout)} className="p-2 text-slate-300 hover:text-slate-600 transition-colors">
-                <span className="material-symbols-outlined">settings</span>
-              </button>
-            </div>
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-bold text-primary bg-primary/5 px-3 py-0.5 rounded-full inline-block">
-                  {isEditing ? (
-                    <span className="flex items-center gap-1">Dr. <input value={editData.doctor || ''} onChange={e => setEditData({ ...editData, doctor: e.target.value })} className="bg-transparent border-none p-0 w-24 text-primary font-bold focus:ring-0" /></span>
-                  ) : `Dr. ${profile.doctor || 'No asignado'}`}
-                </p>
-              </div>
-              <p className="text-[11px] text-slate-400 font-medium px-1 flex items-center gap-1">
-                <span className="material-symbols-outlined text-xs">mail</span> {user?.email}
+                  <span className="flex items-center gap-1 italic">Dr. <input value={editData.doctor || ''} onChange={e => setEditData({ ...editData, doctor: e.target.value })} className="bg-transparent border-none p-0 w-24 text-primary font-bold focus:ring-0 text-[10px]" /></span>
+                ) : `Dr. ${profile.doctor || 'Dr. Health'}`}
               </p>
+              <div className="size-1 bg-slate-200 rounded-full"></div>
+              <p className="text-[10px] font-black text-slate-400">
+                {isEditing ? (
+                  <select value={editData.sexo || ''} onChange={e => setEditData({ ...editData, sexo: e.target.value })} className="bg-transparent border-none p-0 text-[10px] font-black focus:ring-0">
+                    <option value="Hombre">MALE</option>
+                    <option value="Mujer">FEMALE</option>
+                  </select>
+                ) : (profile.sexo || 'MALE').toUpperCase()}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-8 grid grid-cols-2 gap-4 w-full">
+            <div className="bg-slate-50/50 p-4 rounded-[32px] border border-slate-100 flex flex-col items-center">
+              <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mb-1">Edad Metabólica</p>
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl font-black text-slate-900">{calculateMetabolicAge()}</span>
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Años</span>
+              </div>
+            </div>
+            <div className="bg-slate-50/50 p-4 rounded-[32px] border border-slate-100 flex flex-col items-center">
+              <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mb-1">Impacto Bio-Hack</p>
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl font-black text-emerald-500">85</span>
+                <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-tighter">%</span>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Logout Dropdown */}
+        <button
+          onClick={() => setShowLogout(!showLogout)}
+          className="absolute top-10 right-6 size-10 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 hover:text-slate-600 transition-colors"
+        >
+          <span className="material-symbols-outlined text-xl">settings</span>
+        </button>
+
         {showLogout && (
-          <div className="absolute right-6 top-16 bg-white shadow-2xl rounded-2xl border border-slate-100 p-2 w-48 z-[110] animate-in slide-in-from-top-4">
+          <div className="absolute right-6 top-20 bg-white shadow-2xl rounded-2xl border border-slate-100 p-2 w-48 z-[110] animate-in slide-in-from-top-4">
             <button onClick={logout} className="w-full text-left px-4 py-3 text-red-500 text-sm font-black hover:bg-red-50 rounded-xl flex items-center gap-3 transition-colors">
               <span className="material-symbols-outlined text-xl">logout</span>
               Cerrar Sesión
@@ -154,230 +195,229 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
         )}
       </div>
 
-      {/* Actions Bar */}
-      <div className="px-6 -mt-6 flex gap-3 z-10">
+      {/* Profile Control Bar */}
+      <div className="px-6 -mt-8 flex gap-3 z-10 relative">
+        <button
+          onClick={() => isEditing ? handleSaveManual() : setIsEditing(true)}
+          className={`flex-1 ${isEditing ? 'bg-emerald-500 text-white' : 'bg-white text-slate-700'} py-4 rounded-[28px] shadow-xl border border-slate-100 font-black text-xs flex items-center justify-center gap-3 active:scale-95 transition-all outline-none`}
+        >
+          <span className="material-symbols-outlined font-fill text-lg">{isEditing ? 'save' : 'fingerprint'}</span>
+          {isEditing ? 'GUARDAR' : 'DESBLOQUEAR'}
+        </button>
+
+        <button
+          onClick={() => setShowClinical(!showClinical)}
+          className={`px-6 py-4 rounded-[28px] shadow-xl border border-slate-100 font-black text-xs flex items-center justify-center gap-3 active:scale-95 transition-all outline-none ${showClinical ? 'bg-blue-600 text-white' : 'bg-white text-blue-600'}`}
+        >
+          <span className="material-symbols-outlined font-fill text-lg">clinical_notes</span>
+        </button>
+
         {!isLocked && (
-          <>
-            <button
-              onClick={() => isEditing ? handleSaveManual() : setIsEditing(true)}
-              className="flex-1 bg-white hover:bg-slate-50 py-4 rounded-2xl shadow-lg border border-slate-100 font-black text-sm flex items-center justify-center gap-3 active:scale-95 transition-all text-slate-700"
-            >
-              <span className="material-symbols-outlined text-primary font-fill">{isEditing ? 'save' : 'edit_note'}</span>
-              {isEditing ? 'GUARDAR' : 'EDITAR'}
-            </button>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isProcessing}
-              className="bg-slate-900 hover:bg-black text-white px-6 py-4 rounded-2xl shadow-lg border border-slate-100 font-black text-sm flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-50"
-            >
-              <span className="material-symbols-outlined font-fill">upload_file</span>
-            </button>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isProcessing}
+            className="bg-slate-900 text-white px-6 py-4 rounded-[28px] shadow-xl border border-slate-100 font-black flex items-center justify-center active:scale-95 transition-all disabled:opacity-50"
+          >
+            <span className="material-symbols-outlined font-fill text-lg">upload_file</span>
             <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept="application/pdf" className="hidden" />
-          </>
+          </button>
         )}
       </div>
 
       {/* Medical Content */}
-      <main className="px-6 py-8 space-y-8 animate-in fade-in duration-500">
-        <section>
-          <div className="flex items-center gap-3 mb-6">
-            <div className="size-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
-              <span className="material-symbols-outlined font-fill">clinical_notes</span>
-            </div>
-            <h3 className="text-xl font-black text-slate-900 tracking-tight">Ficha Técnica</h3>
+      <main className="px-6 py-10 space-y-10 animate-in fade-in duration-700">
+
+        {/* Metabolic KPIs */}
+        <section className={`${showClinical ? 'block' : 'hidden'} animate-in slide-in-from-top-4`}>
+          <div className="flex items-center justify-between mb-6 px-1">
+            <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Métricas Clínicas</h3>
+            <span className="text-[10px] font-black text-blue-500 bg-blue-50 px-3 py-1 rounded-full uppercase">Bio-Análisis</span>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white p-5 rounded-[28px] border border-slate-100 shadow-sm transition-all hover:shadow-md">
-              <p className="text-[10px] text-slate-400 font-black uppercase mb-3 flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-xs">cake</span> EDAD
-              </p>
-              <div className="flex items-baseline gap-1">
-                {isEditing ? (
-                  <input
-                    type="number"
-                    value={editData.edad || ''}
-                    onChange={e => setEditData({ ...editData, edad: e.target.value })}
-                    className="text-2xl font-black text-slate-800 bg-transparent border-none p-0 focus:ring-0 w-16"
-                  />
-                ) : <span className="text-3xl font-black text-slate-800">{profile.edad || '--'}</span>}
-                <span className="text-xs font-bold text-slate-400 uppercase">años</span>
+            <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm flex flex-col items-center">
+              <div className="size-10 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-4">
+                <span className="material-symbols-outlined text-xl">height</span>
               </div>
-            </div>
-            <div className="bg-white p-5 rounded-[28px] border border-slate-100 shadow-sm transition-all hover:shadow-md">
-              <p className="text-[10px] text-slate-400 font-black uppercase mb-3 flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-xs">monitor_weight</span> PESO
-              </p>
-              <div className="flex items-baseline gap-1">
-                {isEditing ? (
-                  <input
-                    type="number"
-                    value={editData.peso || ''}
-                    onChange={e => setEditData({ ...editData, peso: e.target.value })}
-                    className="text-2xl font-black text-slate-800 bg-transparent border-none p-0 focus:ring-0 w-16"
-                  />
-                ) : <span className="text-3xl font-black text-slate-800">{profile.peso || '--'}</span>}
-                <span className="text-xs font-bold text-slate-400 uppercase">lbs</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 mt-4">
-            <div className="bg-white p-5 rounded-[28px] border border-slate-100 shadow-sm transition-all hover:shadow-md">
-              <p className="text-[10px] text-slate-400 font-black uppercase mb-3 flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-xs">straighten</span> ESTATURA
-              </p>
+              <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mb-1">Estatura</p>
               <div className="flex items-baseline gap-1">
                 {isEditing ? (
                   <input
                     type="text"
                     value={editData.estatura || ''}
                     onChange={e => setEditData({ ...editData, estatura: e.target.value })}
-                    className="text-2xl font-black text-slate-800 bg-transparent border-none p-0 focus:ring-0 w-20"
+                    className="text-xl font-black text-slate-800 bg-transparent border-none p-0 focus:ring-0 w-16 text-center"
                   />
-                ) : <span className="text-3xl font-black text-slate-800">{profile.estatura || '--'}</span>}
-                <span className="text-xs font-bold text-slate-400 uppercase">cms</span>
+                ) : <span className="text-2xl font-black text-slate-800">{profile.estatura || '--'}</span>}
+                <span className="text-[10px] font-bold text-slate-300 uppercase">cm</span>
               </div>
             </div>
-            <div className="bg-white p-5 rounded-[28px] border border-slate-100 shadow-sm transition-all hover:shadow-md">
-              <p className="text-[10px] text-slate-400 font-black uppercase mb-3 flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-xs">wc</span> SEXO
-              </p>
-              <div className="flex items-baseline gap-1">
-                {isEditing ? (
-                  <select
-                    value={editData.sexo || ''}
-                    onChange={e => setEditData({ ...editData, sexo: e.target.value })}
-                    className="text-lg font-black text-slate-800 bg-transparent border-none p-0 focus:ring-0 w-full"
-                  >
-                    <option value="Hombre">Hombre</option>
-                    <option value="Mujer">Mujer</option>
-                  </select>
-                ) : <span className="text-xl font-black text-slate-800 lowercase first-letter:uppercase">{profile.sexo || '--'}</span>}
-              </div>
-            </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4 mt-4">
-            <div className="bg-white p-5 rounded-[28px] border border-slate-100 shadow-sm transition-all hover:shadow-md">
-              <p className="text-[10px] text-slate-400 font-black uppercase mb-3 flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-xs">bloodtype</span> SANGRE
-              </p>
-              <div className="flex items-baseline gap-1">
-                {isEditing ? (
-                  <input
-                    value={editData.sangre || ''}
-                    onChange={e => setEditData({ ...editData, sangre: e.target.value })}
-                    className="text-2xl font-black text-slate-800 bg-transparent border-none p-0 focus:ring-0 w-20 uppercase"
-                  />
-                ) : <span className="text-3xl font-black text-slate-800 uppercase">{profile.sangre || '--'}</span>}
+            <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm flex flex-col items-center">
+              <div className="size-10 bg-orange-50 text-orange-600 rounded-2xl flex items-center justify-center mb-4">
+                <span className="material-symbols-outlined text-xl">monitor_weight</span>
               </div>
-            </div>
-            <div className="bg-white p-5 rounded-[28px] border border-slate-100 shadow-sm transition-all hover:shadow-md">
-              <p className="text-[10px] text-slate-400 font-black uppercase mb-3 flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-xs">personal_injury</span> CINTURA
-              </p>
+              <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mb-1">BMI Index</p>
               <div className="flex items-baseline gap-1">
-                {isEditing ? (
-                  <input
-                    type="text"
-                    value={editData.cintura || ''}
-                    onChange={e => setEditData({ ...editData, cintura: e.target.value })}
-                    className="text-2xl font-black text-slate-800 bg-transparent border-none p-0 focus:ring-0 w-20"
-                  />
-                ) : <span className="text-3xl font-black text-slate-800">{profile.cintura || '--'}</span>}
-                <span className="text-xs font-bold text-slate-400 uppercase">cms</span>
+                <span className="text-2xl font-black text-slate-800">{bmi}</span>
+                <span className="text-[10px] font-bold text-slate-300 uppercase">Score</span>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Patient History */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <section className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm">
-            <div className="flex items-center gap-3 mb-4">
-              <span className="material-symbols-outlined text-pink-500">medical_information</span>
-              <h4 className="font-black text-slate-800 text-sm uppercase tracking-wide">Comorbilidades</h4>
+        {/* Essential Info Grid */}
+        <section className="space-y-6">
+          <div className="flex items-center gap-3 px-1 mb-2">
+            <div className="size-8 bg-slate-900 rounded-xl flex items-center justify-center text-white shadow-lg">
+              <span className="material-symbols-outlined text-sm font-fill">clinical_notes</span>
             </div>
-            {isEditing ? (
-              <textarea
-                value={(editData.comorbilidades || []).join(', ')}
-                onChange={e => setEditData({ ...editData, comorbilidades: e.target.value.split(',').map(s => s.trim()) })}
-                className="w-full bg-slate-50 border-none rounded-xl text-sm focus:ring-primary h-24 p-3 font-medium text-slate-600"
-                placeholder="Diabetes, Hipertensión..."
-              />
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {profile.comorbilidades && profile.comorbilidades.length > 0 ? (
-                  profile.comorbilidades.map((c, i) => (
-                    <span key={i} className="text-xs font-black bg-slate-50 px-4 py-2 rounded-xl text-slate-600 border border-slate-100 shadow-sm">{c}</span>
-                  ))
-                ) : <p className="text-xs text-slate-400 italic">No hay registros clínicos.</p>}
+            <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Ficha de Usuario</h3>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            {[
+              { l: 'Edad', v: profile.edad, u: 'Años', i: 'cake', c: 'blue', key: 'edad', type: 'number' },
+              { l: 'Peso', v: profile.peso, u: 'Lbs', i: 'fitness_center', c: 'orange', key: 'peso', type: 'number' },
+              { l: 'Cintura', v: profile.cintura, u: 'Cm', i: 'straighten', c: 'emerald', key: 'cintura' },
+              { l: 'Sangre', v: profile.sangre, u: 'Tipo', i: 'bloodtype', c: 'red', key: 'sangre' }
+            ].map(item => (
+              <div key={item.key} className="bg-white p-5 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-md transition-all">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className={`material-symbols-outlined text-sm text-${item.c}-500`}>{item.i}</span>
+                  <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest">{item.l}</p>
+                </div>
+                <div className="flex items-baseline gap-1">
+                  {isEditing ? (
+                    <input
+                      type={item.type || 'text'}
+                      value={(editData as any)[item.key] || ''}
+                      onChange={e => setEditData({ ...editData, [item.key]: e.target.value })}
+                      className="text-xl font-black text-slate-800 bg-transparent border-none p-0 focus:ring-0 w-full"
+                    />
+                  ) : <span className="text-2xl font-black text-slate-800 uppercase">{item.v || '--'}</span>}
+                  <span className="text-[10px] font-bold text-slate-300 uppercase">{item.u}</span>
+                </div>
               </div>
-            )}
+            ))}
+          </div>
+        </section>
+
+        {/* Clinical History & Observations */}
+        <div className={`space-y-6 ${showClinical ? 'block' : 'hidden'} animate-in slide-in-from-bottom-4`}>
+          <section className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm space-y-6 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-5">
+              <span className="material-symbols-outlined text-[100px]">medical_services</span>
+            </div>
+
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-6">
+                <span className="material-symbols-outlined text-blue-500 font-fill">biotech</span>
+                <h4 className="font-black text-slate-900 text-[10px] uppercase tracking-[0.2em]">Contexto Metabólico</h4>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Alergias Detectadas</label>
+                  {isEditing ? (
+                    <input
+                      value={editData.alergias || ''}
+                      onChange={e => setEditData({ ...editData, alergias: e.target.value })}
+                      className="w-full bg-slate-50 border-none rounded-2xl text-xs p-4 font-bold text-slate-700"
+                    />
+                  ) : (
+                    <div className="bg-blue-50/50 p-4 rounded-2xl border border-blue-100/50">
+                      <p className="text-xs font-bold text-slate-700 leading-relaxed">
+                        {profile.alergias || "Sin alergias críticas reportadas."}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Comorbilidades</label>
+                  {isEditing ? (
+                    <textarea
+                      value={(editData.comorbilidades || []).join(', ')}
+                      onChange={e => setEditData({ ...editData, comorbilidades: e.target.value.split(',').map(s => s.trim()) })}
+                      className="w-full bg-slate-50 border-none rounded-2xl text-xs p-4 font-bold text-slate-700 h-20"
+                      placeholder="Diabetes, Hipertensión..."
+                    />
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {profile.comorbilidades && profile.comorbilidades.length > 0 ? (
+                        profile.comorbilidades.map((c, i) => (
+                          <span key={i} className="text-[10px] font-black bg-slate-100 px-4 py-2 rounded-xl text-slate-600 border border-slate-100">{c}</span>
+                        ))
+                      ) : <p className="text-xs text-slate-400 italic px-1">Sin historial registrado.</p>}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Objetivos Bio-Hack</label>
+                  <div className="flex flex-wrap gap-2">
+                    {['Grasa %', 'Masa Muscular', 'Resistencia', 'Longevidad'].map(tag => (
+                      <span key={tag} className="text-[9px] font-black border border-slate-200 px-3 py-1.5 rounded-full text-slate-400 uppercase tracking-tight">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
           </section>
 
-          <section className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm">
-            <div className="flex items-center gap-3 mb-4">
-              <span className="material-symbols-outlined text-blue-500">vaccines</span>
-              <h4 className="font-black text-slate-800 text-sm uppercase tracking-wide">Alergias</h4>
+          {/* Observaciones Premium */}
+          <section className="bg-slate-900 p-8 rounded-[40px] text-white shadow-2xl shadow-slate-900/40 relative overflow-hidden group">
+            <div className="absolute -bottom-10 -right-10 size-40 bg-white/5 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-1000"></div>
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-4">
+                <span className="material-symbols-outlined text-amber-400 font-fill text-xl">shield_with_heart</span>
+                <h4 className="font-black text-[10px] uppercase tracking-[.2em] text-white/60">Notas Médicas Limitantes</h4>
+              </div>
+              {isEditing ? (
+                <textarea
+                  value={editData.observaciones || ''}
+                  onChange={e => setEditData({ ...editData, observaciones: e.target.value })}
+                  className="w-full bg-white/10 border-none rounded-2xl text-xs p-4 font-bold text-white focus:ring-0 h-24"
+                />
+              ) : (
+                <p className="text-xs leading-[1.8] italic font-medium text-white/90">
+                  {profile.observaciones || "Optimizado para protocolos de alta intensidad sin restricciones detectadas."}
+                </p>
+              )}
             </div>
-            {isEditing ? (
-              <textarea
-                value={editData.alergias || ''}
-                onChange={e => setEditData({ ...editData, alergias: e.target.value })}
-                className="w-full bg-slate-50 border-none rounded-xl text-sm focus:ring-primary h-24 p-3 font-medium text-slate-600"
-                placeholder="Penicilina, Mani..."
-              />
-            ) : (
-              <p className="text-sm font-medium text-slate-600">
-                {profile.alergias || "Sin alergias reportadas."}
-              </p>
-            )}
           </section>
         </div>
 
-        <section className="bg-slate-900 p-6 rounded-[32px] text-white shadow-xl shadow-slate-900/20">
-          <div className="flex items-center gap-3 mb-3">
-            <span className="material-symbols-outlined text-amber-400 font-fill">warning</span>
-            <h4 className="font-black text-[10px] uppercase tracking-widest opacity-60 text-white">Observaciones Limitantes</h4>
-          </div>
-          {isEditing ? (
-            <textarea
-              value={editData.observaciones || ''}
-              onChange={e => setEditData({ ...editData, observaciones: e.target.value })}
-              className="w-full bg-white/10 border-none rounded-xl text-sm focus:ring-white h-24 p-3 font-medium text-white"
-            />
-          ) : (
-            <p className="text-sm font-medium leading-relaxed italic opacity-90">
-              {profile.observaciones || "El paciente no presenta limitantes reportadas."}
-            </p>
-          )}
-        </section>
-
-        {/* Emergency Card */}
-        <section className="bg-red-50 p-6 rounded-[32px] border border-red-100 flex items-center justify-between group">
-          <div className="flex items-center gap-4">
-            <div className="size-12 bg-white rounded-2xl flex items-center justify-center text-red-500 shadow-sm border border-red-100 group-hover:scale-110 transition-transform">
-              <span className="material-symbols-outlined font-fill">sos</span>
+        {/* SOS Card Refactored */}
+        <section className="bg-red-50 p-7 rounded-[40px] border border-red-100 flex items-center justify-between group active:scale-[0.98] transition-all">
+          <div className="flex items-center gap-5">
+            <div className="size-14 bg-white rounded-[24px] flex items-center justify-center text-red-500 shadow-sm border border-red-100 group-hover:rotate-12 transition-transform duration-500">
+              <span className="material-symbols-outlined font-fill text-2xl">health_and_safety</span>
             </div>
             <div>
-              <p className="text-[10px] text-red-400 font-black uppercase mb-0.5 tracking-wider">Contacto de Emergencia</p>
+              <p className="text-[9px] text-red-400 font-black uppercase tracking-widest mb-1">Emergencia 24/7</p>
               {isEditing ? (
                 <input
                   value={editData.emergencia || ''}
                   onChange={e => setEditData({ ...editData, emergencia: e.target.value })}
                   className="text-lg font-black text-slate-900 bg-transparent border-none p-0 focus:ring-0 w-32"
                 />
-              ) : <p className="text-lg font-black text-slate-900">{profile.emergencia || "No asignado"}</p>}
+              ) : <p className="text-lg font-black text-slate-900 tracking-tight">{profile.emergencia || "Configurar Contacto"}</p>}
             </div>
           </div>
           {(profile.emergencia && !isEditing) && (
-            <a href={`tel:${profile.emergencia}`} className="size-12 bg-red-500 rounded-full flex items-center justify-center text-white shadow-lg shadow-red-500/30 active:scale-90 transition-all">
-              <span className="material-symbols-outlined font-fill text-xl">call</span>
+            <a href={`tel:${profile.emergencia}`} className="size-14 bg-red-600 rounded-full flex items-center justify-center text-white shadow-xl shadow-red-600/30 active:scale-90 transition-all">
+              <span className="material-symbols-outlined font-fill text-2xl">call</span>
             </a>
           )}
         </section>
+
+        <div className="pt-6 text-center">
+          <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.4em]">MN-NutriApp Pro v34.1</p>
+        </div>
       </main>
     </div>
   );
