@@ -160,31 +160,29 @@ const InventoryView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => 
             <main className="px-6 py-8 space-y-10">
                 {activeTab === 'shopping' ? (
                     <div className="animate-in slide-in-from-bottom-4 duration-700">
-                        <div className="flex border-b border-slate-50 pb-6 mb-8 items-center justify-between gap-3">
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={resetList}
-                                    className="bg-red-50 text-red-500 px-5 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-wider active:scale-95 transition-all border border-red-100 flex items-center gap-2"
-                                >
-                                    <span className="material-symbols-outlined text-sm">restart_alt</span>
-                                    REINICIAR
-                                </button>
-                                <button
-                                    onClick={handleSync}
-                                    className="bg-primary/5 text-primary px-5 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-wider active:scale-95 transition-all border border-primary/10 flex items-center gap-2"
-                                >
-                                    <span className="material-symbols-outlined text-sm">sync</span>
-                                    SINCRONIZAR
-                                </button>
-                                <button
-                                    onClick={handleShareList}
-                                    className="bg-emerald-50 text-emerald-600 px-5 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-wider active:scale-95 transition-all border border-emerald-100 flex items-center gap-2"
-                                >
-                                    <span className="material-symbols-outlined text-sm">share</span>
-                                    COMPARTIR
-                                </button>
-                            </div>
-                            <label className="flex items-center gap-3 cursor-pointer group">
+                        <div className="flex flex-wrap border-b border-slate-50 pb-6 mb-8 items-center gap-2">
+                            <button
+                                onClick={resetList}
+                                className="bg-red-50 text-red-500 px-3 py-3 rounded-2xl text-[10px] font-black uppercase tracking-wider active:scale-95 transition-all border border-red-100 flex items-center gap-1.5"
+                            >
+                                <span className="material-symbols-outlined text-sm">restart_alt</span>
+                                REINICIAR
+                            </button>
+                            <button
+                                onClick={handleSync}
+                                className="bg-primary/5 text-primary px-3 py-3 rounded-2xl text-[10px] font-black uppercase tracking-wider active:scale-95 transition-all border border-primary/10 flex items-center gap-1.5"
+                            >
+                                <span className="material-symbols-outlined text-sm">sync</span>
+                                SYNC
+                            </button>
+                            <button
+                                onClick={handleShareList}
+                                className="bg-emerald-50 text-emerald-600 px-3 py-3 rounded-2xl text-[10px] font-black uppercase tracking-wider active:scale-95 transition-all border border-emerald-100 flex items-center gap-1.5"
+                            >
+                                <span className="material-symbols-outlined text-sm">share</span>
+                                ENVIAR
+                            </button>
+                            <label className="flex items-center gap-2 cursor-pointer group ml-auto">
                                 <div className="relative">
                                     <input
                                         type="checkbox"
@@ -195,7 +193,7 @@ const InventoryView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => 
                                     <div className="size-6 rounded-lg border-2 border-slate-200 transition-all peer-checked:bg-primary peer-checked:border-primary"></div>
                                     <span className="absolute inset-0 flex items-center justify-center text-white scale-0 transition-transform peer-checked:scale-100 material-symbols-outlined text-[18px]">check</span>
                                 </div>
-                                <span className="text-[11px] text-slate-400 font-black uppercase tracking-tight group-hover:text-slate-600 transition-colors">MOSTRAR TODO</span>
+                                <span className="text-[10px] text-slate-400 font-black uppercase tracking-tight group-hover:text-slate-600 transition-colors">TODO</span>
                             </label>
                         </div>
 

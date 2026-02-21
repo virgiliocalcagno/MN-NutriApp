@@ -43,7 +43,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto bg-white h-screen shadow-2xl relative flex flex-col overflow-hidden">
+    <div className="max-w-md mx-auto bg-white h-screen shadow-2xl relative flex flex-col overflow-hidden overflow-x-hidden">
       {currentView !== 'inventory' && currentView !== 'welcome' && (
         <TopNav currentView={currentView} setCurrentView={setCurrentView} />
       )}
