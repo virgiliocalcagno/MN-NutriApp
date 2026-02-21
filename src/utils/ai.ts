@@ -99,7 +99,7 @@ export const processPdfWithGemini = async (
   pdfEvalBase64?: string,
   apiKey?: string
 ): Promise<AIResponse> => {
-  if (apiKey && apiKey !== 'AIzaSyAF5rs3cJFs_E6S7ouibqs7B2fgVRDLzc0') {
+  if (apiKey && apiKey.length > 20) {
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash", generationConfig: { temperature: 0 } });
@@ -213,7 +213,7 @@ RESPONDE UNICAMENTE CON ESTE FORMATO JSON:
 export const analyzeImageWithGemini = async (base64Image: string, perfil?: any, apiKey?: string) => {
   try {
     const cleanBase64 = base64Image.replace(/^data:image\/\w+;base64,/, "");
-    if (apiKey && apiKey !== 'AIzaSyAF5rs3cJFs_E6S7ouibqs7B2fgVRDLzc0') {
+    if (apiKey && apiKey.length > 20) {
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
