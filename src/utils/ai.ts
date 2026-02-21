@@ -61,22 +61,35 @@ Genera el array "compras" siguiendo ESTOS PASOS EXACTOS:
 PASO 1 - ESCANEO EXHAUSTIVO:
 Lee CADA comida de CADA dia que aparezca en el PDF, sin importar cuantos dias o tiempos de comida tenga el plan. Recorre TODOS los dias y TODOS los tiempos de comida presentes (DESAYUNO, MERIENDA, ALMUERZO, CENA, etc.). NO te saltes NINGUN dia ni NINGUN tiempo de comida que exista en el documento.
 
-PASO 2 - EXTRACCION LITERAL:
-Para cada comida, extrae TODOS los ingredientes mencionados. Manten los nombres COMPUESTOS tal como aparecen en el PDF.
-CORRECTO: "Aceite de oliva", "Galletas de arroz", "Pan pita integral", "Aceite de coco", "Platano verde", "Platano maduro", "Queso mozzarella", "Col rizada", "Proteina en polvo"
-INCORRECTO: NO separes "Aceite de oliva" en "Aceite" y "Oliva". NO separes "Galletas de arroz" en "Galletas" y "Arroz". NO omitas ingredientes como condimentos, frutas o vegetales.
+PASO 2 - EXTRACCION Y CONVERSION A PRODUCTOS DE SUPERMERCADO:
+Para cada comida, extrae TODOS los ingredientes. PERO convierte cada ingrediente de receta a un PRODUCTO REAL que se compra en un supermercado de Republica Dominicana.
+CONVERSIONES OBLIGATORIAS:
+- "Claras de huevo" o "Clara de huevo" -> "Huevos" (se compran enteros, el usuario usa la clara)
+- "Pechuga de pollo" o "Pollo desmechado" -> "Pechuga de pollo"
+- "Carne molida de res" -> "Carne molida"
+- "Filete de salmon" -> "Salmon"
+- "Jugo de limon" -> "Limones"
+- "Dientes de ajo" -> "Ajo"
+MANTENER como producto propio: "Aceite de oliva", "Galletas de arroz", "Pan pita integral", "Proteina en polvo", "Queso mozzarella", "Col rizada", "Pastrami de pavo"
 
 PASO 2.5 - SEPARACION DE INGREDIENTES COMBINADOS:
-Si el PDF describe una comida con multiples ingredientes unidos por "y", "con", "+" o comas, SEPARALOS en productos individuales de supermercado.
+Si el PDF describe una comida con multiples ingredientes unidos por "y", "con", "+" o comas, SEPARALOS en productos individuales.
 Ejemplo: "Pastrami de pavo y queso" -> DOS items: "Pastrami de pavo" y "Queso"
 Ejemplo: "Tortilla con pollo y aguacate" -> TRES items: "Tortilla", "Pollo", "Aguacate"
-Ejemplo: "Ensalada de atun con lechuga y tomate" -> TRES items: "Atun", "Lechuga", "Tomate"
-EXCEPCION: NO separes nombres propios de productos como "Aceite de oliva", "Pan pita integral", "Galletas de arroz", "Col rizada", "Proteina en polvo". Estos son UN SOLO producto.
+EXCEPCION: NO separes nombres propios de productos como "Aceite de oliva", "Pan pita integral", "Galletas de arroz", "Col rizada", "Proteina en polvo".
 
-PASO 3 - CONSOLIDACION SIN DUPLICADOS:
-Agrupa ingredientes identicos en UNA SOLA entrada. Suma la cantidad total semanal. Ejemplo:
-Si "Aceite de oliva 1 cdta" aparece en 14 comidas: ["Aceite de oliva", "14 cdtas semanal", 1, "Aceites y Condimentos", "Aceites y Condimentos"]
-Si "Tortilla integral" aparece 5 veces: ["Tortilla integral", "5 unidades", 1, "Panaderia y Tortillas", "Panaderia"]
+PASO 3 - CONSOLIDACION Y CALCULO SEMANAL EN UNIDADES DOMINICANAS:
+Agrupa ingredientes identicos. Calcula la cantidad TOTAL SEMANAL y expresala en las unidades que se VENDEN en los supermercados de Republica Dominicana:
+- Carnes: en LIBRAS (lb). Ejemplo: "2 lb semanal"
+- Huevos: en UNIDADES o CARTON. Si necesita 15 huevos -> "1 carton (30 uds)" porque se vende en carton de 15 o 30
+- Frutas y verduras: en UNIDADES o LIBRAS. Ejemplo: "7 unidades", "2 lb semanal"
+- Lacteos y quesos: en ONZAS (oz) o UNIDADES. Ejemplo: "16 oz", "1 paquete"
+- Arroz, avena, granos: en LIBRAS. Ejemplo: "2 lb"
+- Aceites: en ONZAS (oz) o BOTELLA. Ejemplo: "1 botella"
+- Pan, tortillas, casabe, galletas: en PAQUETES o UNIDADES. Ejemplo: "2 paquetes"
+- Tuberculos (platano, batata): en UNIDADES. Ejemplo: "14 unidades"
+- Embutidos: en LIBRAS o PAQUETE. Ejemplo: "1 lb", "1 paquete"
+NO uses kilos, gramos, mililitros ni cucharaditas. Solo unidades dominicanas: libras, onzas, unidades, paquetes, carton, docena, botella.
 
 PASO 4 - CATEGORIZACION POR PASILLO DE SUPERMERCADO:
 Usa EXACTAMENTE estos pasillos (columna 4 = Categoria, columna 5 = Pasillo):
@@ -93,7 +106,7 @@ Usa EXACTAMENTE estos pasillos (columna 4 = Categoria, columna 5 = Pasillo):
 - Embutidos: jamon, pastrami de pavo. Pasillo: "Embutidos"
 
 PASO 5 - VERIFICACION FINAL:
-Antes de devolver el JSON, revisa tu lista contra el PDF original. Cada ingrediente mencionado en cualquier comida DEBE estar presente en el array "compras". Si sospechas que faltan ingredientes, relee el PDF y agregalos.
+Revisa tu lista contra el PDF. Cada ingrediente DEBE estar presente como producto de supermercado. Verifica que NO haya ingredientes de receta (claras, dientes de ajo, etc.) sino productos comprables. Verifica que las cantidades esten en unidades dominicanas.
 
 RESPONDE UNICAMENTE CON ESTE FORMATO JSON:
 {
