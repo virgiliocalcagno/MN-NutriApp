@@ -34,6 +34,63 @@ export interface RecipeDetails {
   };
 }
 
+// Maps recipe ingredient names to actual supermarket product names
+const INGREDIENT_TO_PRODUCT: Record<string, string> = {
+  'clara de huevo': 'Huevos',
+  'claras de huevo': 'Huevos',
+  'yema de huevo': 'Huevos',
+  'yemas de huevo': 'Huevos',
+  'huevo entero': 'Huevos',
+  'dientes de ajo': 'Ajo',
+  'diente de ajo': 'Ajo',
+  'jugo de limon': 'Limones',
+  'zumo de limon': 'Limones',
+  'jugo de naranja': 'Naranjas',
+  'filete de salmon': 'Salmon',
+  'filetes de salmon': 'Salmon',
+  'filete de pescado': 'Pescado',
+  'carne molida de res': 'Carne molida',
+  'pollo desmechado': 'Pechuga de pollo',
+  'pollo desmenuzado': 'Pechuga de pollo',
+  'pechuga de pollo desmechada': 'Pechuga de pollo',
+  'hojas de espinaca': 'Espinaca',
+  'hojas de lechuga': 'Lechuga',
+  'rodajas de tomate': 'Tomate',
+  'tiras de pimiento': 'Pimiento',
+  'ralladura de limon': 'Limones',
+};
+
+// Post-process AI compras to normalize ingredient names to real products
+const normalizeCompras = (data: AIResponse): AIResponse => {
+  if (!data.compras || !Array.isArray(data.compras)) return data;
+
+  const normalized = data.compras.map(item => {
+    if (!Array.isArray(item) || item.length < 1) return item;
+    const name = item[0];
+    const nameLower = name.toLowerCase().trim();
+    const mapped = INGREDIENT_TO_PRODUCT[nameLower];
+    if (mapped) {
+      return [mapped, ...item.slice(1)] as typeof item;
+    }
+    return item;
+  });
+
+  // Deduplicate after normalization (e.g. if 'Claras de huevo' and 'Huevo' both became 'Huevos')
+  const seen = new Map<string, number>();
+  const deduped: typeof normalized = [];
+  for (const item of normalized) {
+    const key = item[0].toLowerCase();
+    if (seen.has(key)) {
+      // Already exists, skip duplicate (keep first occurrence)
+      continue;
+    }
+    seen.set(key, deduped.length);
+    deduped.push(item);
+  }
+
+  return { ...data, compras: deduped };
+};
+
 const CLOUD_FUNCTION_URL = 'https://us-central1-mn-nutriapp.cloudfunctions.net/procesarNutricion';
 
 export const processPdfWithGemini = async (
@@ -131,7 +188,7 @@ RESPONDE UNICAMENTE CON ESTE FORMATO JSON:
       const result = await model.generateContent(parts);
       const responseText = result.response.text();
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) return JSON.parse(jsonMatch[0]) as AIResponse;
+      if (jsonMatch) return normalizeCompras(JSON.parse(jsonMatch[0]) as AIResponse);
       throw new Error("Formato inválido");
     } catch (e: any) {
       console.warn("Gemini 2.5 falló, intentando Fallback...", e?.message || e?.status || e);
@@ -146,7 +203,7 @@ RESPONDE UNICAMENTE CON ESTE FORMATO JSON:
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ perfil: JSON.stringify(perfil), pdfPlan: cleanPlan, pdfEval: cleanEval })
     });
-    return await response.json();
+    return normalizeCompras(await response.json());
   } catch (error: any) {
     console.error("AI Critical Error:", error);
     throw error;
