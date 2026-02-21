@@ -62,8 +62,9 @@ REGLA MÁS IMPORTANTE — LISTA DE COMPRAS:
 Genera el array "compras" siguiendo ESTOS PASOS EXACTOS:
 
 PASO 1 — ESCANEO EXHAUSTIVO:
-Lee CADA comida de CADA día (DOMINGO a SÁBADO, DESAYUNO → MERIENDA_AM → ALMUERZO → MERIENDA_PM → CENA). 
-NO te saltes NINGÚN día ni NINGÚN tiempo de comida. Son 7 días × 5 comidas = hasta 35 bloques.
+Lee CADA comida de CADA día que aparezca en el PDF, sin importar cuántos días o tiempos de comida tenga el plan.
+Recorre TODOS los días (puede ser de DOMINGO a SÁBADO, o menos) y TODOS los tiempos de comida presentes (DESAYUNO, MERIENDA, ALMUERZO, CENA, etc.).
+NO te saltes NINGÚN día ni NINGÚN tiempo de comida que exista en el documento.
 
 PASO 2 — EXTRACCIÓN LITERAL:
 Para cada comida, extrae TODOS los ingredientes mencionados. 
@@ -95,7 +96,7 @@ Usa EXACTAMENTE estos pasillos (columna 4 = Categoría, columna 5 = Pasillo):
   • Embutidos: jamón, pastrami de pavo (Pasillo: "Embutidos")
 
 PASO 5 — VERIFICACIÓN FINAL:
-Antes de devolver el JSON, verifica que tu lista tenga al menos 30 ingredientes únicos para un plan semanal completo. Si tienes menos de 25, REVISA de nuevo el PDF porque seguramente te faltaron ingredientes.
+Antes de devolver el JSON, revisa tu lista contra el PDF original. Cada ingrediente mencionado en cualquier comida DEBE estar presente en el array "compras". Si sospechas que faltan ingredientes, relee el PDF y agrégalos.
 
 RESPONDE ÚNICAMENTE CON ESTE FORMATO JSON:
 {
