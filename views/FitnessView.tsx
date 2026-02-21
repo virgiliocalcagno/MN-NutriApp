@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useStore } from '@/src/context/StoreContext';
-import { analyzeImageWithGemini } from '@/src/utils/ai';
+import { analyzeImageWithGemini, getFitnessAdvice } from '@/src/utils/ai';
 
 const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
   const { store, saveStore } = useStore();
@@ -8,6 +8,8 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
   const [showHistory, setShowHistory] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const longPressTimer = useRef<number | null>(null);
+  const [aiAdvice, setAiAdvice] = useState<string | null>(null);
+  const [isGeneratingAdvice, setIsGeneratingAdvice] = useState(false);
 
   // --- Fit Logic (from CP002) ---
   const meta = store.profile?.metaAgua || 2800;
@@ -100,6 +102,19 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
     if (pos === -1) newDone.push(idx);
     else newDone.splice(pos, 1);
     saveStore({ ...store, doneEx: { ...store.doneEx, [displayDay]: newDone } });
+  };
+
+  const handleGenerateAdvice = async () => {
+    if (!store.profile) return;
+    setIsGeneratingAdvice(true);
+    try {
+      const advice = await getFitnessAdvice(store.profile, store.firebaseConfig?.geminiApiKey || '');
+      setAiAdvice(advice);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsGeneratingAdvice(false);
+    }
   };
 
   // --- Video Parsing ---
@@ -267,6 +282,65 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
           <div className="flex items-center justify-between px-1">
             <h3 className="text-lg font-bold text-slate-900">Entrenamiento</h3>
             <span className="text-xs font-bold text-primary bg-primary/5 px-3 py-1 rounded-full uppercase">{displayDay}</span>
+          </div>
+
+          {/* AI Recommendations Section */}
+          <div className="bg-slate-900 p-6 rounded-[32px] shadow-2xl shadow-slate-900/20 border border-white/5 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+              <span className="material-symbols-outlined text-[60px] text-white">psychology</span>
+            </div>
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <span className="size-2 bg-primary rounded-full animate-pulse"></span>
+                  <p className="text-[10px] text-white/40 font-black uppercase tracking-[0.2em]">Bio-Análisis IA</p>
+                </div>
+                <button
+                  onClick={handleGenerateAdvice}
+                  disabled={isGeneratingAdvice}
+                  className="bg-white/10 hover:bg-white/20 text-white size-8 rounded-xl flex items-center justify-center transition-all active:scale-95 disabled:opacity-50"
+                >
+                  <span className={`material-symbols-outlined text-lg ${isGeneratingAdvice ? 'animate-spin' : ''}`}>sync</span>
+                </button>
+              </div>
+
+              {!aiAdvice && !isGeneratingAdvice && (
+                <div className="py-2">
+                  <h4 className="text-white font-black text-sm mb-1 uppercase">Recomendaciones de Élite</h4>
+                  <p className="text-white/30 text-[10px] leading-relaxed">Analiza tu perfil clínico para recibir ajustes técnicos personalizados.</p>
+                  <button
+                    onClick={handleGenerateAdvice}
+                    className="mt-4 w-full bg-primary text-white py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20"
+                  >
+                    GENERAR PROTOCOLO
+                  </button>
+                </div>
+              )}
+
+              {isGeneratingAdvice && (
+                <div className="py-4 space-y-2">
+                  <div className="h-4 bg-white/5 rounded-lg animate-pulse w-3/4"></div>
+                  <div className="h-4 bg-white/5 rounded-lg animate-pulse w-1/2"></div>
+                  <div className="h-4 bg-white/5 rounded-lg animate-pulse w-2/3"></div>
+                </div>
+              )}
+
+              {aiAdvice && !isGeneratingAdvice && (
+                <div className="space-y-3 py-2">
+                  {aiAdvice.split('\n').filter(l => l.trim()).map((line, i) => (
+                    <div key={i} className="flex gap-3 items-start bg-white/5 p-3 rounded-2xl border border-white/5">
+                      <p className="text-xs text-blue-200 font-medium leading-relaxed">{line}</p>
+                    </div>
+                  ))}
+                  {store.profile?.comorbilidades.includes('Hipertensión') && (
+                    <div className="flex items-center gap-2 bg-red-500/10 p-3 rounded-2xl border border-red-500/20 mt-2">
+                      <span className="material-symbols-outlined text-red-500 text-sm">warning</span>
+                      <p className="text-[9px] text-red-400 font-black uppercase tracking-widest">Alerta HTA: Evitar Valsalva</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Exercises */}

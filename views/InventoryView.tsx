@@ -240,20 +240,20 @@ const InventoryView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => 
 
             {/* Level Selector Modal */}
             {selectedItemForStatus && (
-                <div className="fixed inset-0 z-[100] flex items-end justify-center p-6 animate-in fade-in duration-300">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
                     <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={() => setSelectedItemForStatus(null)}></div>
-                    <div className="relative w-full max-w-lg bg-white rounded-[48px] p-10 space-y-8 animate-in slide-in-from-bottom duration-500 shadow-2xl">
+                    <div className="relative w-full max-w-sm bg-white rounded-[40px] p-8 space-y-6 animate-in zoom-in duration-400 shadow-2xl">
                         <div className="flex items-center justify-between">
                             <div>
-                                <h3 className="text-[22px] font-black text-slate-900 tracking-tight leading-none">{selectedItemForStatus.name}</h3>
-                                <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mt-3">Estado de Abastecimiento</p>
+                                <h3 className="text-[20px] font-black text-slate-900 tracking-tight leading-none">{selectedItemForStatus.name}</h3>
+                                <p className="text-[9px] text-slate-400 font-black uppercase tracking-[0.2em] mt-3">Estado de Abastecimiento</p>
                             </div>
-                            <button onClick={() => setSelectedItemForStatus(null)} className="size-14 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center active:scale-90 transition-all border border-slate-100">
-                                <span className="material-symbols-outlined">close</span>
+                            <button onClick={() => setSelectedItemForStatus(null)} className="size-11 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center active:scale-90 transition-all border border-slate-100">
+                                <span className="material-symbols-outlined text-xl">close</span>
                             </button>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-3">
                             {[
                                 { lv: 1, label: 'AGOTADO', color: 'bg-red-50 text-red-500 border-red-100 ring-red-500/10' },
                                 { lv: 2, label: 'STOCK BAJO', color: 'bg-orange-50 text-orange-500 border-orange-100 ring-orange-500/10' },
@@ -263,10 +263,10 @@ const InventoryView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => 
                                 <button
                                     key={opt.lv}
                                     onClick={() => { updateItemLevel(selectedItemForStatus.id, opt.lv); setSelectedItemForStatus(null); }}
-                                    className={`p-7 rounded-[32px] border-2 flex flex-col items-center gap-4 active:scale-[0.97] transition-all ${opt.lv === selectedItemForStatus.level ? `${opt.color} ring-4 border-transparent` : 'bg-white border-slate-100 text-slate-400'}`}
+                                    className={`p-5 rounded-[28px] border-[1.5px] flex flex-col items-center gap-3 active:scale-[0.97] transition-all ${opt.lv === selectedItemForStatus.level ? `${opt.color} ring-4 border-transparent` : 'bg-white border-slate-100 text-slate-400'}`}
                                 >
-                                    <div className={`size-3 rounded-full ${opt.lv === 1 ? 'bg-red-500' : opt.lv === 2 ? 'bg-orange-500' : opt.lv === 3 ? 'bg-yellow-400' : 'bg-primary'}`}></div>
-                                    <span className="text-[11px] font-black tracking-widest leading-none">{opt.label}</span>
+                                    <div className={`size-2.5 rounded-full ${opt.lv === 1 ? 'bg-red-500' : opt.lv === 2 ? 'bg-orange-500' : opt.lv === 3 ? 'bg-yellow-400' : 'bg-primary'}`}></div>
+                                    <span className="text-[10px] font-black tracking-widest leading-none">{opt.label}</span>
                                 </button>
                             ))}
                         </div>

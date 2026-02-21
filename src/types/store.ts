@@ -12,6 +12,7 @@ export interface Profile {
     doctor: string;
     edad: string;
     peso: string;
+    pesoObjetivo?: string;
     sexo: string;
     pesoIdeal: string;
     metaAgua: number;
@@ -23,6 +24,7 @@ export interface Profile {
     emergencia: string;
     observaciones: string;
     sangre: string;
+    tipoSangre?: string;
     alergias: string;
     objetivos: string[];
     comorbilidades: string[];
@@ -94,6 +96,7 @@ export interface Store {
     lastScan: any | null;
     lastUpdateDate: string; // ISO date string YYYY-MM-DD
     profiles: Record<string, Partial<Store>>; // Multi-user isolation
+    firebaseConfig?: { geminiApiKey: string };
 }
 
 export const initialStore: Store = {
@@ -111,9 +114,9 @@ export const initialStore: Store = {
     schedule: null,
     profile: {
         paciente: '', doctor: '', edad: '', peso: '', sexo: 'Hombre', pesoIdeal: '',
-        metaAgua: 2800, estatura: '', cintura: '', cuello: '', brazos: '', grasa: '',
+        pesoObjetivo: '', metaAgua: 2800, estatura: '', cintura: '', cuello: '', brazos: '', grasa: '',
         emergencia: '', observaciones: '',
-        sangre: '', alergias: '', objetivos: [], comorbilidades: [],
+        sangre: '', tipoSangre: '', alergias: '', objetivos: [], comorbilidades: [],
         suplementos: [], proximaCita: '',
         evolution: []
     },
@@ -124,5 +127,6 @@ export const initialStore: Store = {
     caloriesTarget: 2000,
     lastScan: null,
     lastUpdateDate: new Date().toISOString().split('T')[0],
-    profiles: {}
+    profiles: {},
+    firebaseConfig: { geminiApiKey: '' }
 };

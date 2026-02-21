@@ -298,8 +298,8 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm flex flex-col items-center">
-              <div className="size-10 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-4">
+            <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm flex flex-col items-center group hover:border-blue-200 transition-all">
+              <div className="size-10 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <span className="material-symbols-outlined text-xl">height</span>
               </div>
               <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mb-1">Estatura</p>
@@ -316,14 +316,21 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm flex flex-col items-center">
-              <div className="size-10 bg-orange-50 text-orange-600 rounded-2xl flex items-center justify-center mb-4">
-                <span className="material-symbols-outlined text-xl">monitor_weight</span>
+            <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm flex flex-col items-center group hover:border-orange-200 transition-all">
+              <div className="size-10 bg-orange-50 text-orange-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <span className="material-symbols-outlined text-xl">track_changes</span>
               </div>
-              <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mb-1">BMI Index</p>
+              <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mb-1">Peso Objetivo</p>
               <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-black text-slate-800">{bmi}</span>
-                <span className="text-[10px] font-bold text-slate-300 uppercase">Score</span>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editData.pesoObjetivo || ''}
+                    onChange={e => setEditData({ ...editData, pesoObjetivo: e.target.value })}
+                    className="text-xl font-black text-slate-800 bg-transparent border-none p-0 focus:ring-0 w-16 text-center"
+                  />
+                ) : <span className="text-2xl font-black text-orange-600 font-fill">{profile.pesoObjetivo || '--'}</span>}
+                <span className="text-[10px] font-bold text-slate-300 uppercase">Lbs</span>
               </div>
             </div>
           </div>
@@ -341,9 +348,9 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
           <div className="grid grid-cols-2 gap-4">
             {[
               { l: 'Edad', v: profile.edad, u: 'Años', i: 'cake', c: 'blue', key: 'edad', type: 'number' },
-              { l: 'Peso', v: profile.peso, u: 'Lbs', i: 'fitness_center', c: 'orange', key: 'peso', type: 'number' },
-              { l: 'Cintura', v: profile.cintura, u: 'Cm', i: 'straighten', c: 'emerald', key: 'cintura' },
-              { l: 'Sangre', v: profile.sangre, u: 'Tipo', i: 'bloodtype', c: 'red', key: 'sangre' }
+              { l: 'Peso Actual', v: profile.peso, u: 'Lbs', i: 'monitor_weight', c: 'orange', key: 'peso', type: 'number' },
+              { l: 'T. Sangre', v: profile.tipoSangre || profile.sangre, u: 'Gnd', i: 'bloodtype', c: 'red', key: 'tipoSangre' },
+              { l: 'Cintura', v: profile.cintura, u: 'Cm', i: 'straighten', c: 'emerald', key: 'cintura' }
             ].map(item => (
               <div key={item.key} className="bg-white p-5 rounded-[32px] border border-slate-100 shadow-sm hover:shadow-md transition-all">
                 <div className="flex items-center gap-2 mb-3">
@@ -398,33 +405,48 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
                 </div>
 
                 <div>
-                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Comorbilidades</label>
-                  {isEditing ? (
-                    <textarea
-                      value={(editData.comorbilidades || []).join(', ')}
-                      onChange={e => setEditData({ ...editData, comorbilidades: e.target.value.split(',').map(s => s.trim()) })}
-                      className="w-full bg-slate-50 border-none rounded-2xl text-xs p-4 font-bold text-slate-700 h-20"
-                      placeholder="Diabetes, Hipertensión..."
-                    />
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {profile.comorbilidades && profile.comorbilidades.length > 0 ? (
-                        profile.comorbilidades.map((c, i) => (
-                          <span key={i} className="text-[10px] font-black bg-slate-100 px-4 py-2 rounded-xl text-slate-600 border border-slate-100">{c}</span>
-                        ))
-                      ) : <p className="text-xs text-slate-400 italic px-1">Sin historial registrado.</p>}
-                    </div>
-                  )}
+                  <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Condiciones Médicas</label>
+                  <div className="flex flex-wrap gap-2">
+                    {['Hipertensión', 'Diabetes', 'Tiroides', 'Colesterol'].map(cond => {
+                      const isActive = (profile.comorbilidades || []).includes(cond);
+                      return (
+                        <button
+                          key={cond}
+                          onClick={() => {
+                            if (!isEditing) return;
+                            const currentList = editData.comorbilidades || [];
+                            const newList = currentList.includes(cond) ? currentList.filter(c => c !== cond) : [...currentList, cond];
+                            setEditData({ ...editData, comorbilidades: newList });
+                          }}
+                          className={`text-[9px] font-black px-4 py-2 rounded-xl transition-all border ${isActive ? 'bg-red-50 text-red-500 border-red-100' : 'bg-slate-50 text-slate-300 border-slate-100'}`}
+                        >
+                          {cond.toUpperCase()}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 <div>
                   <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Objetivos Bio-Hack</label>
                   <div className="flex flex-wrap gap-2">
-                    {['Grasa %', 'Masa Muscular', 'Resistencia', 'Longevidad'].map(tag => (
-                      <span key={tag} className="text-[9px] font-black border border-slate-200 px-3 py-1.5 rounded-full text-slate-400 uppercase tracking-tight">
-                        {tag}
-                      </span>
-                    ))}
+                    {['Bajar Peso', 'Masa Muscular', 'Grasa Corporal', 'Cardiovascular'].map(obj => {
+                      const isActive = (profile.objetivos || []).includes(obj);
+                      return (
+                        <button
+                          key={obj}
+                          onClick={() => {
+                            if (!isEditing) return;
+                            const currentList = editData.objetivos || [];
+                            const newList = currentList.includes(obj) ? currentList.filter(o => o !== obj) : [...currentList, obj];
+                            setEditData({ ...editData, objetivos: newList });
+                          }}
+                          className={`text-[9px] font-black px-4 py-2 rounded-xl transition-all border ${isActive ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-300 border-slate-100'}`}
+                        >
+                          {obj.toUpperCase()}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 

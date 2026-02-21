@@ -64,12 +64,14 @@ export const processPdfWithGemini = async (
                     "doctor": "...", 
                     "edad": "...", 
                     "peso": "...", 
+                    "pesoObjetivo": "...",
                     "estatura": "...", 
                     "cintura": "...", 
                     "cuello": "...", 
                     "brazos": "...",
                     "grasa": "...",
                     "sangre": "...", 
+                    "tipoSangre": "...",
                     "alergias": "...", 
                     "objetivos": [], 
                     "comorbilidades": [],
@@ -234,31 +236,76 @@ REGLAS:
           }
         };
       }
-    } catch (e) {
-      console.error("Gemini v31.1 Error Crítico:", e);
-      if (e instanceof Error) {
-        console.error("Mensaje Error:", e.message);
-      }
+      return {
+        titulo: "Error",
+        kcal: 0,
+        ingredientes: [],
+        preparacion: [],
+        bioHack: { titulo: "Error", explicacion: "No se pudo generar la receta.", pasos: [] },
+        nutrientes: { proteina: "", grasas: "", carbos: "" }
+      };
     }
+  } catch (e) {
+    console.error("Gemini v31.1 Error Crítico:", e);
+    return {
+      titulo: "Error de Conexión",
+      kcal: 0,
+      ingredientes: [],
+      preparacion: [],
+      bioHack: { titulo: "Error", explicacion: "Error de conexión con la IA.", pasos: [] },
+      nutrientes: { proteina: "", grasas: "", carbos: "" }
+    };
   }
+}
 
-  // FALLBACK v31.1
-  return {
-    titulo: mealDesc,
-    kcal: 0,
-    ingredientes: ["Ingredientes del plato"],
-    preparacion: [
-      { titulo: "Preparación base", descripcion: "Acondiciona el ingrediente principal retirando humedad." },
-      { titulo: "Cocción", descripcion: "Aplica la técnica de calor principal respetando los tiempos." },
-      { titulo: "Ensamble", descripcion: "Integra los acompañamientos en una base armónica." },
-      { titulo: "Finalización", descripcion: "Toque de aceite de oliva en crudo para realzar sabores." }
-    ],
-    bioHack: {
-      titulo: "SECUENCIACIÓN METABÓLICA",
-      pasos: ["1. Vegetales (Fibra)", "2. Proteína", "3. Carbohidratos"],
-      explicacion: "Consume en este orden para optimizar tu curva de glucosa."
-    },
-    nutrientes: { proteina: "", grasas: "", carbos: "" },
-    imageUrl: `https://via.placeholder.com/600x400.png?text=${encodeURIComponent(mealDesc)}`
-  };
+// FALLBACK v31.1
+return {
+  titulo: mealDesc,
+  kcal: 0,
+  ingredientes: ["Ingredientes del plato"],
+  preparacion: [
+    { titulo: "Preparación base", descripcion: "Acondiciona el ingrediente principal retirando humedad." },
+    { titulo: "Cocción", descripcion: "Aplica la técnica de calor principal respetando los tiempos." },
+    { titulo: "Ensamble", descripcion: "Integra los acompañamientos en una base armónica." },
+    { titulo: "Finalización", descripcion: "Toque de aceite de oliva en crudo para realzar sabores." }
+  ],
+  bioHack: {
+    titulo: "SECUENCIACIÓN METABÓLICA",
+    pasos: ["1. Vegetales (Fibra)", "2. Proteína", "3. Carbohidratos"],
+    explicacion: "Consume en este orden para optimizar tu curva de glucosa."
+  },
+  nutrientes: { proteina: "", grasas: "", carbos: "" },
+  imageUrl: `https://via.placeholder.com/600x400.png?text=${encodeURIComponent(mealDesc)}`
 };
+};
+
+export async function getFitnessAdvice(profile: Profile, apiKey: string): Promise<string> {
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-002" });
+
+  const prompt = `Actúa como un médico experto en medicina deportiva y bio-hacking. 
+  Genera 3 recomendaciones de élite BREVES y ACCIÓNABLES para el entrenamiento de este usuario basándose en su perfil clínico.
+  
+  PERFIL:
+  - Objetivos: ${profile.objetivos.join(', ')}
+  - Comorbilidades: ${profile.comorbilidades.join(', ')}
+  - Edad: ${profile.edad}, Peso: ${profile.peso}, Grasa%: ${profile.grasa}
+  - Peso Objetivo: ${profile.pesoObjetivo || 'No definido'}
+  
+  REGLAS:
+  1. Si tiene HIPERTENSIÓN: Recomienda evitar maniobras de Valsalva y priorizar cardio de estado estable.
+  2. Si busca MASA MUSCULAR: Recomienda protocolos de hipertrofia y tiempos de descanso específicos.
+  3. Si busca BAJAR PESO: Recomienda entrenamiento de fuerza combinado con cardio HIIT si su salud lo permite.
+  4. Sé extremadamente profesional y usa terminología de bio-hacking (ej: flexibilidad metabólica, síntesis proteica).
+  
+  FORMATO: Devuelve solo los 3 puntos con un emoji cada uno, sin introducciones.`;
+
+  try {
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
+    return text;
+  } catch (error) {
+    console.error("Fitness Advice AI Error:", error);
+    return "• Prioriza el descanso activo.\n• Mantén una hidratación constante.\n• Escucha a tu cuerpo durante el esfuerzo.";
+  }
+}
