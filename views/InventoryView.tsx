@@ -75,6 +75,36 @@ const InventoryView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => 
         }
     };
 
+    const handleShareList = async () => {
+        const items = showAllInventory ? inventory : shoppingList;
+        const grouped = groupItems(items, 'aisle');
+        const totalItems = items.length;
+
+        let text = `🛒 LISTA DE COMPRAS (${totalItems} productos)\n`;
+        text += `━━━━━━━━━━━━━━━━━━━━\n\n`;
+
+        for (const [aisle, aisleItems] of Object.entries(grouped).sort()) {
+            text += `📍 ${aisle.toUpperCase()}\n`;
+            for (const item of aisleItems) {
+                const check = item.level >= 3 ? '✅' : '⬜';
+                text += `  ${check} ${item.name} — ${item.qty}\n`;
+            }
+            text += `\n`;
+        }
+
+        text += `━━━━━━━━━━━━━━━━━━━━\n`;
+        text += `📱 Generado por MN-NutriApp`;
+
+        if (navigator.share) {
+            try {
+                await navigator.share({ title: 'Lista de Compras', text });
+            } catch (e) { /* user cancelled */ }
+        } else {
+            await navigator.clipboard.writeText(text);
+            alert('Lista copiada al portapapeles');
+        }
+    };
+
     // UI Helpers
     const getStockMeterHtml = (level: number) => {
         const colors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-400', 'bg-blue-500'];
@@ -144,6 +174,13 @@ const InventoryView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => 
                                 >
                                     <span className="material-symbols-outlined text-sm">sync</span>
                                     SINCRONIZAR
+                                </button>
+                                <button
+                                    onClick={handleShareList}
+                                    className="bg-emerald-50 text-emerald-600 px-5 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-wider active:scale-95 transition-all border border-emerald-100 flex items-center gap-2"
+                                >
+                                    <span className="material-symbols-outlined text-sm">share</span>
+                                    COMPARTIR
                                 </button>
                             </div>
                             <label className="flex items-center gap-3 cursor-pointer group">
