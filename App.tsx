@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
 import { View } from './types';
-import HomeView from './views/HomeView';
-import FitnessView from './views/FitnessView';
-import ProfileView from './views/ProfileView';
-import ProgressView from './views/ProgressView';
-import WelcomeView from './views/WelcomeView';
-import TopNav from './components/TopNav';
-import InventoryView from './views/InventoryView';
-import LoginScreen from './src/components/LoginScreen';
-import { useStore } from './src/context/StoreContext';
-import BottomNav from './components/BottomNav';
-import NutriScanView from './views/NutriScanView';
+import HomeView from '@/views/HomeView';
+import FitnessView from '@/views/FitnessView';
+import ProfileView from '@/views/ProfileView';
+import ProgressView from '@/views/ProgressView';
+import WelcomeView from '@/views/WelcomeView';
+import TopNav from '@/components/TopNav';
+import InventoryView from '@/views/InventoryView';
+import LoginScreen from '@/src/components/LoginScreen';
+import { useStore } from '@/src/context/StoreContext';
+import BottomNav from '@/components/BottomNav';
+import NutriScanView from '@/views/NutriScanView';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>('welcome');
