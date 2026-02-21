@@ -55,6 +55,7 @@ export const processPdfWithGemini = async (
                 2. Extrae medidas actuales: peso, grasa %, cintura, cuello, brazos si están disponibles.
                 3. Extrae el menú semanal completo y rutinas de ejercicio.
                 4. Lista de compras: Identifica ingredientes y categorízalos.
+                5. Clínica: Identifica suplementación activa y fecha de próxima cita. Actualiza comorbilidades (ej. si algo aparece como 'Corregido').
                 
                 RESPONDE ÚNICAMENTE CON ESTE FORMATO JSON:
                 {
@@ -71,7 +72,9 @@ export const processPdfWithGemini = async (
                     "sangre": "...", 
                     "alergias": "...", 
                     "objetivos": [], 
-                    "comorbilidades": [] 
+                    "comorbilidades": [],
+                    "suplementos": [],
+                    "proximaCita": "..."
                   },
                   "semana": { "LUNES": {"DESAYUNO": "...", "MERIENDA_AM": "...", "ALMUERZO": "...", "MERIENDA_PM": "...", "CENA": "..." }, ... },
                   "ejercicios": { "LUNES": [ {"n": "🏋️ Ejercicio", "i": "3x12", "link": ""} ], ... },

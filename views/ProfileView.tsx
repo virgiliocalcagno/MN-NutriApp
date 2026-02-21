@@ -68,11 +68,26 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
             const currentPatientName = (store.profile?.paciente || '').trim();
 
             let updatedProfiles = { ...store.profiles };
+            const isMismatch = currentPatientName && currentPatientName !== newPatientName;
 
-            // 1. Multi-User Isolation: Save current user if it exists and is different
-            if (currentPatientName && currentPatientName !== newPatientName) {
-              const { profiles: _, ...rest } = store;
-              updatedProfiles[currentPatientName] = rest;
+            // 1. Identity Verification & Confirmation
+            if (isMismatch) {
+              const choice = window.confirm(
+                `⚠️ DIFERENCIA DE IDENTIDAD DETECTADA\n\n` +
+                `Documento: ${newPatientName}\n` +
+                `Perfil Actual: ${currentPatientName}\n\n` +
+                `¿Deseas CAMBIAR al perfil de ${newPatientName}? (Aceptar)\n` +
+                `¿O prefieres SOBRESCRIBIR el perfil actual? (Cancelar)\n\n` +
+                `*Si aceptas y no existe, se creará un contenedor nuevo.`
+              );
+
+              if (choice) {
+                // Save current user before switching
+                const { profiles: _, ...rest } = store;
+                updatedProfiles[currentPatientName] = rest;
+              } else {
+                // Stay on current profile but overwrite with new name (not recommended but an option)
+              }
             }
 
             // 2. Biometric Evolution: Move current biometrics to history if they exist
@@ -80,7 +95,7 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
             const evolution = [...(currentProfile.evolution || [])];
 
             const hasClinicalData = currentProfile.peso || currentProfile.grasa;
-            if (hasClinicalData && currentProfile.paciente === newPatientName) {
+            if (hasClinicalData && (currentProfile.paciente === newPatientName || !isMismatch)) {
               evolution.push({
                 date: new Date().toISOString().split('T')[0],
                 weight: currentProfile.peso,
@@ -127,7 +142,7 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
               lastUpdateDate: new Date().toISOString().split('T')[0]
             });
 
-            alert(`✅ PLAN ACTUALIZADO PARA: ${newPatientName}\n\n♻️ Plan anterior purgado.\n📈 Historial biométrico guardado.\n🛒 ${newInventory.length} suministros en lista de compras.\n🔥 Meta: ${caloriesTarget} Kcal | 💧 Agua: ${waterGoal}ml`);
+            alert(`✅ PLAN CLINICO ACTUALIZADO: ${newPatientName}\n\n♻️ Plan anterior purgado.\n📅 Próxima Cita: ${data.perfilAuto?.proximaCita || 'No especificada'}\n💊 Suplementos: ${(data.perfilAuto?.suplementos || []).join(', ') || 'Ninguno'}\n🛒 ${newInventory.length} suministros en lista.`);
           }
         };
         reader.readAsDataURL(file);
@@ -410,6 +425,47 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
                         {tag}
                       </span>
                     ))}
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-slate-100 flex flex-col gap-4">
+                  <div className="flex items-center justify-between bg-slate-50 p-4 rounded-3xl border border-slate-100/50">
+                    <div className="flex items-center gap-3">
+                      <span className="material-symbols-outlined text-amber-500 font-fill text-lg">event</span>
+                      <div>
+                        <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest">Próxima Cita</p>
+                        {isEditing ? (
+                          <input
+                            value={editData.proximaCita || ''}
+                            onChange={e => setEditData({ ...editData, proximaCita: e.target.value })}
+                            className="bg-transparent border-none p-0 text-xs font-bold text-slate-700 focus:ring-0"
+                            placeholder="DD/MM/YYYY"
+                          />
+                        ) : (
+                          <p className="text-xs font-bold text-slate-700">{profile.proximaCita || "Por programar"}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Suplementación Activa</label>
+                    {isEditing ? (
+                      <textarea
+                        value={(editData.suplementos || []).join(', ')}
+                        onChange={e => setEditData({ ...editData, suplementos: e.target.value.split(',').map(s => s.trim()) })}
+                        className="w-full bg-slate-50 border-none rounded-2xl text-xs p-4 font-bold text-slate-700 h-20"
+                        placeholder="Omega 3, Creatina..."
+                      />
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {profile.suplementos && profile.suplementos.length > 0 ? (
+                          profile.suplementos.map((s, i) => (
+                            <span key={i} className="text-[10px] font-bold bg-amber-50 px-4 py-2 rounded-xl text-amber-700 border border-amber-100">{s}</span>
+                          ))
+                        ) : <p className="text-xs text-slate-400 italic px-1">Sin suplementos registrados.</p>}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

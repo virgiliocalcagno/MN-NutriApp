@@ -131,25 +131,44 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
         />
       )}
 
-      <header className="px-6 pt-8 pb-4 flex items-center justify-between bg-white/50 border-b border-slate-50">
-        <div>
-          <h1 className="text-2xl font-extrabold text-slate-800 tracking-tight">Menú de Hoy</h1>
-          <p className="text-slate-400 font-medium text-sm capitalize">{selectedDay.toLowerCase()}, {new Date().getDate()} de {new Intl.DateTimeFormat('es-ES', { month: 'long' }).format(new Date())}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="relative size-12 flex items-center justify-center">
-            <svg className="size-full transform -rotate-90">
-              <circle cx="24" cy="24" r="20" className="stroke-slate-100 fill-none" strokeWidth="4" />
-              <circle cx="24" cy="24" r="20" className="stroke-primary fill-none" strokeWidth="4" strokeDasharray="125.6" strokeDashoffset="37.6" strokeLinecap="round" />
-            </svg>
-            <span className="absolute text-[11px] font-bold text-slate-700">70%</span>
+      <header className="px-6 pt-10 pb-8 bg-white/80 backdrop-blur-xl border-b border-slate-100 rounded-b-[40px] shadow-sm">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none mb-1">Menú de Hoy</h1>
+            <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">{selectedDay}, {new Date().getDate()} {new Intl.DateTimeFormat('es-ES', { month: 'short' }).format(new Date())}</p>
           </div>
-          <button onClick={() => setShowScheduleModal(true)} className="bg-slate-100 p-2.5 rounded-full text-slate-600 hover:bg-slate-200 transition-colors">
-            <span className="material-symbols-outlined text-2xl">schedule</span>
-          </button>
-          <button className="bg-slate-100 p-2.5 rounded-full text-slate-600 hover:bg-slate-200 transition-colors">
-            <span className="material-symbols-outlined text-2xl">notifications</span>
-          </button>
+          <div className="flex items-center gap-3">
+            <button onClick={() => setShowScheduleModal(true)} className="size-11 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 active:scale-90 transition-all border border-slate-100 shadow-sm">
+              <span className="material-symbols-outlined text-2xl font-fill">schedule</span>
+            </button>
+            <div className="size-11 bg-primary text-white rounded-2xl flex items-center justify-center shadow-lg shadow-primary/30 active:scale-95 transition-all">
+              <span className="material-symbols-outlined text-2xl font-fill">notifications</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Clinical Dashboard Summary */}
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-slate-50/80 p-4 rounded-3xl border border-slate-100/50 flex flex-col items-center justify-center group hover:bg-white hover:shadow-sm transition-all duration-300">
+            <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Meta Diaria</p>
+            <div className="flex items-baseline gap-1">
+              <span className="text-lg font-black text-slate-900">{store.caloriesTarget || 2000}</span>
+              <span className="text-[8px] font-bold text-slate-300 uppercase">kcal</span>
+            </div>
+          </div>
+          <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex flex-col items-center justify-center group hover:scale-[1.02] transition-transform duration-300">
+            <p className="text-[7px] font-black text-blue-500 uppercase tracking-widest mb-1.5">Próxima Cita</p>
+            <div className="flex items-baseline gap-1">
+              <span className="text-sm font-black text-blue-600">{store.profile?.proximaCita ? store.profile.proximaCita.split('/').slice(0, 2).join('/') : '--/--'}</span>
+            </div>
+          </div>
+          <div className="bg-slate-50/80 p-4 rounded-3xl border border-slate-100/50 flex flex-col items-center justify-center group hover:bg-white hover:shadow-sm transition-all duration-300">
+            <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Peso Actual</p>
+            <div className="flex items-baseline gap-1">
+              <span className="text-lg font-black text-slate-900">{store.profile?.peso || '--'}</span>
+              <span className="text-[8px] font-bold text-slate-300 uppercase">lbs</span>
+            </div>
+          </div>
         </div>
       </header>
 

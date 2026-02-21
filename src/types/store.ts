@@ -26,6 +26,8 @@ export interface Profile {
     alergias: string;
     objetivos: string[];
     comorbilidades: string[];
+    suplementos?: string[];
+    proximaCita?: string;
     evolution: BiometricEntry[];
     metas?: {
         calorias: number;
@@ -112,6 +114,7 @@ export const initialStore: Store = {
         metaAgua: 2800, estatura: '', cintura: '', cuello: '', brazos: '', grasa: '',
         emergencia: '', observaciones: '',
         sangre: '', alergias: '', objetivos: [], comorbilidades: [],
+        suplementos: [], proximaCita: '',
         evolution: []
     },
     historial: [],
