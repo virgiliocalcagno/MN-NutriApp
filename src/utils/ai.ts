@@ -48,44 +48,69 @@ export const processPdfWithGemini = async (
       const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
       const promptText = `Actúa como procesador médico experto para MN-NutriApp. 
-                Extrae la información directamente de los documentos PDF adjuntos.
-                
-                REGLAS CRÍTICAS:
-                1. Identifica obligatoriamente el nombre del Paciente y del Médico.
-                2. Extrae medidas actuales: peso, grasa %, cintura, cuello, brazos si están disponibles.
-                3. Extrae el menú semanal completo y rutinas de ejercicio.
-                4. Lista de compras: Identifica ingredientes y categorízalos. IMPORTANTE: Extrae los nombres de forma LITEAL como aparecen en el PDF (ej: 'Aceite de coco', 'Galletas de arroz'). NO los separes, NO los resumas, NO excluyas componentes compuesto.
-                5. Clínica: Identifica suplementación activa y fecha de próxima cita. Actualiza comorbilidades (ej. si algo aparece como 'Corregido').
-                
-                RESPONDE ÚNICAMENTE CON ESTE FORMATO JSON:
-                {
-                  "perfilAuto": { 
-                    "paciente": "...", 
-                    "doctor": "...", 
-                    "edad": "...", 
-                    "peso": "...", 
-                    "pesoObjetivo": "...",
-                    "estatura": "...", 
-                    "cintura": "...", 
-                    "cuello": "...", 
-                    "brazos": "...",
-                    "grasa": "...",
-                    "sangre": "...", 
-                    "tipoSangre": "...",
-                    "alergias": "...", 
-                    "objetivos": [], 
-                    "comorbilidades": [],
-                    "suplementos": [],
-                    "proximaCita": "..."
-                  },
-                  "semana": { "LUNES": {"DESAYUNO": "...", "MERIENDA_AM": "...", "ALMUERZO": "...", "MERIENDA_PM": "...", "CENA": "..." }, ... },
-                  "ejercicios": { "LUNES": [ {"n": "🏋️ Ejercicio", "i": "3x12", "link": ""} ], ... },
-                  "compras": [ ["Nombre", "Cantidad", 1, "Categoría", "Pasillo"] ],
-                  "metas": { "calorias": 2000, "agua": 2800 },
-                  "horarios": { "DESAYUNO": "08:30 AM", "ALMUERZO": "01:30 PM", "CENA": "07:30 PM" }
-                }
-                
-                Categorías permitidas para compras: Proteínas, Carbohidratos, Frutas y Verduras, Lácteos, Grasas, Cereales, Panadería, Bebidas, Gral.`;
+Extrae la información directamente de los documentos PDF adjuntos.
+
+REGLAS CRÍTICAS:
+1. Identifica obligatoriamente el nombre del Paciente y del Médico.
+2. Extrae medidas actuales: peso, grasa %, cintura, cuello, brazos si están disponibles.
+3. Extrae el menú semanal completo (los 7 días con sus 5 tiempos de comida) y rutinas de ejercicio.
+4. Clínica: Identifica suplementación activa y fecha de próxima cita. Actualiza comorbilidades.
+
+═══════════════════════════════════════════
+REGLA MÁS IMPORTANTE — LISTA DE COMPRAS:
+═══════════════════════════════════════════
+Genera el array "compras" siguiendo ESTOS PASOS EXACTOS:
+
+PASO 1 — ESCANEO EXHAUSTIVO:
+Lee CADA comida de CADA día (DOMINGO a SÁBADO, DESAYUNO → MERIENDA_AM → ALMUERZO → MERIENDA_PM → CENA). 
+NO te saltes NINGÚN día ni NINGÚN tiempo de comida. Son 7 días × 5 comidas = hasta 35 bloques.
+
+PASO 2 — EXTRACCIÓN LITERAL:
+Para cada comida, extrae TODOS los ingredientes mencionados. 
+Mantén los nombres COMPUESTOS tal como aparecen en el PDF:
+  ✅ "Aceite de oliva", "Galletas de arroz", "Pan pita integral", "Aceite de coco", "Plátano verde", "Plátano maduro", "Queso mozzarella", "Col rizada", "Proteína en polvo"
+  ❌ NO separes "Aceite de oliva" en "Aceite" y "Oliva"
+  ❌ NO separes "Galletas de arroz" en "Galletas" y "Arroz"
+  ❌ NO omitas ingredientes como condimentos, frutas o vegetales
+
+PASO 3 — CONSOLIDACIÓN (SIN DUPLICADOS):
+Agrupa ingredientes idénticos en UNA SOLA entrada. 
+Suma la cantidad total semanal. Ejemplo:
+  Si "Aceite de oliva (1 cdta)" aparece en 14 comidas → ["Aceite de oliva", "14 cdtas (semanal)", 1, "Aceites y Condimentos", "Aceites y Condimentos"]
+  Si "Tortilla integral" aparece 5 veces → ["Tortilla integral", "5 unidades", 1, "Panadería y Tortillas", "Panadería"]
+  Si "Pechuga de pollo" aparece 4 veces con diferentes gramos → ["Pechuga de pollo", "~500g total", 1, "Carnes y Pescados", "Carnes"]
+
+PASO 4 — CATEGORIZACIÓN POR PASILLO DE SUPERMERCADO:
+Usa EXACTAMENTE estos pasillos (columna 4 = Categoría, columna 5 = Pasillo):
+  • Carnes y Pescados: pollo, cerdo, res, salmón, bacalao, atún, pescado, alitas, pastrami (Pasillo: "Carnes")
+  • Frutas: banana, melón, fresas, naranja, lechosa, sandía, blueberries, limón (Pasillo: "Frutas")
+  • Verduras y Hortalizas: lechuga, tomate, zucchini, zanahoria, espinaca, pepino, brócoli, auyama, remolacha, col rizada, repollo, champiñones, cebolla, berro (Pasillo: "Verduras")
+  • Lácteos y Huevos: huevos, queso mozzarella, leche descremada (Pasillo: "Lácteos")
+  • Panadería y Tortillas: tortilla integral, pan pita integral, casabe (Pasillo: "Panadería")
+  • Cereales y Granos: arroz, pasta, quinoa, avena, galletas de arroz (Pasillo: "Cereales")
+  • Tubérculos: plátano verde, plátano maduro, batata (Pasillo: "Tubérculos")
+  • Aceites y Condimentos: aceite de oliva, aceite de coco, curry, cúrcuma, paprika, sal, ajo, salsa BBQ (Pasillo: "Aceites y Condimentos")
+  • Frutos Secos: macadamias, almendras, aceitunas, aguacate (Pasillo: "Frutos Secos")
+  • Bebidas y Suplementos: proteína en polvo, té, café, edulcorante (Pasillo: "Bebidas")
+  • Embutidos: jamón, pastrami de pavo (Pasillo: "Embutidos")
+
+PASO 5 — VERIFICACIÓN FINAL:
+Antes de devolver el JSON, verifica que tu lista tenga al menos 30 ingredientes únicos para un plan semanal completo. Si tienes menos de 25, REVISA de nuevo el PDF porque seguramente te faltaron ingredientes.
+
+RESPONDE ÚNICAMENTE CON ESTE FORMATO JSON:
+{
+  "perfilAuto": { 
+    "paciente": "...", "doctor": "...", "edad": "...", "peso": "...", "pesoObjetivo": "...",
+    "estatura": "...", "cintura": "...", "cuello": "...", "brazos": "...", "grasa": "...",
+    "sangre": "...", "tipoSangre": "...", "alergias": "...", 
+    "objetivos": [], "comorbilidades": [], "suplementos": [], "proximaCita": "..."
+  },
+  "semana": { "LUNES": {"DESAYUNO": "...", "MERIENDA_AM": "...", "ALMUERZO": "...", "MERIENDA_PM": "...", "CENA": "..." }, ... },
+  "ejercicios": { "LUNES": [ {"n": "🏋️ Ejercicio", "i": "3x12", "link": ""} ], ... },
+  "compras": [ ["Nombre Completo Literal", "Cantidad Total Semanal", 1, "Categoría", "Pasillo"] ],
+  "metas": { "calorias": 2000, "agua": 2800 },
+  "horarios": { "DESAYUNO": "08:30 AM", "ALMUERZO": "01:30 PM", "CENA": "07:30 PM" }
+}`;
 
       const parts: any[] = [{ text: promptText }];
       if (pdfPlanBase64) parts.push({ inlineData: { mimeType: "application/pdf", data: pdfPlanBase64.replace(/^data:application\/pdf;base64,/, "") } });
