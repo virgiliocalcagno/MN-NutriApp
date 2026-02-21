@@ -97,6 +97,7 @@ export interface Store {
     lastUpdateDate: string; // ISO date string YYYY-MM-DD
     profiles: Record<string, Partial<Store>>; // Multi-user isolation
     firebaseConfig?: { geminiApiKey: string };
+    planIngredients?: string[]; // Literal shopping list from AI
 }
 
 export const initialStore: Store = {
@@ -128,5 +129,6 @@ export const initialStore: Store = {
     lastScan: null,
     lastUpdateDate: new Date().toISOString().split('T')[0],
     profiles: {},
-    firebaseConfig: { geminiApiKey: '' }
+    firebaseConfig: { geminiApiKey: '' },
+    planIngredients: []
 };

@@ -135,6 +135,7 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
               menu: data.semana || {},
               exercises: data.ejercicios || {},
               inventory: [...(userBasis.inventory || []), ...newInventory],
+              planIngredients: (data.compras || []).map(c => c[0]), // Save literal names
               schedule: data.horarios || userBasis.schedule,
               caloriesTarget,
               waterGoal,

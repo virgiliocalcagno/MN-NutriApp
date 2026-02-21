@@ -54,7 +54,7 @@ export const processPdfWithGemini = async (
                 1. Identifica obligatoriamente el nombre del Paciente y del Médico.
                 2. Extrae medidas actuales: peso, grasa %, cintura, cuello, brazos si están disponibles.
                 3. Extrae el menú semanal completo y rutinas de ejercicio.
-                4. Lista de compras: Identifica ingredientes y categorízalos.
+                4. Lista de compras: Identifica ingredientes y categorízalos. IMPORTANTE: Extrae los nombres de forma LITEAL como aparecen en el PDF (ej: 'Aceite de coco', 'Galletas de arroz'). NO los separes, NO los resumas, NO excluyas componentes compuesto.
                 5. Clínica: Identifica suplementación activa y fecha de próxima cita. Actualiza comorbilidades (ej. si algo aparece como 'Corregido').
                 
                 RESPONDE ÚNICAMENTE CON ESTE FORMATO JSON:

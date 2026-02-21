@@ -139,6 +139,8 @@ export const FOOD_DATA: Record<string, { en: string, cat: string }> = {
     'espinaca': { en: 'Spinach', cat: 'Frutas y Verduras' },
     'champis': { en: 'Mushrooms', cat: 'Frutas y Verduras' }, 'champiñones': { en: 'Mushrooms', cat: 'Frutas y Verduras' },
     'galletas': { en: 'Cookies', cat: 'Panadería' },
+    'galletas de arroz': { en: 'Rice Cakes', cat: 'Carbohidratos' },
+    'aceite de coco': { en: 'Coconut Oil', cat: 'Grasas' },
     'yogurt': { en: 'Yogurt', cat: 'Lácteos' },
     'almendras': { en: 'Almonds', cat: 'Grasas' },
     'nueces': { en: 'Walnuts', cat: 'Grasas' },
@@ -171,10 +173,37 @@ export const getProductImage = (name: string, category: string) => {
 
 // ... (keep previous functions)
 
-export const syncPlanToPantry = (menu: Record<string, any>, currentInventory: InventoryItem[]): InventoryItem[] => {
+export const syncPlanToPantry = (
+    menu: Record<string, any>,
+    currentInventory: InventoryItem[],
+    planIngredients: string[] = []
+): InventoryItem[] => {
     const existingNames = new Set(currentInventory.map(i => i.name.toLowerCase()));
     const newItems: InventoryItem[] = [];
 
+    // Prioritize Literal Plan Ingredients (Pure from PDF)
+    if (planIngredients && planIngredients.length > 0) {
+        planIngredients.forEach(name => {
+            const lowerName = name.toLowerCase();
+            if (!existingNames.has(lowerName)) {
+                // Find category in FOOD_DATA or default to Gral
+                const data = Object.entries(FOOD_DATA).find(([k]) => lowerName.includes(k))?.[1];
+                newItems.push({
+                    id: Date.now().toString() + '-' + name.replace(/\s+/g, '_'),
+                    name: name.charAt(0).toUpperCase() + name.slice(1),
+                    qty: '1 Unidad',
+                    level: 1,
+                    category: data?.cat || 'Gral',
+                    aisle: 'Pasillo Gral',
+                    isCustom: false
+                });
+                existingNames.add(lowerName);
+            }
+        });
+        return [...currentInventory, ...newItems];
+    }
+
+    // Fallback: Legacy description parsing (only if planIngredients is empty)
     const allDescriptions: string[] = [];
     Object.values(menu).forEach((dayMenu: any) => {
         if (typeof dayMenu === 'object') {
@@ -186,8 +215,21 @@ export const syncPlanToPantry = (menu: Record<string, any>, currentInventory: In
 
     allDescriptions.forEach(desc => {
         const lowerDesc = desc.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+        // Find all matches
+        const matches: string[] = [];
         Object.keys(FOOD_DATA).forEach(key => {
-            if ((lowerDesc.includes(` ${key} `) || lowerDesc.startsWith(`${key} `) || lowerDesc.endsWith(` ${key}`) || lowerDesc === key) && !existingNames.has(key)) {
+            if (lowerDesc.includes(key) &&
+                (lowerDesc.includes(` ${key} `) || lowerDesc.startsWith(`${key} `) || lowerDesc.endsWith(` ${key}`) || lowerDesc === key)) {
+                matches.push(key);
+            }
+        });
+
+        // Filter out redundant sub-matches (e.g., "aceite" if "aceite de coco" is present)
+        const refinedMatches = matches.filter(m => !matches.some(other => other !== m && other.includes(m)));
+
+        refinedMatches.forEach(key => {
+            if (!existingNames.has(key)) {
                 const data = FOOD_DATA[key];
                 newItems.push({
                     id: Date.now().toString() + '-' + key,

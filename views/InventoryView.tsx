@@ -57,7 +57,7 @@ const InventoryView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => 
 
     const handleSync = () => {
         if (window.confirm("¿Sincronizar con el plan nutricional? Se añadirán los productos faltantes a la lista de compras.")) {
-            const newInventory = syncPlanToPantry(store.menu || {}, inventory);
+            const newInventory = syncPlanToPantry(store.menu || {}, inventory, store.planIngredients || []);
             saveStore({ ...store, inventory: newInventory });
         }
     };
