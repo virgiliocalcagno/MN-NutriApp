@@ -45,7 +45,7 @@ export const processPdfWithGemini = async (
   if (apiKey && apiKey !== 'AIzaSyAF5rs3cJFs_E6S7ouibqs7B2fgVRDLzc0') {
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash", generationConfig: { temperature: 0 } });
 
       const promptText = `Actua como procesador medico experto para MN-NutriApp. Extrae la informacion directamente de los documentos PDF adjuntos.
 
@@ -114,7 +114,7 @@ RESPONDE UNICAMENTE CON ESTE FORMATO JSON:
       if (jsonMatch) return JSON.parse(jsonMatch[0]) as AIResponse;
       throw new Error("Formato inválido");
     } catch (e: any) {
-      console.warn("Gemini 2.0 falló, intentando Fallback...", e?.message || e?.status || e);
+      console.warn("Gemini 2.5 falló, intentando Fallback...", e?.message || e?.status || e);
     }
   }
 
@@ -138,7 +138,7 @@ export const analyzeImageWithGemini = async (base64Image: string, perfil?: any, 
     const cleanBase64 = base64Image.replace(/^data:image\/\w+;base64,/, "");
     if (apiKey && apiKey !== 'AIzaSyAF5rs3cJFs_E6S7ouibqs7B2fgVRDLzc0') {
       const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
       const prompt = `Actúa como una Eminencia en Nutrición Clínica y Bio-hacking Metabólico. 
 Analiza esta imagen de comida para el paciente: ${perfil?.paciente || 'Usuario'}.
@@ -190,7 +190,7 @@ export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: 
   if (effectiveApiKey && effectiveApiKey.length > 20) {
     try {
       const genAI = new GoogleGenerativeAI(effectiveApiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
       const prompt = `Eres un Chef de Alta Cocina y Experto en Bio-hacking Nutricional.
 Transforma estos ingredientes en una receta profesional con datos nutricionales reales.
@@ -297,7 +297,7 @@ REGLAS:
 
 export async function getFitnessAdvice(profile: Profile, apiKey: string): Promise<string> {
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-002" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
   const prompt = `Actúa como un médico experto en medicina deportiva y bio-hacking. 
   Genera 3 recomendaciones de élite BREVES y ACCIÓNABLES para el entrenamiento de este usuario basándose en su perfil clínico.
