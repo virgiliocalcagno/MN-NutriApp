@@ -409,7 +409,7 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
                   <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Condiciones Médicas</label>
                   <div className="flex flex-wrap gap-2">
                     {['Hipertensión', 'Diabetes', 'Tiroides', 'Colesterol'].map(cond => {
-                      const isActive = (profile.comorbilidades || []).includes(cond);
+                      const isActive = (isEditing ? (editData.comorbilidades || []) : (profile.comorbilidades || [])).includes(cond);
                       return (
                         <button
                           key={cond}
@@ -432,7 +432,7 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
                   <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Objetivos Bio-Hack</label>
                   <div className="flex flex-wrap gap-2">
                     {['Bajar Peso', 'Masa Muscular', 'Grasa Corporal', 'Cardiovascular'].map(obj => {
-                      const isActive = (profile.objetivos || []).includes(obj);
+                      const isActive = (isEditing ? (editData.objetivos || []) : (profile.objetivos || [])).includes(obj);
                       return (
                         <button
                           key={obj}
