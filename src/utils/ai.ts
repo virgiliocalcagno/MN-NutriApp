@@ -7,6 +7,10 @@ export interface AIResponse {
   semana: Record<string, Record<string, string>>;
   ejercicios: Record<string, any[]>;
   compras: [string, string, number, string, string][];
+  metas: {
+    calorias: number;
+    agua: number;
+  };
 }
 
 export interface RecipeDetails {
@@ -50,8 +54,11 @@ export const processPdfWithGemini = async (
                   "perfilAuto": { "paciente": "...", "doctor": "...", "edad": "...", "peso": "...", "estatura": "...", "cintura": "...", "sangre": "...", "alergias": "...", "objetivos": [], "comorbilidades": [] },
                   "semana": { "LUNES": {"DESAYUNO": "...", "MERIENDA_AM": "...", "ALMUERZO": "...", "MERIENDA_PM": "...", "CENA": "..." }, ... },
                   "ejercicios": { "LUNES": [ {"n": "🏋️ Ejercicio", "i": "3x12", "link": ""} ], ... },
-                  "compras": [ ["Nombre", "Cantidad", 1, "Categoría", "Pasillo"] ]
-                }`;
+                  "compras": [ ["Nombre", "Cantidad", 1, "Categoría", "Pasillo"] ],
+                  "metas": { "calorias": 2000, "agua": 2800 }
+                }
+                
+                Categorías permitidas para compras: Proteínas, Carbohidratos, Frutas y Verduras, Lácteos, Grasas, Cereales, Panadería, Bebidas, Gral.`;
 
       const parts: any[] = [{ text: promptText }];
       if (pdfPlanBase64) parts.push({ inlineData: { mimeType: "application/pdf", data: pdfPlanBase64.replace(/^data:application\/pdf;base64,/, "") } });

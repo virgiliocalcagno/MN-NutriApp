@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useStore } from '@/src/context/StoreContext';
 import { processPdfWithGemini } from '@/src/utils/ai';
-import { MealItem, initialStore } from '@/src/types/store';
+import { MealItem, InventoryItem, initialStore } from '@/src/types/store';
 import { firebaseConfig } from '@/src/firebase';
 import { useLongPress } from '@/src/hooks/useLongPress';
 
@@ -67,19 +67,36 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
             const mergedProfile = { ...initialStore.profile, ...data.perfilAuto };
             const newMenu = data.semana || {};
             const newExercises = data.ejercicios || {};
-            const newItems: MealItem[] = (data.compras || []).map((c: any, idx: number) => ({
+
+            // Map compras to InventoryItems (Plan de Insumos)
+            const newInventory: InventoryItem[] = (data.compras || []).map((c: any, idx: number) => ({
               id: Date.now() + '-' + idx,
-              n: c[0], q: c[1], lv: 4, cat: c[3] || 'Gral', aisle: c[4] || 'Gral', b: false
+              name: c[0],
+              qty: c[1],
+              level: 4, // Professional plans usually assume you NEED these, so they start as needed? 
+              // Or level 1 (Out) so they show in shopping list?
+              // The user said "cree los suministro", usually means populate the pantry.
+              // Let's set level 4 (Full) as it's a new loading, or level 1 if they are "shopping" items.
+              // Actually, if they are "compras", they should probably be level 1 (Agotado) so they appear in the Shopping List.
+              category: c[3] || 'Gral',
+              aisle: c[4] || 'Gral',
+              isCustom: false
             }));
+
+            // Sync Fitness Metas
+            const caloriesTarget = data.metas?.calorias || store.caloriesTarget || 2000;
+            const waterGoal = data.metas?.agua || store.profile?.metaAgua || 2800;
 
             saveStore({
               ...store,
-              profile: mergedProfile,
+              profile: { ...mergedProfile, metaAgua: waterGoal },
               menu: newMenu,
               exercises: newExercises,
-              items: newItems
+              inventory: [...store.inventory, ...newInventory],
+              caloriesTarget: caloriesTarget,
+              waterGoal: waterGoal
             });
-            alert(`✅ ANÁLISIS COMPLETADO EXITOSAMENTE\n\n👤 Paciente: ${mergedProfile.paciente || 'Paciente'}\n📅 Menú: ${Object.keys(newMenu).length} días\n🛒 Despensa: ${newItems.length} productos\n\nTu perfil ha sido actualizado.`);
+            alert(`✅ ANÁLISIS COMPLETADO EXITOSAMENTE\n\n👤 Paciente: ${mergedProfile.paciente || 'Paciente'}\n📅 Menú: ${Object.keys(newMenu).length} días\n🛒 Suministros: ${newInventory.length} añadidos\n🔥 Meta: ${caloriesTarget} Kcal\n💧 Agua: ${waterGoal}ml`);
           }
         };
         reader.readAsDataURL(file);
