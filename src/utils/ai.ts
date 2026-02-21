@@ -244,39 +244,38 @@ REGLAS:
         bioHack: { titulo: "Error", explicacion: "No se pudo generar la receta.", pasos: [] },
         nutrientes: { proteina: "", grasas: "", carbos: "" }
       };
+    } catch (e) {
+      console.error("Gemini v31.1 Error Crítico:", e);
+      return {
+        titulo: "Error de Conexión",
+        kcal: 0,
+        ingredientes: [],
+        preparacion: [],
+        bioHack: { titulo: "Error", explicacion: "Error de conexión con la IA.", pasos: [] },
+        nutrientes: { proteina: "", grasas: "", carbos: "" }
+      };
     }
-  } catch (e) {
-    console.error("Gemini v31.1 Error Crítico:", e);
-    return {
-      titulo: "Error de Conexión",
-      kcal: 0,
-      ingredientes: [],
-      preparacion: [],
-      bioHack: { titulo: "Error", explicacion: "Error de conexión con la IA.", pasos: [] },
-      nutrientes: { proteina: "", grasas: "", carbos: "" }
-    };
   }
-}
 
-// FALLBACK v31.1
-return {
-  titulo: mealDesc,
-  kcal: 0,
-  ingredientes: ["Ingredientes del plato"],
-  preparacion: [
-    { titulo: "Preparación base", descripcion: "Acondiciona el ingrediente principal retirando humedad." },
-    { titulo: "Cocción", descripcion: "Aplica la técnica de calor principal respetando los tiempos." },
-    { titulo: "Ensamble", descripcion: "Integra los acompañamientos en una base armónica." },
-    { titulo: "Finalización", descripcion: "Toque de aceite de oliva en crudo para realzar sabores." }
-  ],
-  bioHack: {
-    titulo: "SECUENCIACIÓN METABÓLICA",
-    pasos: ["1. Vegetales (Fibra)", "2. Proteína", "3. Carbohidratos"],
-    explicacion: "Consume en este orden para optimizar tu curva de glucosa."
-  },
-  nutrientes: { proteina: "", grasas: "", carbos: "" },
-  imageUrl: `https://via.placeholder.com/600x400.png?text=${encodeURIComponent(mealDesc)}`
-};
+  // FALLBACK v31.1
+  return {
+    titulo: mealDesc,
+    kcal: 0,
+    ingredientes: ["Ingredientes del plato"],
+    preparacion: [
+      { titulo: "Preparación base", descripcion: "Acondiciona el ingrediente principal retirando humedad." },
+      { titulo: "Cocción", descripcion: "Aplica la técnica de calor principal respetando los tiempos." },
+      { titulo: "Ensamble", descripcion: "Integra los acompañamientos en una base armónica." },
+      { titulo: "Finalización", descripcion: "Toque de aceite de oliva en crudo para realzar sabores." }
+    ],
+    bioHack: {
+      titulo: "SECUENCIACIÓN METABÓLICA",
+      pasos: ["1. Vegetales (Fibra)", "2. Proteína", "3. Carbohidratos"],
+      explicacion: "Consume en este orden para optimizar tu curva de glucosa."
+    },
+    nutrientes: { proteina: "", grasas: "", carbos: "" },
+    imageUrl: `https://via.placeholder.com/600x400.png?text=${encodeURIComponent(mealDesc)}`
+  };
 };
 
 export async function getFitnessAdvice(profile: Profile, apiKey: string): Promise<string> {
