@@ -10,7 +10,7 @@ export const firebaseConfig = {
     messagingSenderId: "706226122083",
     appId: "1:706226122083:web:754e9feedc0cc0b5377756",
     measurementId: "G-J39PRJB106",
-    geminiApiKey: "AIzaSyCG7564hN0_WqzSgSbpPUaGuVSgphni4eE"
+    geminiApiKey: (import.meta as any).env?.VITE_GEMINI_API_KEY || "AIzaSyAfTvLerusHbaThIHNcRGF0Vk8SfTitaM8"
 };
 
 export const app = initializeApp(firebaseConfig);

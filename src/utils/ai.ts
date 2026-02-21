@@ -114,7 +114,7 @@ RESPONDE UNICAMENTE CON ESTE FORMATO JSON:
       if (jsonMatch) return JSON.parse(jsonMatch[0]) as AIResponse;
       throw new Error("Formato inválido");
     } catch (e: any) {
-      console.warn("Gemini 2.0 falló, intentando Fallback...");
+      console.warn("Gemini 2.0 falló, intentando Fallback...", e?.message || e?.status || e);
     }
   }
 
