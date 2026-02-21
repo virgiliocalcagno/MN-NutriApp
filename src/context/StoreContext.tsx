@@ -85,13 +85,28 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
         }
     }, [loading, store.lastUpdateDate]);
 
+    // Recursively remove undefined values (Firestore rejects them)
+    const removeUndefined = (obj: any): any => {
+        if (obj === null || obj === undefined) return null;
+        if (Array.isArray(obj)) return obj.map(removeUndefined);
+        if (typeof obj === 'object') {
+            const clean: any = {};
+            for (const [k, v] of Object.entries(obj)) {
+                if (v !== undefined) clean[k] = removeUndefined(v);
+            }
+            return clean;
+        }
+        return obj;
+    };
+
     const saveStore = async (newStore: Store) => {
         setStore(newStore);
         localStorage.setItem('mn_pro_clinic_v6', JSON.stringify(newStore));
 
         if (user) {
             try {
-                await setDoc(doc(db, 'users', user.uid), newStore);
+                const cleanData = removeUndefined(newStore);
+                await setDoc(doc(db, 'users', user.uid), cleanData);
             } catch (e) {
                 console.error("Error saving to cloud", e);
             }
