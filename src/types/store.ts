@@ -36,8 +36,18 @@ export interface Exercise {
     link?: string;
 }
 
+export interface WaterEntry {
+    id: string;
+    type: string;
+    amount: number;
+    time: string;
+}
+
 export interface Store {
     water: number;
+    waterHistory: WaterEntry[];
+    waterGoal: number;
+    waterUnits: string;
     menu: Record<string, any>; // Flexible menu structure
     items: MealItem[];
     exercises: Record<string, Exercise[]>;
@@ -56,6 +66,9 @@ export interface Store {
 
 export const initialStore: Store = {
     water: 0,
+    waterHistory: [],
+    waterGoal: 2800,
+    waterUnits: 'ml',
     menu: {},
     items: [],
     exercises: {},

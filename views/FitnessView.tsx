@@ -5,7 +5,9 @@ import { analyzeImageWithGemini } from '@/src/utils/ai';
 const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
   const { store, saveStore } = useStore();
   const [activeVideoUrl, setActiveVideoUrl] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const longPressTimer = useRef<number | null>(null);
 
   // --- Fit Logic (from CP002) ---
   const meta = store.profile?.metaAgua || 2800;
@@ -14,9 +16,75 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
   const metaLiters = meta / 1000;
   const hydrationPercent = Math.min((currentWater / meta) * 100, 100);
 
-  const handleUpdateWater = (amount: number) => {
-    const newWater = Math.max(0, Math.min(currentWater + amount, meta));
-    saveStore({ ...store, water: newWater });
+  const handleUpdateWater = (amount: number, type: string = 'Agua') => {
+    const newEntry = {
+      id: Date.now().toString(),
+      type,
+      amount,
+      time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+    };
+
+    const newWater = Math.max(0, currentWater + amount);
+    saveStore({
+      ...store,
+      water: newWater,
+      waterHistory: [newEntry, ...(store.waterHistory || [])]
+    });
+  };
+
+  const handleUndoWater = () => {
+    if (!store.waterHistory || store.waterHistory.length === 0) return;
+    const [last, ...rest] = store.waterHistory;
+    const newWater = Math.max(0, currentWater - last.amount);
+    saveStore({
+      ...store,
+      water: newWater,
+      waterHistory: rest
+    });
+    alert(`✅ Toma de ${last.type} (${last.amount}ml) eliminada.`);
+  };
+
+  const getNextSuggestedIntake = () => {
+    if (!store.schedule) return "Programar horario primero";
+
+    const now = new Date();
+    const schedule = store.schedule;
+    const entries = Object.entries(schedule).filter(([k]) =>
+      ['DESAYUNO', 'ALMUERZO', 'CENA'].includes(k.toUpperCase())
+    );
+
+    // Convert schedule times to Date objects for today
+    const exclusionZones = entries.map(([name, timeStr]) => {
+      const [time, period] = timeStr.split(' ');
+      let [hours, minutes] = time.split(':').map(Number);
+      if (period === 'PM' && hours < 12) hours += 12;
+      if (period === 'AM' && hours === 12) hours = 0;
+
+      const mealDate = new Date();
+      mealDate.setHours(hours, minutes, 0, 0);
+
+      return {
+        name,
+        start: new Date(mealDate.getTime() - 30 * 60000),
+        end: new Date(mealDate.getTime() + 60 * 60000)
+      };
+    });
+
+    // Check if currently in exclusion zone
+    const currentZone = exclusionZones.find(z => now >= z.start && now <= z.end);
+    if (currentZone) {
+      const nextAvailable = new Date(currentZone.end.getTime() + 10 * 60000); // 10 min after zone
+      return `Sugerido: ${nextAvailable.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}`;
+    }
+
+    // Otherwise, suggest 1 hour from now, but check if that hits a future zone
+    let suggested = new Date(now.getTime() + 60 * 60000);
+    const futureZone = exclusionZones.find(z => suggested >= z.start && suggested <= z.end);
+    if (futureZone) {
+      suggested = new Date(futureZone.end.getTime() + 10 * 60000);
+    }
+
+    return `${suggested.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })} (350ml)`;
   };
 
   const dias = ["DOMINGO", "LUNES", "MARTES", "MIERCOLES", "JUEVES", "VIERNES", "SABADO"];
@@ -119,34 +187,79 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
     <div className="flex flex-col min-h-screen bg-slate-50/50">
       <main className="p-4 pb-20 overflow-y-auto">
         <div className="space-y-6 animate-in fade-in duration-300">
-          {/* Hydration */}
-          <section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-110 transition-transform">
-              <span className="material-symbols-outlined text-6xl text-primary font-fill">water_drop</span>
-            </div>
-            <div className="flex justify-between items-center mb-6">
+          {/* Control Hídrico Premium */}
+          <section className="bg-white p-8 rounded-[40px] shadow-sm border border-slate-100 flex flex-col items-center">
+            <div className="w-full flex justify-between items-center mb-10">
               <div>
-                <h2 className="text-lg font-bold text-slate-900">Hidratación</h2>
-                <p className="text-xs text-slate-400 font-bold uppercase tracking-tight">Status: {hydrationPercent === 100 ? 'Meta lograda' : 'En progreso'}</p>
+                <h2 className="text-xl font-black text-[#1e60f1] tracking-tight">Control Hídrico</h2>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">META: {meta} ML</p>
               </div>
-              <div className="text-right">
-                <span className="text-2xl font-black text-primary">{hydration.toFixed(1)}<span className="text-sm">L</span></span>
-                <p className="text-[10px] text-slate-400 font-bold">META: {metaLiters}L</p>
+              <div className="size-12 bg-blue-50 rounded-2xl flex items-center justify-center text-[#1e60f1]">
+                <span className="material-symbols-outlined text-2xl">inventory_2</span>
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
-              <div className="flex-1 bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                <div className="bg-primary h-full transition-all duration-700" style={{ width: `${hydrationPercent}%` }}></div>
+            {/* Radial Progress with Long Press */}
+            <div
+              className="relative size-64 flex items-center justify-center cursor-pointer select-none active:scale-95 transition-all"
+              onContextMenu={(e) => { e.preventDefault(); setShowHistory(true); }}
+              onTouchStart={() => {
+                longPressTimer.current = window.setTimeout(() => setShowHistory(true), 800);
+              }}
+              onTouchEnd={() => {
+                if (longPressTimer.current) clearTimeout(longPressTimer.current);
+              }}
+              onMouseDown={() => {
+                longPressTimer.current = window.setTimeout(() => setShowHistory(true), 800);
+              }}
+              onMouseUp={() => {
+                if (longPressTimer.current) clearTimeout(longPressTimer.current);
+              }}
+            >
+              <svg className="size-full -rotate-90">
+                <circle cx="128" cy="128" r="100" fill="none" stroke="#f1f5f9" strokeWidth="12" />
+                <circle
+                  cx="128" cy="128" r="100" fill="none" stroke="#1e60f1" strokeWidth="12"
+                  strokeDasharray="628"
+                  strokeDashoffset={628 - (628 * hydrationPercent / 100)}
+                  strokeLinecap="round"
+                  className="transition-all duration-1000"
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <h3 className="text-[44px] font-black text-slate-800 leading-none">{currentWater}</h3>
+                <p className="text-slate-400 font-bold text-sm mt-1">/ {meta} ml</p>
+                <p className="text-[#1e60f1] font-black text-[10px] uppercase tracking-widest mt-3">{(store.waterHistory?.length || 0)}/8 TOMAS</p>
               </div>
-              <div className="flex gap-2">
-                <button onClick={() => handleUpdateWater(-250)} className="size-10 rounded-xl bg-slate-50 text-slate-400 hover:text-red-500 flex items-center justify-center transition-colors">
-                  <span className="material-symbols-outlined text-lg">remove</span>
+            </div>
+
+            {/* Next Intake Suggestion */}
+            <div className="bg-blue-50/50 px-6 py-3 rounded-full mt-10 mb-8 border border-blue-100/50">
+              <p className="text-[11px] font-black text-[#1e60f1] tracking-wide">
+                Próxima toma sugerida: <span className="font-extrabold">{getNextSuggestedIntake()}</span>
+              </p>
+            </div>
+
+            {/* Quick Buttons */}
+            <div className="grid grid-cols-4 gap-4 w-full">
+              {[
+                { label: 'Agua', amount: 350, icon: 'water_drop', color: 'text-blue-400' },
+                { label: 'Café/Té', amount: 150, icon: 'coffee', color: 'text-amber-700' },
+                { label: 'Colación', amount: 200, icon: 'soup_kitchen', color: 'text-blue-500' },
+                { label: 'Bebida', amount: 300, icon: 'glass_cup', color: 'text-orange-500' }
+              ].map((item, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleUpdateWater(item.amount, item.label)}
+                  className="flex flex-col items-center gap-2 bg-slate-50/50 p-4 rounded-3xl hover:bg-white hover:shadow-xl hover:shadow-slate-100 transition-all active:scale-95 border border-transparent hover:border-slate-100"
+                >
+                  <span className={`material-symbols-outlined text-2xl ${item.color}`}>{item.icon}</span>
+                  <div className="text-center">
+                    <p className="text-[10px] font-black text-slate-800 leading-tight">{item.label}</p>
+                    <p className="text-[9px] text-slate-400 font-bold">{item.amount}ml</p>
+                  </div>
                 </button>
-                <button onClick={() => handleUpdateWater(250)} className="size-10 rounded-xl bg-primary text-white shadow-lg shadow-primary/20 flex items-center justify-center active:scale-95 transition-all">
-                  <span className="material-symbols-outlined text-lg">add</span>
-                </button>
-              </div>
+              ))}
             </div>
           </section>
 
@@ -205,6 +318,72 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
       </main>
 
       <VideoModal />
+      <HistoryModal
+        isOpen={showHistory}
+        onClose={() => setShowHistory(false)}
+        history={store.waterHistory || []}
+        onUndo={handleUndoWater}
+      />
+    </div>
+  );
+};
+
+const HistoryModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  history: any[];
+  onUndo: () => void;
+}> = ({ isOpen, onClose, history, onUndo }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[110] flex items-end justify-center animate-in fade-in duration-300">
+      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose}></div>
+      <div className="relative w-full max-w-lg bg-white rounded-t-[40px] p-8 space-y-6 animate-in slide-in-from-bottom duration-500 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] max-h-[80vh] flex flex-col">
+
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">📋</span>
+            <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">Historial Hoy</h3>
+            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest ml-auto">Últimas {history.length} tomas</span>
+          </div>
+          <button onClick={onClose} className="size-10 bg-slate-50 rounded-full flex items-center justify-center text-slate-400 active:scale-90 transition-all">
+            <span className="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto space-y-3 no-scrollbar py-2">
+          {history.length > 0 ? history.map((entry) => (
+            <div key={entry.id} className="p-4 bg-slate-50/50 rounded-2xl border border-slate-100/50 flex items-center gap-4">
+              <div className="size-12 bg-white rounded-xl shadow-sm flex items-center justify-center text-blue-500 font-bold border border-slate-50">
+                <span className="material-symbols-outlined text-xl">
+                  {entry.type === 'Agua' ? 'water_drop' : (entry.type === 'Café/Té' ? 'coffee' : (entry.type === 'Colación' ? 'soup_kitchen' : 'glass_cup'))}
+                </span>
+              </div>
+              <div className="flex-1">
+                <h4 className="font-black text-slate-800 text-sm">{entry.type}</h4>
+                <p className="text-[11px] text-slate-400 font-bold">{entry.amount} ml</p>
+              </div>
+              <span className="text-xs font-black text-slate-400">{entry.time}</span>
+            </div>
+          )) : (
+            <div className="text-center py-10">
+              <p className="text-slate-300 font-bold">Sin registros hoy</p>
+            </div>
+          )}
+        </div>
+
+        <div className="pt-4">
+          <button
+            onClick={() => { onUndo(); onClose(); }}
+            disabled={history.length === 0}
+            className="w-full bg-[#ef4444] text-white font-black py-5 rounded-[24px] text-xs uppercase tracking-[0.2em] shadow-xl shadow-red-100 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:shadow-none"
+          >
+            <span className="material-symbols-outlined text-lg">undo</span>
+            Deshacer Última Toma {history.length > 0 ? `(${history[0].amount} ml)` : ''}
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
