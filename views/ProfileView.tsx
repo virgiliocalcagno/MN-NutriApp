@@ -12,6 +12,9 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({ ...store.profile });
   const [isLocked, setIsLocked] = useState(true);
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'reading' | 'analyzing' | 'syncing' | 'success' | 'error'>('idle');
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [lastUploadData, setLastUploadData] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { profile } = store;
@@ -56,44 +59,39 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
         alert('Por favor selecciona un archivo PDF.');
         return;
       }
-      setIsProcessing(true);
+      setUploadStatus('reading');
       try {
         const reader = new FileReader();
         reader.onload = async () => {
+          setUploadStatus('analyzing');
           const base64 = reader.result as string;
           const activeKey = (firebaseConfig as any).geminiApiKey;
           const data = await processPdfWithGemini(profile, base64, undefined, activeKey);
+
           if (data) {
+            setUploadStatus('syncing');
             const newPatientName = (data.perfilAuto?.paciente || 'Usuario').trim();
             const currentPatientName = (store.profile?.paciente || '').trim();
 
             let updatedProfiles = { ...store.profiles };
             const isMismatch = currentPatientName && currentPatientName !== newPatientName;
 
-            // 1. Identity Verification & Confirmation
+            // 1. Identity Verification
             if (isMismatch) {
               const choice = window.confirm(
                 `⚠️ DIFERENCIA DE IDENTIDAD DETECTADA\n\n` +
                 `Documento: ${newPatientName}\n` +
                 `Perfil Actual: ${currentPatientName}\n\n` +
-                `¿Deseas CAMBIAR al perfil de ${newPatientName}? (Aceptar)\n` +
-                `¿O prefieres SOBRESCRIBIR el perfil actual? (Cancelar)\n\n` +
-                `*Si aceptas y no existe, se creará un contenedor nuevo.`
+                `¿Deseas cambiar al perfil de ${newPatientName}?`
               );
-
               if (choice) {
-                // Save current user before switching
                 const { profiles: _, ...rest } = store;
                 updatedProfiles[currentPatientName] = rest;
-              } else {
-                // Stay on current profile but overwrite with new name (not recommended but an option)
               }
             }
 
-            // 2. Biometric Evolution: Move current biometrics to history if they exist
             const currentProfile = store.profile;
             const evolution = [...(currentProfile.evolution || [])];
-
             const hasClinicalData = currentProfile.peso || currentProfile.grasa;
             if (hasClinicalData && (currentProfile.paciente === newPatientName || !isMismatch)) {
               evolution.push({
@@ -106,12 +104,11 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
               });
             }
 
-            // 3. Plan Purging & Inventory Injection (Level 1 - Rojo)
             const newInventory: InventoryItem[] = (data.compras || []).map((c: any, idx: number) => ({
               id: Date.now() + '-' + idx,
               name: c[0],
               qty: c[1],
-              level: 1, // Rojo / Agotado
+              level: 1,
               category: c[3] || 'Gral',
               aisle: c[4] || 'Gral',
               isCustom: false
@@ -119,9 +116,8 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
 
             const caloriesTarget = data.metas?.calorias || 2000;
             const waterGoal = data.metas?.agua || 2800;
-
-            // Load existing user data if any, or start from initialStore to PURGE old plan
             const userBasis = updatedProfiles[newPatientName] || initialStore;
+            const hasNewPlan = data.semana && Object.keys(data.semana).length > 0;
 
             saveStore({
               ...initialStore,
@@ -134,24 +130,36 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
               },
               menu: data.semana || {},
               exercises: data.ejercicios || {},
-              inventory: [...(userBasis.inventory || []), ...newInventory],
-              planIngredients: (data.compras || []).map(c => c[0]), // Save literal names
-              schedule: data.horarios || userBasis.schedule,
+              inventory: hasNewPlan ? newInventory : [...(userBasis.inventory || []), ...newInventory],
+              planIngredients: (data.compras || []).map(c => c[0]),
+              doneMeals: hasNewPlan ? {} : (userBasis.doneMeals || {}),
+              doneEx: hasNewPlan ? {} : (userBasis.doneEx || {}),
+              schedule: data.horarios || (hasNewPlan ? null : userBasis.schedule),
               caloriesTarget,
               waterGoal,
               profiles: updatedProfiles,
               lastUpdateDate: new Date().toISOString().split('T')[0]
             });
 
-            alert(`✅ PLAN CLINICO ACTUALIZADO: ${newPatientName}\n\n♻️ Plan anterior purgado.\n📅 Próxima Cita: ${data.perfilAuto?.proximaCita || 'No especificada'}\n💊 Suplementos: ${(data.perfilAuto?.suplementos || []).join(', ') || 'Ninguno'}\n🛒 ${newInventory.length} suministros en lista.`);
+            setLastUploadData({
+              name: newPatientName,
+              items: newInventory.length,
+              cita: data.perfilAuto?.proximaCita
+            });
+            setUploadStatus('success');
+            setTimeout(() => {
+              setShowSuccessModal(true);
+              setUploadStatus('idle');
+            }, 800);
           }
         };
         reader.readAsDataURL(file);
       } catch (error: any) {
         console.error(error);
+        setUploadStatus('error');
         alert(`⚠️ Error al procesar el PDF: ${error.message || error}`);
+        setTimeout(() => setUploadStatus('idle'), 2000);
       } finally {
-        setIsProcessing(false);
         if (fileInputRef.current) fileInputRef.current.value = '';
       }
     }
@@ -164,12 +172,95 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
 
   return (
     <div className="flex flex-col bg-slate-50 min-h-screen pb-24">
-      {isProcessing && (
-        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center backdrop-blur-sm p-4">
-          <div className="bg-white p-8 rounded-3xl shadow-2xl flex flex-col items-center animate-in zoom-in-95 max-w-sm w-full text-center">
-            <div className="size-20 border-[6px] border-blue-100 border-t-blue-600 rounded-full animate-spin mb-6"></div>
-            <h3 className="text-xl font-bold text-slate-900 mb-2">Analizando Datos</h3>
-            <p className="text-slate-500 text-sm">Extrayendo información clínica...</p>
+      {/* Custom Premium Processing Overlay */}
+      {uploadStatus !== 'idle' && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 animate-in fade-in duration-300">
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-xl" />
+          <div className="relative w-full max-w-sm bg-white rounded-[48px] p-10 flex flex-col items-center text-center shadow-2xl space-y-8 animate-in zoom-in duration-500">
+
+            <div className="relative size-32">
+              <div className="absolute inset-0 border-[3px] border-slate-100 rounded-full" />
+              <div
+                className="absolute inset-0 border-[3px] border-blue-600 rounded-full transition-all duration-700 ease-in-out"
+                style={{
+                  borderTopColor: 'transparent',
+                  borderLeftColor: 'transparent',
+                  transform: `rotate(${uploadStatus === 'reading' ? 120 : uploadStatus === 'analyzing' ? 240 : 360}deg)`,
+                  animation: uploadStatus === 'analyzing' ? 'spin 1.5s linear infinite' : 'none'
+                }}
+              />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="material-symbols-outlined text-4xl text-blue-600 animate-pulse">
+                  {uploadStatus === 'reading' ? 'content_paste_search' : uploadStatus === 'analyzing' ? 'biotech' : 'sync_saved_locally'}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">
+                {uploadStatus === 'reading' ? 'Leyendo PDF' : uploadStatus === 'analyzing' ? 'IA Analizando' : uploadStatus === 'syncing' ? 'Sincronizando' : 'Completado'}
+              </h3>
+              <p className="text-[11px] text-slate-400 font-bold uppercase tracking-[0.2em]">Cerebro Metabólico v3.4</p>
+            </div>
+
+            <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-blue-600 transition-all duration-1000 ease-out"
+                style={{ width: uploadStatus === 'reading' ? '30%' : uploadStatus === 'analyzing' ? '70%' : '100%' }}
+              />
+            </div>
+
+            <p className="text-sm font-medium text-slate-500 leading-relaxed px-2">
+              {uploadStatus === 'reading' ? 'Extrayendo capas de información del documento clínico...' :
+                uploadStatus === 'analyzing' ? 'Nuestra IA está interpretando tus nuevas metas y nutrición...' :
+                  'Cargando nuevos suministros y configurando tu semana...'}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Premium Success Modal */}
+      {showSuccessModal && lastUploadData && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 animate-in fade-in duration-300">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={() => setShowSuccessModal(false)} />
+          <div className="relative w-full max-w-sm bg-white rounded-[48px] overflow-hidden shadow-2xl animate-in zoom-in duration-500">
+            <div className="bg-blue-600 p-10 text-center relative overflow-hidden">
+              <div className="absolute top-0 right-0 size-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl" />
+              <div className="size-20 bg-white rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-xl animate-bounce">
+                <span className="material-symbols-outlined text-blue-600 text-4xl font-fill">check_circle</span>
+              </div>
+              <h3 className="text-white text-2xl font-black tracking-tight mb-1">¡Plan Sincronizado!</h3>
+              <p className="text-blue-100 text-[10px] font-black uppercase tracking-[0.2em]">{lastUploadData.name}</p>
+            </div>
+
+            <div className="p-8 space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-slate-50 p-4 rounded-3xl border border-slate-100">
+                  <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mb-1">Suministros</p>
+                  <p className="text-xl font-black text-slate-900">{lastUploadData.items}</p>
+                </div>
+                <div className="bg-slate-50 p-4 rounded-3xl border border-slate-100">
+                  <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mb-1">Próxima Cita</p>
+                  <p className="text-sm font-black text-slate-900 truncate">{lastUploadData.cita || 'TBD'}</p>
+                </div>
+              </div>
+
+              <div className="bg-emerald-50 p-4 rounded-[24px] border border-emerald-100 flex items-center gap-4">
+                <div className="size-10 bg-white rounded-xl flex items-center justify-center text-emerald-500 shadow-sm shrink-0">
+                  <span className="material-symbols-outlined text-xl">auto_renew</span>
+                </div>
+                <p className="text-[11px] font-bold text-emerald-800 leading-tight">
+                  La despensa y el menú semanal han sido actualizados con éxito.
+                </p>
+              </div>
+
+              <button
+                onClick={() => setShowSuccessModal(false)}
+                className="w-full bg-slate-900 text-white py-5 rounded-[24px] font-black text-xs uppercase tracking-[0.2em] active:scale-95 transition-all shadow-xl shadow-slate-200"
+              >
+                EMPEZAR AHORA
+              </button>
+            </div>
           </div>
         </div>
       )}
