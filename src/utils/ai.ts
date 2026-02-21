@@ -47,58 +47,48 @@ export const processPdfWithGemini = async (
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-      const promptText = `Actúa como procesador médico experto para MN-NutriApp. 
-Extrae la información directamente de los documentos PDF adjuntos.
+      const promptText = `Actua como procesador medico experto para MN-NutriApp. Extrae la informacion directamente de los documentos PDF adjuntos.
 
-REGLAS CRÍTICAS:
-1. Identifica obligatoriamente el nombre del Paciente y del Médico.
-2. Extrae medidas actuales: peso, grasa %, cintura, cuello, brazos si están disponibles.
-3. Extrae el menú semanal completo (los 7 días con sus 5 tiempos de comida) y rutinas de ejercicio.
-4. Clínica: Identifica suplementación activa y fecha de próxima cita. Actualiza comorbilidades.
+REGLAS CRITICAS:
+1. Identifica obligatoriamente el nombre del Paciente y del Medico.
+2. Extrae medidas actuales: peso, grasa %, cintura, cuello, brazos si estan disponibles.
+3. Extrae el menu semanal completo y rutinas de ejercicio.
+4. Clinica: Identifica suplementacion activa y fecha de proxima cita. Actualiza comorbilidades.
 
-═══════════════════════════════════════════
-REGLA MÁS IMPORTANTE — LISTA DE COMPRAS:
-═══════════════════════════════════════════
+--- REGLA MAS IMPORTANTE: LISTA DE COMPRAS ---
 Genera el array "compras" siguiendo ESTOS PASOS EXACTOS:
 
-PASO 1 — ESCANEO EXHAUSTIVO:
-Lee CADA comida de CADA día que aparezca en el PDF, sin importar cuántos días o tiempos de comida tenga el plan.
-Recorre TODOS los días (puede ser de DOMINGO a SÁBADO, o menos) y TODOS los tiempos de comida presentes (DESAYUNO, MERIENDA, ALMUERZO, CENA, etc.).
-NO te saltes NINGÚN día ni NINGÚN tiempo de comida que exista en el documento.
+PASO 1 - ESCANEO EXHAUSTIVO:
+Lee CADA comida de CADA dia que aparezca en el PDF, sin importar cuantos dias o tiempos de comida tenga el plan. Recorre TODOS los dias y TODOS los tiempos de comida presentes (DESAYUNO, MERIENDA, ALMUERZO, CENA, etc.). NO te saltes NINGUN dia ni NINGUN tiempo de comida que exista en el documento.
 
-PASO 2 — EXTRACCIÓN LITERAL:
-Para cada comida, extrae TODOS los ingredientes mencionados. 
-Mantén los nombres COMPUESTOS tal como aparecen en el PDF:
-  ✅ "Aceite de oliva", "Galletas de arroz", "Pan pita integral", "Aceite de coco", "Plátano verde", "Plátano maduro", "Queso mozzarella", "Col rizada", "Proteína en polvo"
-  ❌ NO separes "Aceite de oliva" en "Aceite" y "Oliva"
-  ❌ NO separes "Galletas de arroz" en "Galletas" y "Arroz"
-  ❌ NO omitas ingredientes como condimentos, frutas o vegetales
+PASO 2 - EXTRACCION LITERAL:
+Para cada comida, extrae TODOS los ingredientes mencionados. Manten los nombres COMPUESTOS tal como aparecen en el PDF.
+CORRECTO: "Aceite de oliva", "Galletas de arroz", "Pan pita integral", "Aceite de coco", "Platano verde", "Platano maduro", "Queso mozzarella", "Col rizada", "Proteina en polvo"
+INCORRECTO: NO separes "Aceite de oliva" en "Aceite" y "Oliva". NO separes "Galletas de arroz" en "Galletas" y "Arroz". NO omitas ingredientes como condimentos, frutas o vegetales.
 
-PASO 3 — CONSOLIDACIÓN (SIN DUPLICADOS):
-Agrupa ingredientes idénticos en UNA SOLA entrada. 
-Suma la cantidad total semanal. Ejemplo:
-  Si "Aceite de oliva (1 cdta)" aparece en 14 comidas → ["Aceite de oliva", "14 cdtas (semanal)", 1, "Aceites y Condimentos", "Aceites y Condimentos"]
-  Si "Tortilla integral" aparece 5 veces → ["Tortilla integral", "5 unidades", 1, "Panadería y Tortillas", "Panadería"]
-  Si "Pechuga de pollo" aparece 4 veces con diferentes gramos → ["Pechuga de pollo", "~500g total", 1, "Carnes y Pescados", "Carnes"]
+PASO 3 - CONSOLIDACION SIN DUPLICADOS:
+Agrupa ingredientes identicos en UNA SOLA entrada. Suma la cantidad total semanal. Ejemplo:
+Si "Aceite de oliva 1 cdta" aparece en 14 comidas: ["Aceite de oliva", "14 cdtas semanal", 1, "Aceites y Condimentos", "Aceites y Condimentos"]
+Si "Tortilla integral" aparece 5 veces: ["Tortilla integral", "5 unidades", 1, "Panaderia y Tortillas", "Panaderia"]
 
-PASO 4 — CATEGORIZACIÓN POR PASILLO DE SUPERMERCADO:
-Usa EXACTAMENTE estos pasillos (columna 4 = Categoría, columna 5 = Pasillo):
-  • Carnes y Pescados: pollo, cerdo, res, salmón, bacalao, atún, pescado, alitas, pastrami (Pasillo: "Carnes")
-  • Frutas: banana, melón, fresas, naranja, lechosa, sandía, blueberries, limón (Pasillo: "Frutas")
-  • Verduras y Hortalizas: lechuga, tomate, zucchini, zanahoria, espinaca, pepino, brócoli, auyama, remolacha, col rizada, repollo, champiñones, cebolla, berro (Pasillo: "Verduras")
-  • Lácteos y Huevos: huevos, queso mozzarella, leche descremada (Pasillo: "Lácteos")
-  • Panadería y Tortillas: tortilla integral, pan pita integral, casabe (Pasillo: "Panadería")
-  • Cereales y Granos: arroz, pasta, quinoa, avena, galletas de arroz (Pasillo: "Cereales")
-  • Tubérculos: plátano verde, plátano maduro, batata (Pasillo: "Tubérculos")
-  • Aceites y Condimentos: aceite de oliva, aceite de coco, curry, cúrcuma, paprika, sal, ajo, salsa BBQ (Pasillo: "Aceites y Condimentos")
-  • Frutos Secos: macadamias, almendras, aceitunas, aguacate (Pasillo: "Frutos Secos")
-  • Bebidas y Suplementos: proteína en polvo, té, café, edulcorante (Pasillo: "Bebidas")
-  • Embutidos: jamón, pastrami de pavo (Pasillo: "Embutidos")
+PASO 4 - CATEGORIZACION POR PASILLO DE SUPERMERCADO:
+Usa EXACTAMENTE estos pasillos (columna 4 = Categoria, columna 5 = Pasillo):
+- Carnes y Pescados: pollo, cerdo, res, salmon, bacalao, atun, pescado, alitas, pastrami. Pasillo: "Carnes"
+- Frutas: banana, melon, fresas, naranja, lechosa, sandia, blueberries, limon. Pasillo: "Frutas"
+- Verduras y Hortalizas: lechuga, tomate, zucchini, zanahoria, espinaca, pepino, brocoli, auyama, remolacha, col rizada, repollo, champinones, cebolla, berro. Pasillo: "Verduras"
+- Lacteos y Huevos: huevos, queso mozzarella, leche descremada. Pasillo: "Lacteos"
+- Panaderia y Tortillas: tortilla integral, pan pita integral, casabe. Pasillo: "Panaderia"
+- Cereales y Granos: arroz, pasta, quinoa, avena, galletas de arroz. Pasillo: "Cereales"
+- Tuberculos: platano verde, platano maduro, batata. Pasillo: "Tuberculos"
+- Aceites y Condimentos: aceite de oliva, aceite de coco, curry, curcuma, paprika, sal, ajo, salsa BBQ. Pasillo: "Aceites y Condimentos"
+- Frutos Secos: macadamias, almendras, aceitunas, aguacate. Pasillo: "Frutos Secos"
+- Bebidas y Suplementos: proteina en polvo, te, cafe, edulcorante. Pasillo: "Bebidas"
+- Embutidos: jamon, pastrami de pavo. Pasillo: "Embutidos"
 
-PASO 5 — VERIFICACIÓN FINAL:
-Antes de devolver el JSON, revisa tu lista contra el PDF original. Cada ingrediente mencionado en cualquier comida DEBE estar presente en el array "compras". Si sospechas que faltan ingredientes, relee el PDF y agrégalos.
+PASO 5 - VERIFICACION FINAL:
+Antes de devolver el JSON, revisa tu lista contra el PDF original. Cada ingrediente mencionado en cualquier comida DEBE estar presente en el array "compras". Si sospechas que faltan ingredientes, relee el PDF y agregalos.
 
-RESPONDE ÚNICAMENTE CON ESTE FORMATO JSON:
+RESPONDE UNICAMENTE CON ESTE FORMATO JSON:
 {
   "perfilAuto": { 
     "paciente": "...", "doctor": "...", "edad": "...", "peso": "...", "pesoObjetivo": "...",
@@ -106,12 +96,13 @@ RESPONDE ÚNICAMENTE CON ESTE FORMATO JSON:
     "sangre": "...", "tipoSangre": "...", "alergias": "...", 
     "objetivos": [], "comorbilidades": [], "suplementos": [], "proximaCita": "..."
   },
-  "semana": { "LUNES": {"DESAYUNO": "...", "MERIENDA_AM": "...", "ALMUERZO": "...", "MERIENDA_PM": "...", "CENA": "..." }, ... },
-  "ejercicios": { "LUNES": [ {"n": "🏋️ Ejercicio", "i": "3x12", "link": ""} ], ... },
-  "compras": [ ["Nombre Completo Literal", "Cantidad Total Semanal", 1, "Categoría", "Pasillo"] ],
+  "semana": { "LUNES": {"DESAYUNO": "...", "MERIENDA_AM": "...", "ALMUERZO": "...", "MERIENDA_PM": "...", "CENA": "..." } },
+  "ejercicios": { "LUNES": [ {"n": "Ejercicio", "i": "3x12", "link": ""} ] },
+  "compras": [ ["Nombre Completo Literal", "Cantidad Total Semanal", 1, "Categoria", "Pasillo"] ],
   "metas": { "calorias": 2000, "agua": 2800 },
   "horarios": { "DESAYUNO": "08:30 AM", "ALMUERZO": "01:30 PM", "CENA": "07:30 PM" }
 }`;
+
 
       const parts: any[] = [{ text: promptText }];
       if (pdfPlanBase64) parts.push({ inlineData: { mimeType: "application/pdf", data: pdfPlanBase64.replace(/^data:application\/pdf;base64,/, "") } });
