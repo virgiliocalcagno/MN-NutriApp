@@ -76,9 +76,10 @@ const InventoryView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => 
     };
 
     const handleShareList = async () => {
-        const items = showAllInventory ? inventory : shoppingList;
-        const grouped = groupItems(items, 'aisle');
-        const totalItems = items.length;
+        // Only share items that need purchasing (Agotado or Stock Bajo)
+        const itemsToBuy = inventory.filter(item => item.level <= 2);
+        const grouped = groupItems(itemsToBuy, 'aisle');
+        const totalItems = itemsToBuy.length;
 
         let text = `🛒 LISTA DE COMPRAS (${totalItems} productos)\n`;
         text += `━━━━━━━━━━━━━━━━━━━━\n\n`;
