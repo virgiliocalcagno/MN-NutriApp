@@ -78,6 +78,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
                     calories: 0,
                     water: 0,
                     doneEx: {},
+                    doneMeals: {},
                     lastUpdateDate: today
                 });
             }

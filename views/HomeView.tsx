@@ -51,6 +51,24 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
     }
   };
 
+  const toggleMealStatus = (mealId: string) => {
+    const dayKey = selectedDay.toUpperCase();
+    const currentDone = store.doneMeals?.[dayKey] || [];
+    const isDone = currentDone.includes(mealId);
+
+    if (isDone) {
+      if (confirm("¿Deseas desmarcar esta comida como completada?")) {
+        const newDone = currentDone.filter(id => id !== mealId);
+        saveStore({ ...store, doneMeals: { ...store.doneMeals, [dayKey]: newDone } });
+      }
+    } else {
+      if (confirm("¿Deseas marcar esta comida como completada?")) {
+        const newDone = [...currentDone, mealId];
+        saveStore({ ...store, doneMeals: { ...store.doneMeals, [dayKey]: newDone } });
+      }
+    }
+  };
+
   const normalize = (str: string) =>
     str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
 
@@ -169,17 +187,22 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
         <section className="space-y-6 pt-4 relative">
           <div className="absolute left-[15px] top-6 bottom-0 w-[2px] bg-slate-100 z-0"></div>
           {mealItems.length > 0 ? (
-            mealItems.map((meal, idx) => (
-              <MealCard
-                key={idx}
-                type={meal.name}
-                time={store.schedule?.[meal.id] || "Horario"}
-                title={meal.description}
-                kcal={`${meal.kcal || '---'} kcal`}
-                status={idx === 0 ? 'completed' : idx === 1 ? 'active' : 'pending'}
-                onViewRecipe={() => setSelectedMeal({ id: `${meal.name}-${idx}`, type: meal.name, description: meal.description })}
-              />
-            ))
+            mealItems.map((meal, idx) => {
+              const isDone = (store.doneMeals?.[selectedDay.toUpperCase()] || []).includes(meal.id);
+              const isNext = !isDone && (idx === 0 || (store.doneMeals?.[selectedDay.toUpperCase()] || []).includes(mealItems[idx - 1].id));
+
+              return (
+                <MealCard
+                  key={idx}
+                  type={meal.name}
+                  time={store.schedule?.[meal.id] || "Horario"}
+                  title={meal.description}
+                  status={isDone ? 'completed' : isNext ? 'active' : 'pending'}
+                  onToggle={() => toggleMealStatus(meal.id)}
+                  onViewRecipe={() => setSelectedMeal({ id: `${meal.name}-${idx}`, type: meal.name, description: meal.description })}
+                />
+              );
+            })
           ) : (
             <div className="p-8 text-center border-2 border-dashed border-slate-200 rounded-3xl bg-white/50">
               <span className="material-symbols-outlined text-slate-300 text-5xl mb-2">event_busy</span>
@@ -197,15 +220,18 @@ interface MealCardProps {
   type: string;
   time: string;
   title: string;
-  kcal: string;
   status: 'completed' | 'active' | 'pending';
+  onToggle: () => void;
   onViewRecipe: () => void;
 }
 
-const MealCard: React.FC<MealCardProps> = ({ type, time, title, kcal, status, onViewRecipe }) => {
+const MealCard: React.FC<MealCardProps> = ({ type, time, title, status, onToggle, onViewRecipe }) => {
   return (
     <div className="relative z-10 flex gap-5 group items-start">
-      <div className={`size-8 rounded-full flex items-center justify-center shrink-0 border-4 border-white shadow-sm mt-1 transition-all ${status === 'completed' ? 'bg-emerald-500' : status === 'active' ? 'bg-primary' : 'bg-slate-200'}`}>
+      <div
+        onClick={onToggle}
+        className={`size-8 rounded-full flex items-center justify-center shrink-0 border-4 border-white shadow-sm mt-1 transition-all cursor-pointer select-none active:scale-90 ${status === 'completed' ? 'bg-emerald-500' : status === 'active' ? 'bg-primary' : 'bg-slate-200'}`}
+      >
         {status === 'completed' && <span className="material-symbols-outlined text-white text-sm font-bold">check</span>}
         {status === 'active' && <div className="size-2.5 bg-white rounded-full"></div>}
       </div>
@@ -215,11 +241,7 @@ const MealCard: React.FC<MealCardProps> = ({ type, time, title, kcal, status, on
           <span className="text-[11px] font-black text-slate-400">{time}</span>
         </div>
         <h3 className="text-slate-800 font-extrabold text-base leading-tight mb-4">{title}</h3>
-        <div className="flex items-center justify-between mt-auto">
-          <div className="flex items-center gap-1.5 text-primary">
-            <span className="material-symbols-outlined text-[18px] fill-1">local_fire_department</span>
-            <span className="text-xs font-black">{kcal}</span>
-          </div>
+        <div className="flex items-center justify-end mt-auto">
           <button onClick={onViewRecipe} className="text-primary font-black text-[10px] hover:underline uppercase tracking-wider">Ver Receta</button>
         </div>
       </div>

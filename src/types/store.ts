@@ -52,6 +52,7 @@ export interface Store {
     items: MealItem[];
     exercises: Record<string, Exercise[]>;
     doneEx: Record<string, number[]>;
+    doneMeals: Record<string, string[]>;
     selectedDay: string;
     schedule: Record<string, string> | null;
     profile: Profile;
@@ -73,6 +74,7 @@ export const initialStore: Store = {
     items: [],
     exercises: {},
     doneEx: {},
+    doneMeals: {},
     selectedDay: '',
     schedule: null,
     profile: {

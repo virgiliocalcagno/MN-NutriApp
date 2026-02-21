@@ -26,7 +26,8 @@ Este archivo es tu **"Botón de Pánico"**. Aquí guardo los momentos en los que
 | `CP017` | 20/02/2026 | `2c9cedf` | **MN-NutriApp v32.7**: Isolated Scheduler Reset & UI Fixes. | ✅ Estable |
 | `CP018` | 20/02/2026 | `ee76c22` | **MN-NutriApp v32.8**: HomeView Refactor & Nutrition Scheduler Modal. | ✅ Estable |
 | `CP019` | 20/02/2026 | `79956ba` | **MN-NutriApp v32.9**: Fixed Navigation Bar & Layout Refactor. | ✅ Estable |
-| `CP020` | 20/02/2026 | `d3e8f1a` | **MN-NutriApp v33.0**: Smart Hydration Tracker (30/60 Medical Rule). | 🚀 Activo |
+| `CP020` | 20/02/2026 | `d3e8f1a` | **MN-NutriApp v33.0**: Smart Hydration Tracker (30/60 Medical Rule). | ✅ Estable |
+| `CP021` | 20/02/2026 | `b2c4e5f` | **MN-NutriApp v33.1**: Functional Meal Tracking & UI Cleanup. | 🚀 Activo |
 
 ---
 > [!IMPORTANT]
