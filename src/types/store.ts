@@ -43,6 +43,16 @@ export interface WaterEntry {
     time: string;
 }
 
+export interface InventoryItem {
+    id: string;
+    name: string;
+    qty: string;
+    level: number; // 1: Out, 2: Low, 3: OK, 4: Full
+    category: string;
+    aisle: string;
+    isCustom?: boolean;
+}
+
 export interface Store {
     water: number;
     waterHistory: WaterEntry[];
@@ -53,6 +63,7 @@ export interface Store {
     exercises: Record<string, Exercise[]>;
     doneEx: Record<string, number[]>;
     doneMeals: Record<string, string[]>;
+    inventory: InventoryItem[];
     selectedDay: string;
     schedule: Record<string, string> | null;
     profile: Profile;
@@ -75,6 +86,7 @@ export const initialStore: Store = {
     exercises: {},
     doneEx: {},
     doneMeals: {},
+    inventory: [],
     selectedDay: '',
     schedule: null,
     profile: {

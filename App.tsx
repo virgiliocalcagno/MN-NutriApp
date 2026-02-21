@@ -6,7 +6,7 @@ import ProfileView from './views/ProfileView';
 import ProgressView from './views/ProgressView';
 import WelcomeView from './views/WelcomeView';
 import TopNav from './components/TopNav';
-import ShoppingView from './views/ShoppingView';
+import InventoryView from './views/InventoryView';
 import LoginScreen from './src/components/LoginScreen';
 import { useStore } from './src/context/StoreContext';
 import BottomNav from './components/BottomNav';
@@ -34,7 +34,7 @@ const App: React.FC = () => {
       case 'welcome': return <WelcomeView onStart={() => setCurrentView('home')} />;
       case 'home': return <HomeView setView={setCurrentView} />;
       case 'fitness': return <FitnessView setView={setCurrentView} />;
-      case 'shopping': return <ShoppingView setView={setCurrentView} />;
+      case 'inventory': return <InventoryView setView={setCurrentView} />;
       case 'profile': return <ProfileView setView={setCurrentView} />;
       case 'progress': return <ProgressView />;
       case 'scan': return <NutriScanView setView={setCurrentView} />;
@@ -44,7 +44,7 @@ const App: React.FC = () => {
 
   return (
     <div className="max-w-md mx-auto bg-white h-screen shadow-2xl relative flex flex-col overflow-hidden">
-      {currentView !== 'shopping' && currentView !== 'welcome' && (
+      {currentView !== 'inventory' && currentView !== 'welcome' && (
         <TopNav currentView={currentView} setCurrentView={setCurrentView} />
       )}
       <main className={`flex-1 overflow-y-auto no-scrollbar ${currentView !== 'welcome' ? 'pb-4' : ''}`}>
