@@ -11,6 +11,7 @@ export interface AIResponse {
     calorias: number;
     agua: number;
   };
+  horarios?: Record<string, string>; // e.g., {"DESAYUNO": "08:00 AM", ...}
 }
 
 export interface RecipeDetails {
@@ -49,13 +50,34 @@ export const processPdfWithGemini = async (
       const promptText = `Actúa como procesador médico experto para MN-NutriApp. 
                 Extrae la información directamente de los documentos PDF adjuntos.
                 
+                REGLAS CRÍTICAS:
+                1. Identifica obligatoriamente el nombre del Paciente y del Médico.
+                2. Extrae medidas actuales: peso, grasa %, cintura, cuello, brazos si están disponibles.
+                3. Extrae el menú semanal completo y rutinas de ejercicio.
+                4. Lista de compras: Identifica ingredientes y categorízalos.
+                
                 RESPONDE ÚNICAMENTE CON ESTE FORMATO JSON:
                 {
-                  "perfilAuto": { "paciente": "...", "doctor": "...", "edad": "...", "peso": "...", "estatura": "...", "cintura": "...", "sangre": "...", "alergias": "...", "objetivos": [], "comorbilidades": [] },
+                  "perfilAuto": { 
+                    "paciente": "...", 
+                    "doctor": "...", 
+                    "edad": "...", 
+                    "peso": "...", 
+                    "estatura": "...", 
+                    "cintura": "...", 
+                    "cuello": "...", 
+                    "brazos": "...",
+                    "grasa": "...",
+                    "sangre": "...", 
+                    "alergias": "...", 
+                    "objetivos": [], 
+                    "comorbilidades": [] 
+                  },
                   "semana": { "LUNES": {"DESAYUNO": "...", "MERIENDA_AM": "...", "ALMUERZO": "...", "MERIENDA_PM": "...", "CENA": "..." }, ... },
                   "ejercicios": { "LUNES": [ {"n": "🏋️ Ejercicio", "i": "3x12", "link": ""} ], ... },
                   "compras": [ ["Nombre", "Cantidad", 1, "Categoría", "Pasillo"] ],
-                  "metas": { "calorias": 2000, "agua": 2800 }
+                  "metas": { "calorias": 2000, "agua": 2800 },
+                  "horarios": { "DESAYUNO": "08:30 AM", "ALMUERZO": "01:30 PM", "CENA": "07:30 PM" }
                 }
                 
                 Categorías permitidas para compras: Proteínas, Carbohidratos, Frutas y Verduras, Lácteos, Grasas, Cereales, Panadería, Bebidas, Gral.`;

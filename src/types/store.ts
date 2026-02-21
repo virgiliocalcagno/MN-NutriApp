@@ -1,3 +1,12 @@
+export interface BiometricEntry {
+    date: string;
+    weight: string;
+    fat?: string;
+    waist?: string;
+    cuello?: string;
+    brazos?: string;
+}
+
 export interface Profile {
     paciente: string;
     doctor: string;
@@ -8,12 +17,20 @@ export interface Profile {
     metaAgua: number;
     estatura: string;
     cintura: string;
+    cuello?: string;
+    brazos?: string;
+    grasa?: string;
     emergencia: string;
     observaciones: string;
     sangre: string;
     alergias: string;
     objetivos: string[];
     comorbilidades: string[];
+    evolution: BiometricEntry[];
+    metas?: {
+        calorias: number;
+        agua: number;
+    };
 }
 
 export interface MealItem {
@@ -74,6 +91,7 @@ export interface Store {
     caloriesTarget: number;
     lastScan: any | null;
     lastUpdateDate: string; // ISO date string YYYY-MM-DD
+    profiles: Record<string, Partial<Store>>; // Multi-user isolation
 }
 
 export const initialStore: Store = {
@@ -91,8 +109,10 @@ export const initialStore: Store = {
     schedule: null,
     profile: {
         paciente: '', doctor: '', edad: '', peso: '', sexo: 'Hombre', pesoIdeal: '',
-        metaAgua: 2800, estatura: '', cintura: '', emergencia: '', observaciones: '',
-        sangre: '', alergias: '', objetivos: [], comorbilidades: []
+        metaAgua: 2800, estatura: '', cintura: '', cuello: '', brazos: '', grasa: '',
+        emergencia: '', observaciones: '',
+        sangre: '', alergias: '', objetivos: [], comorbilidades: [],
+        evolution: []
     },
     historial: [],
     medals: { silver: 0, gold: 0 },
@@ -100,5 +120,6 @@ export const initialStore: Store = {
     calories: 0,
     caloriesTarget: 2000,
     lastScan: null,
-    lastUpdateDate: new Date().toISOString().split('T')[0]
+    lastUpdateDate: new Date().toISOString().split('T')[0],
+    profiles: {}
 };

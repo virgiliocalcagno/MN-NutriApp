@@ -64,39 +64,70 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
           const activeKey = (firebaseConfig as any).geminiApiKey;
           const data = await processPdfWithGemini(profile, base64, undefined, activeKey);
           if (data) {
-            const mergedProfile = { ...initialStore.profile, ...data.perfilAuto };
-            const newMenu = data.semana || {};
-            const newExercises = data.ejercicios || {};
+            const newPatientName = (data.perfilAuto?.paciente || 'Usuario').trim();
+            const currentPatientName = (store.profile?.paciente || '').trim();
 
-            // Map compras to InventoryItems (Plan de Insumos)
+            let updatedProfiles = { ...store.profiles };
+
+            // 1. Multi-User Isolation: Save current user if it exists and is different
+            if (currentPatientName && currentPatientName !== newPatientName) {
+              const { profiles: _, ...rest } = store;
+              updatedProfiles[currentPatientName] = rest;
+            }
+
+            // 2. Biometric Evolution: Move current biometrics to history if they exist
+            const currentProfile = store.profile;
+            const evolution = [...(currentProfile.evolution || [])];
+
+            const hasClinicalData = currentProfile.peso || currentProfile.grasa;
+            if (hasClinicalData && currentProfile.paciente === newPatientName) {
+              evolution.push({
+                date: new Date().toISOString().split('T')[0],
+                weight: currentProfile.peso,
+                fat: currentProfile.grasa,
+                waist: currentProfile.cintura,
+                cuello: currentProfile.cuello,
+                brazos: currentProfile.brazos
+              });
+            }
+
+            // 3. Plan Purging & Inventory Injection (Level 1 - Rojo)
             const newInventory: InventoryItem[] = (data.compras || []).map((c: any, idx: number) => ({
               id: Date.now() + '-' + idx,
               name: c[0],
               qty: c[1],
-              level: 4, // Professional plans usually assume you NEED these, so they start as needed? 
-              // Or level 1 (Out) so they show in shopping list?
-              // The user said "cree los suministro", usually means populate the pantry.
-              // Let's set level 4 (Full) as it's a new loading, or level 1 if they are "shopping" items.
-              // Actually, if they are "compras", they should probably be level 1 (Agotado) so they appear in the Shopping List.
+              level: 1, // Rojo / Agotado
               category: c[3] || 'Gral',
               aisle: c[4] || 'Gral',
               isCustom: false
             }));
 
-            // Sync Fitness Metas
-            const caloriesTarget = data.metas?.calorias || store.caloriesTarget || 2000;
-            const waterGoal = data.metas?.agua || store.profile?.metaAgua || 2800;
+            const caloriesTarget = data.metas?.calorias || 2000;
+            const waterGoal = data.metas?.agua || 2800;
+
+            // Load existing user data if any, or start from initialStore to PURGE old plan
+            const userBasis = updatedProfiles[newPatientName] || initialStore;
 
             saveStore({
-              ...store,
-              profile: { ...mergedProfile, metaAgua: waterGoal },
-              menu: newMenu,
-              exercises: newExercises,
-              inventory: [...store.inventory, ...newInventory],
-              caloriesTarget: caloriesTarget,
-              waterGoal: waterGoal
+              ...initialStore,
+              ...userBasis,
+              profile: {
+                ...initialStore.profile,
+                ...data.perfilAuto,
+                metaAgua: waterGoal,
+                evolution: evolution.length > 0 ? evolution : userBasis.profile?.evolution || []
+              },
+              menu: data.semana || {},
+              exercises: data.ejercicios || {},
+              inventory: [...(userBasis.inventory || []), ...newInventory],
+              schedule: data.horarios || userBasis.schedule,
+              caloriesTarget,
+              waterGoal,
+              profiles: updatedProfiles,
+              lastUpdateDate: new Date().toISOString().split('T')[0]
             });
-            alert(`✅ ANÁLISIS COMPLETADO EXITOSAMENTE\n\n👤 Paciente: ${mergedProfile.paciente || 'Paciente'}\n📅 Menú: ${Object.keys(newMenu).length} días\n🛒 Suministros: ${newInventory.length} añadidos\n🔥 Meta: ${caloriesTarget} Kcal\n💧 Agua: ${waterGoal}ml`);
+
+            alert(`✅ PLAN ACTUALIZADO PARA: ${newPatientName}\n\n♻️ Plan anterior purgado.\n📈 Historial biométrico guardado.\n🛒 ${newInventory.length} suministros en lista de compras.\n🔥 Meta: ${caloriesTarget} Kcal | 💧 Agua: ${waterGoal}ml`);
           }
         };
         reader.readAsDataURL(file);
@@ -384,6 +415,34 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
               </div>
             </div>
           </section>
+
+          {/* Evolución Metabólica */}
+          {profile.evolution && profile.evolution.length > 0 && (
+            <section className="bg-white p-8 rounded-[40px] border border-slate-100 shadow-sm space-y-6">
+              <div className="flex items-center gap-3 mb-2">
+                <span className="material-symbols-outlined text-emerald-500 font-fill">history</span>
+                <h4 className="font-black text-slate-900 text-[10px] uppercase tracking-[0.2em]">Evolución Metabólica</h4>
+              </div>
+              <div className="grid grid-cols-1 gap-3">
+                {profile.evolution.slice().reverse().map((entry, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-4 bg-slate-50/50 rounded-3xl border border-slate-100/50 group hover:bg-white hover:shadow-sm transition-all duration-300">
+                    <div>
+                      <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest mb-1">{entry.date}</p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-black text-slate-900">{entry.weight}</span>
+                        {entry.fat && <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-lg">{entry.fat} grasa</span>}
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      {entry.waist && <span className="text-[8px] font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full uppercase">Cintura: {entry.waist}</span>}
+                      {entry.cuello && <span className="text-[8px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded-full uppercase">Cuello: {entry.cuello}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
 
           {/* Observaciones Premium */}
           <section className="bg-slate-900 p-8 rounded-[40px] text-white shadow-2xl shadow-slate-900/40 relative overflow-hidden group">
