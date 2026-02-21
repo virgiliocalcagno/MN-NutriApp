@@ -1,4 +1,4 @@
-import { MealItem } from '../types/store';
+import { MealItem, InventoryItem } from '../types/store';
 
 export const ORDEN_COMIDAS = ["DESAYUNO", "MERIENDA_AM", "ALMUERZO", "MERIENDA_PM", "CENA"];
 
@@ -48,29 +48,23 @@ const getIconForCategory = (cat: string) => {
     }
 };
 
-export const calculatePantryStats = (items: MealItem[]) => {
-    const homeItems = items.filter(i => i.lv >= 3);
+export const calculatePantryStats = (items: InventoryItem[]) => {
+    const homeItems = items.filter(i => i.level >= 3);
     const stats = {
         total: homeItems.length,
-        lowStock: homeItems.filter(i => i.lv === 3).length,
+        lowStock: homeItems.filter(i => i.level === 3).length,
     };
     return stats;
 };
 
-export const getPantryItemsForDisplay = (items: MealItem[]) => {
+export const getPantryItemsForDisplay = (items: InventoryItem[]) => {
     const categories = ['Proteínas', 'Carbohidratos', 'Frutas y Verduras', 'Lácteos', 'Grasas', 'Cereales', 'Panadería', 'Bebidas', 'Gral'];
-    // Show ALL items if they exist in store, or filter by logic? 
-    // User wants to see everything in Pantry list, even if empty (level 1/0 UI).
-    // But usually HomeView summary only shows what is available. 
-    // Let's keep HomeView strict (lv >= 3) but ShoppingView lenient.
-
-    // For Home View Summary:
-    const homeItems = items.filter(i => i.lv >= 3);
+    const homeItems = items.filter(i => i.level >= 3);
 
     return categories.map((cat, idx) => {
-        const catItems = homeItems.filter(i => i.cat === cat || (cat === 'Gral' && !['Proteínas', 'Carbohidratos', 'Frutas y Verduras', 'Lácteos', 'Grasas'].includes(i.cat)));
+        const catItems = homeItems.filter(i => i.category === cat || (cat === 'Gral' && !['Proteínas', 'Carbohidratos', 'Frutas y Verduras', 'Lácteos', 'Grasas'].includes(i.category)));
         const total = catItems.length;
-        const filled = catItems.filter(i => i.lv === 4).length;
+        const filled = catItems.filter(i => i.level === 4).length;
         let percentage = total > 0 ? Math.round((filled / total) * 100) : 0;
 
         let status = 'DISPONIBLE';
@@ -140,7 +134,15 @@ export const FOOD_DATA: Record<string, { en: string, cat: string }> = {
     'chocolate': { en: 'Chocolate', cat: 'Gral' },
     'miel': { en: 'Honey', cat: 'Gral' },
     'vino': { en: 'Red Wine', cat: 'Bebidas' },
-    'cerveza': { en: 'Beer', cat: 'Bebidas' }
+    'cerveza': { en: 'Beer', cat: 'Bebidas' },
+    'pavo': { en: 'Turkey', cat: 'Proteínas' },
+    'espinaca': { en: 'Spinach', cat: 'Frutas y Verduras' },
+    'champis': { en: 'Mushrooms', cat: 'Frutas y Verduras' }, 'champiñones': { en: 'Mushrooms', cat: 'Frutas y Verduras' },
+    'galletas': { en: 'Cookies', cat: 'Panadería' },
+    'yogurt': { en: 'Yogurt', cat: 'Lácteos' },
+    'almendras': { en: 'Almonds', cat: 'Grasas' },
+    'nueces': { en: 'Walnuts', cat: 'Grasas' },
+    'gelatina': { en: 'Jelly', cat: 'Gral' }
 };
 
 export const getProductImage = (name: string, category: string) => {
@@ -167,14 +169,11 @@ export const getProductImage = (name: string, category: string) => {
     }
 };
 
-export const syncPlanToPantry = (menu: Record<string, any>, currentItems: MealItem[]): MealItem[] => {
-    const existingNames = new Set(currentItems.map(i => i.n.toLowerCase()));
-    const newItems: MealItem[] = [];
+// ... (keep previous functions)
 
-    // Flatten menu descriptions (menu is Record<DAY, Record<MEAL, DESC>> or similar)
-    // Check HomeView: store.menu is Record<string, any>.
-    // Usually it's: { "LUNES": { "DESAYUNO": "..." } } or just flat?
-    // Let's assume values are objects with descriptions.
+export const syncPlanToPantry = (menu: Record<string, any>, currentInventory: InventoryItem[]): InventoryItem[] => {
+    const existingNames = new Set(currentInventory.map(i => i.name.toLowerCase()));
+    const newItems: InventoryItem[] = [];
 
     const allDescriptions: string[] = [];
     Object.values(menu).forEach((dayMenu: any) => {
@@ -188,24 +187,21 @@ export const syncPlanToPantry = (menu: Record<string, any>, currentItems: MealIt
     allDescriptions.forEach(desc => {
         const lowerDesc = desc.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
         Object.keys(FOOD_DATA).forEach(key => {
-            // Match whole word to avoid false positives (e.g. "te" in "tomate")
-            // Simple regex: boundary or space
             if ((lowerDesc.includes(` ${key} `) || lowerDesc.startsWith(`${key} `) || lowerDesc.endsWith(` ${key}`) || lowerDesc === key) && !existingNames.has(key)) {
-
                 const data = FOOD_DATA[key];
                 newItems.push({
                     id: Date.now().toString() + '-' + key,
-                    n: key.charAt(0).toUpperCase() + key.slice(1),
-                    q: '1 Unidad',
-                    lv: 4, // Default to Full so they are visible
-                    cat: data.cat,
-                    p: 'Gral',
-                    b: false
+                    name: key.charAt(0).toUpperCase() + key.slice(1),
+                    qty: '1 Unidad',
+                    level: 1, // Start as Out/Agotado so they appear in Shopping List
+                    category: data.cat,
+                    aisle: 'Pasillo Gral',
+                    isCustom: false
                 });
                 existingNames.add(key);
             }
         });
     });
 
-    return [...currentItems, ...newItems];
+    return [...currentInventory, ...newItems];
 };

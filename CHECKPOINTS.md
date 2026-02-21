@@ -28,7 +28,8 @@ Este archivo es tu **"Botón de Pánico"**. Aquí guardo los momentos en los que
 | `CP019` | 20/02/2026 | `79956ba` | **MN-NutriApp v32.9**: Fixed Navigation Bar & Layout Refactor. | ✅ Estable |
 | `CP020` | 20/02/2026 | `d3e8f1a` | **MN-NutriApp v33.0**: Smart Hydration Tracker (30/60 Medical Rule). | ✅ Estable |
 | `CP021` | 20/02/2026 | `b2c4e5f` | **MN-NutriApp v33.1**: Functional Meal Tracking & UI Cleanup. | ✅ Estable |
-| `CP022` | 20/02/2026 | `a1b2c3d` | **MN-NutriApp v34.0**: Inventory & Shopping System (Stitch Design). | 🚀 Activo |
+| `CP022` | 20/02/2026 | `a1b2c3d` | **MN-NutriApp v34.0**: Inventory & Shopping System (Stitch Design). | ✅ Estable |
+| `CP023` | 20/02/2026 | `1a49dc2` | **MN-NutriApp v34.1**: Standardized Imports & Legacy Cleanup. | 🚀 Activo |
 
 ---
 > [!IMPORTANT]

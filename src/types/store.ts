@@ -22,7 +22,7 @@ export interface MealItem {
     q: string; // Quantity
     lv: number; // Stock Level (1-4)
     cat: string; // Category
-    p: string; // Purchase Category
+    aisle: string; // Purchase Category (Pasillo)
     b: boolean; // Bought?
     icon?: string;
     status?: string;
