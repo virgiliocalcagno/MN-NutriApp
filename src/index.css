@@ -32,9 +32,12 @@
 
 .no-scrollbar {
   -ms-overflow-style: none;
+
   /* IE and Edge */
-  scrollbar-width: none;
-  /* Firefox */
+  @supports (scrollbar-width: none) {
+    scrollbar-width: none;
+    /* Firefox */
+  }
 }
 
 /* Chrome, Safari and Opera */

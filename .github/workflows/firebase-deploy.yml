@@ -9,9 +9,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Create .env
-        run: echo "VITE_GEMINI_API_KEY=${VITE_GEMINI_API_KEY}" > .env
-        env:
-          VITE_GEMINI_API_KEY: ${{ secrets.VITE_GEMINI_API_KEY }}
+        run: echo "VITE_GEMINI_API_KEY=${{ secrets.VITE_GEMINI_API_KEY }}" > .env
       - run: npm ci && npm run build
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:

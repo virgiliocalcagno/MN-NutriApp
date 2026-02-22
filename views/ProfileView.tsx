@@ -181,13 +181,16 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
             <div className="relative size-32">
               <div className="absolute inset-0 border-[3px] border-slate-100 rounded-full" />
               <div
-                className="absolute inset-0 border-[3px] border-blue-600 rounded-full transition-all duration-700 ease-in-out dynamic-rotate"
-                style={{
-                  borderTopColor: 'transparent',
-                  borderLeftColor: 'transparent',
-                  '--tw-rotate': `${uploadStatus === 'reading' ? 120 : uploadStatus === 'analyzing' ? 240 : 360}deg`,
-                  animation: uploadStatus === 'analyzing' ? 'spin 1.5s linear infinite' : 'none'
-                } as React.CSSProperties}
+                ref={(el) => {
+                  if (el) {
+                    const deg = uploadStatus === 'reading' ? 120 : uploadStatus === 'analyzing' ? 240 : 360;
+                    el.style.transform = `rotate(${deg}deg)`;
+                    el.style.animation = uploadStatus === 'analyzing' ? 'spin 1.5s linear infinite' : 'none';
+                    el.style.borderTopColor = 'transparent';
+                    el.style.borderLeftColor = 'transparent';
+                  }
+                }}
+                className="absolute inset-0 border-[3px] border-blue-600 rounded-full transition-all duration-700 ease-in-out"
               />
               <div className="absolute inset-0 flex items-center justify-center">
                 <span className="material-symbols-outlined text-4xl text-blue-600 animate-pulse">
@@ -205,8 +208,13 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
 
             <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
               <div
-                className="h-full bg-blue-600 transition-all duration-1000 ease-out dynamic-width"
-                style={{ '--tw-progress': uploadStatus === 'reading' ? '30%' : uploadStatus === 'analyzing' ? '70%' : '100%' } as React.CSSProperties}
+                ref={(el) => {
+                  if (el) {
+                    const width = uploadStatus === 'reading' ? '30%' : uploadStatus === 'analyzing' ? '70%' : '100%';
+                    el.style.width = width;
+                  }
+                }}
+                className="h-full bg-blue-600 transition-all duration-1000 ease-out"
               />
             </div>
 
