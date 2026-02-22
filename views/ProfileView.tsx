@@ -16,6 +16,7 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [lastUploadData, setLastUploadData] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const overlayBarRef = useRef<HTMLDivElement>(null);
 
   const { profile } = store;
   const [showClinical, setShowClinical] = useState(false);
@@ -24,6 +25,13 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
   useEffect(() => {
     setEditData({ ...store.profile });
   }, [store.profile]);
+
+  useEffect(() => {
+    if (overlayBarRef.current) {
+      const w = uploadStatus === 'reading' ? '30%' : uploadStatus === 'analyzing' ? '70%' : '100%';
+      overlayBarRef.current.style.setProperty('--progress-width', w);
+    }
+  }, [uploadStatus]);
 
   // Metabolic Age Calculation (Demo logic for v34.1)
   const calculateMetabolicAge = () => {
@@ -181,13 +189,8 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
             <div className="relative size-32">
               <div className="absolute inset-0 border-[3px] border-slate-100 rounded-full" />
               <div
-                className="absolute inset-0 border-[3px] border-blue-600 rounded-full transition-all duration-700 ease-in-out"
-                style={{
-                  borderTopColor: 'transparent',
-                  borderLeftColor: 'transparent',
-                  transform: `rotate(${uploadStatus === 'reading' ? 120 : uploadStatus === 'analyzing' ? 240 : 360}deg)`,
-                  animation: uploadStatus === 'analyzing' ? 'spin 1.5s linear infinite' : 'none'
-                }}
+                className={`absolute inset-0 border-[3px] border-blue-600 rounded-full transition-all duration-700 ease-in-out border-b-transparent border-r-transparent ${uploadStatus === 'reading' ? 'rotate-[120deg]' : uploadStatus === 'analyzing' ? 'rotate-[240deg] animate-spin' : 'rotate-[360deg]'
+                  }`}
               />
               <div className="absolute inset-0 flex items-center justify-center">
                 <span className="material-symbols-outlined text-4xl text-blue-600 animate-pulse">
@@ -205,8 +208,8 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
 
             <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
               <div
-                className="h-full bg-blue-600 transition-all duration-1000 ease-out"
-                style={{ width: uploadStatus === 'reading' ? '30%' : uploadStatus === 'analyzing' ? '70%' : '100%' }}
+                ref={overlayBarRef}
+                className="h-full bg-blue-600 transition-all duration-1000 ease-out progress-bar-fill"
               />
             </div>
 
@@ -291,6 +294,8 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
                   type="text"
                   value={editData.paciente || ''}
                   onChange={e => setEditData({ ...editData, paciente: e.target.value })}
+                  title="Nombre del paciente"
+                  placeholder="Nombre del paciente"
                   className="bg-slate-50 border-none p-0 text-center focus:ring-0 rounded font-black max-w-[200px]"
                 />
               ) : (profile.paciente || user?.displayName || 'Usuario')}
@@ -300,13 +305,13 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
             <div className="flex items-center justify-center gap-2">
               <p className="text-[10px] font-bold text-primary bg-primary/5 px-3 py-1 rounded-full border border-primary/10">
                 {isEditing ? (
-                  <span className="flex items-center gap-1 italic">Dr. <input value={editData.doctor || ''} onChange={e => setEditData({ ...editData, doctor: e.target.value })} className="bg-transparent border-none p-0 w-24 text-primary font-bold focus:ring-0 text-[10px]" /></span>
+                  <span className="flex items-center gap-1 italic">Dr. <input value={editData.doctor || ''} onChange={e => setEditData({ ...editData, doctor: e.target.value })} title="Nombre del doctor" placeholder="Doctor" className="bg-transparent border-none p-0 w-24 text-primary font-bold focus:ring-0 text-[10px]" /></span>
                 ) : `Dr. ${profile.doctor || 'Dr. Health'}`}
               </p>
               <div className="size-1 bg-slate-200 rounded-full"></div>
               <p className="text-[10px] font-black text-slate-400">
                 {isEditing ? (
-                  <select value={editData.sexo || ''} onChange={e => setEditData({ ...editData, sexo: e.target.value })} className="bg-transparent border-none p-0 text-[10px] font-black focus:ring-0">
+                  <select value={editData.sexo || ''} onChange={e => setEditData({ ...editData, sexo: e.target.value })} title="Sexo" className="bg-transparent border-none p-0 text-[10px] font-black focus:ring-0">
                     <option value="Hombre">MALE</option>
                     <option value="Mujer">FEMALE</option>
                   </select>
@@ -368,14 +373,17 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
         </button>
 
         {!isLocked && (
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isProcessing}
-            className="bg-slate-900 text-white px-6 py-4 rounded-[28px] shadow-xl border border-slate-100 font-black flex items-center justify-center active:scale-95 transition-all disabled:opacity-50"
-          >
-            <span className="material-symbols-outlined font-fill text-lg">upload_file</span>
-            <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept="application/pdf" className="hidden" />
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isProcessing}
+              title="Subir archivo PDF"
+              className="bg-slate-900 text-white px-6 py-4 rounded-[28px] shadow-xl border border-slate-100 font-black flex items-center justify-center active:scale-95 transition-all disabled:opacity-50 text-center"
+            >
+              <span className="material-symbols-outlined font-fill text-lg">upload_file</span>
+            </button>
+            <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept="application/pdf" className="hidden" title="Archivo PDF" placeholder="Seleccionar PDF" />
+          </div>
         )}
       </div>
 
@@ -401,6 +409,8 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
                     type="text"
                     value={editData.estatura || ''}
                     onChange={e => setEditData({ ...editData, estatura: e.target.value })}
+                    title="Estatura en cm"
+                    placeholder="Estatura"
                     className="text-xl font-black text-slate-800 bg-transparent border-none p-0 focus:ring-0 w-16 text-center"
                   />
                 ) : <span className="text-2xl font-black text-slate-800">{profile.estatura || '--'}</span>}
@@ -419,6 +429,8 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
                     type="text"
                     value={editData.pesoObjetivo || ''}
                     onChange={e => setEditData({ ...editData, pesoObjetivo: e.target.value })}
+                    title="Peso objetivo en Lbs"
+                    placeholder="Peso obj."
                     className="text-xl font-black text-slate-800 bg-transparent border-none p-0 focus:ring-0 w-16 text-center"
                   />
                 ) : <span className="text-2xl font-black text-orange-600 font-fill">{profile.pesoObjetivo || '--'}</span>}
@@ -455,6 +467,8 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
                       type={item.type || 'text'}
                       value={(editData as any)[item.key] || ''}
                       onChange={e => setEditData({ ...editData, [item.key]: e.target.value })}
+                      title={item.l}
+                      placeholder={item.l}
                       className="text-xl font-black text-slate-800 bg-transparent border-none p-0 focus:ring-0 w-full"
                     />
                   ) : <span className="text-2xl font-black text-slate-800 uppercase">{item.v || '--'}</span>}
@@ -485,6 +499,8 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
                     <input
                       value={editData.alergias || ''}
                       onChange={e => setEditData({ ...editData, alergias: e.target.value })}
+                      title="Alergias Alimentarias"
+                      placeholder="Ej. Nueces, Lactosa..."
                       className="w-full bg-slate-50 border-none rounded-2xl text-xs p-4 font-bold text-slate-700"
                     />
                   ) : (
@@ -626,6 +642,8 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
                 <textarea
                   value={editData.observaciones || ''}
                   onChange={e => setEditData({ ...editData, observaciones: e.target.value })}
+                  title="Observaciones Médicas"
+                  placeholder="Detalles clínicos relevantes..."
                   className="w-full bg-white/10 border-none rounded-2xl text-xs p-4 font-bold text-white focus:ring-0 h-24"
                 />
               ) : (
@@ -649,6 +667,8 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
                 <input
                   value={editData.emergencia || ''}
                   onChange={e => setEditData({ ...editData, emergencia: e.target.value })}
+                  title="Contacto de emergencia"
+                  placeholder="Teléfono"
                   className="text-lg font-black text-slate-900 bg-transparent border-none p-0 focus:ring-0 w-32"
                 />
               ) : <p className="text-lg font-black text-slate-900 tracking-tight">{profile.emergencia || "Configurar Contacto"}</p>}

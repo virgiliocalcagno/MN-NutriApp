@@ -28,8 +28,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ currentView, setCurrentView }) =>
             <div className={`flex items-center justify-center p-1 rounded-xl transition-all ${isActive ? 'bg-primary/10 shadow-sm shadow-primary/5' : ''
               }`}>
               <span
-                className="material-symbols-outlined text-[26px]"
-                style={{ fontVariationSettings: isActive ? "'FILL' 1, 'wght' 600" : "'FILL' 0, 'wght' 400" }}
+                className={`material-symbols-outlined text-[26px] ${isActive ? 'nav-icon-active' : 'nav-icon-inactive'}`}
               >
                 {item.icon}
               </span>

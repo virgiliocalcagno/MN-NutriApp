@@ -486,6 +486,7 @@ const ScheduleModal: React.FC<{
               type="time"
               value={breakfastTime}
               onChange={(e) => setBreakfastTime(e.target.value)}
+              title="Hora de desayuno"
               className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3 text-base font-black text-slate-900 focus:outline-none focus:ring-4 focus:ring-primary/10 [color-scheme:light] [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-3"
             />
             <span className="absolute right-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 pointer-events-none">schedule</span>
