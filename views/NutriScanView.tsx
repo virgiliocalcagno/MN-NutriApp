@@ -126,7 +126,7 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
                 </div>
 
                 <button
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={() => setShowCaptureMenu(true)}
                     className="w-full bg-white p-8 rounded-[32px] shadow-sm border border-slate-100 flex flex-col items-center text-center hover:bg-slate-50 transition-colors active:scale-[0.98]"
                 >
                     <div className="size-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-4">
@@ -141,7 +141,8 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
 
                 {/* 3. Area de Escaneo / Imagen */}
                 <div className="relative aspect-square rounded-[40px] bg-white overflow-hidden shadow-2xl border-4 border-white">
-                    <input type="file" ref={fileInputRef} onChange={handleScan} accept="image/*" className="hidden" title="NutriScan" />
+                    <input type="file" ref={fileInputRef} onChange={handleScan} accept="image/*" className="hidden" title="Seleccionar imagen" />
+                    <input type="file" ref={cameraInputRef} onChange={handleScan} accept="image/*" capture="environment" className="hidden" title="Tomar foto" />
 
                     {isScanning ? (
                         <div className="absolute inset-0 bg-slate-900/40 z-20 flex flex-col items-center justify-center gap-6 backdrop-blur-xl border border-white/20">
@@ -168,7 +169,7 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
                             <div className="absolute top-0 left-0 w-full h-[2px] bg-blue-400/50 shadow-[0_0_15px_blue] animate-scan z-10"></div>
                         </div>
                     ) : (
-                        <button onClick={() => fileInputRef.current?.click()} className="w-full h-full flex flex-col items-center justify-center gap-4 group transition-all">
+                        <button onClick={() => setShowCaptureMenu(true)} className="w-full h-full flex flex-col items-center justify-center gap-4 group transition-all">
                             <div className="size-24 bg-blue-50 rounded-full flex items-center justify-center shadow-xl group-hover:scale-110 transition-transform duration-500 text-blue-600">
                                 <span className="material-symbols-outlined text-4xl font-fill">photo_camera</span>
                             </div>
@@ -179,7 +180,7 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
 
                 {!scanResult && !isScanning && (
                     <button
-                        onClick={() => fileInputRef.current?.click()}
+                        onClick={() => setShowCaptureMenu(true)}
                         className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-5 rounded-[24px] shadow-xl shadow-blue-500/20 flex items-center justify-center gap-3 active:scale-95 transition-all text-sm tracking-widest uppercase"
                     >
                         <span className="material-symbols-outlined font-fill">auto_awesome</span>
@@ -258,6 +259,51 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
                 )}
             </div>
 
+            {/* Selection Menu (Action Sheet) */}
+            {showCaptureMenu && (
+                <div className="fixed inset-0 z-[100] flex flex-col justify-end animate-in fade-in duration-300">
+                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowCaptureMenu(false)}></div>
+                    <div className="relative bg-white rounded-t-[40px] p-8 space-y-4 animate-in slide-in-from-bottom duration-500 shadow-[0_-10px_40px_rgba(0,0,0,0.1)]">
+                        <div className="w-12 h-1.5 bg-slate-100 rounded-full mx-auto mb-6"></div>
+                        <h3 className="text-xl font-black text-slate-900 text-center mb-8 uppercase tracking-widest">Seleccionar Origen</h3>
+
+                        <div className="grid grid-cols-2 gap-4 pb-8">
+                            <button
+                                onClick={() => {
+                                    setShowCaptureMenu(false);
+                                    cameraInputRef.current?.click();
+                                }}
+                                className="flex flex-col items-center gap-4 p-8 bg-blue-50 rounded-[32px] border border-blue-100 active:scale-95 transition-all"
+                            >
+                                <div className="size-16 bg-white rounded-2xl flex items-center justify-center shadow-sm text-blue-600">
+                                    <span className="material-symbols-outlined text-4xl font-fill">photo_camera</span>
+                                </div>
+                                <span className="text-xs font-black text-blue-600 tracking-wider uppercase">Tomar Foto</span>
+                            </button>
+
+                            <button
+                                onClick={() => {
+                                    setShowCaptureMenu(false);
+                                    fileInputRef.current?.click();
+                                }}
+                                className="flex flex-col items-center gap-4 p-8 bg-slate-50 rounded-[32px] border border-slate-100 active:scale-95 transition-all"
+                            >
+                                <div className="size-16 bg-white rounded-2xl flex items-center justify-center shadow-sm text-slate-400">
+                                    <span className="material-symbols-outlined text-4xl font-fill">photo_library</span>
+                                </div>
+                                <span className="text-xs font-black text-slate-500 tracking-wider uppercase">Galería</span>
+                            </button>
+                        </div>
+
+                        <button
+                            onClick={() => setShowCaptureMenu(false)}
+                            className="w-full py-5 text-slate-400 font-black text-[10px] tracking-[0.3em] uppercase"
+                        >
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
