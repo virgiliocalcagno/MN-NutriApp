@@ -158,6 +158,7 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
               <iframe
                 src={embedUrl}
                 className="w-full h-full"
+                title="Video del ejercicio"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
               ></iframe>
