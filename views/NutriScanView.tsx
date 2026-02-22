@@ -50,7 +50,7 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
                         condiciones: store.profile.comorbilidades.join(", ") + (store.profile.alergias ? `, Alergias: ${store.profile.alergias}` : "")
                     };
 
-                    const result = await analyzeImageWithGemini(base64, profileContext);
+                    const result = await analyzeImageWithGemini(base64, profileContext, (import.meta as any).env?.VITE_GEMINI_API_KEY);
 
                     setScanResult({
                         ...result,
