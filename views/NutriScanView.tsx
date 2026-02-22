@@ -98,7 +98,7 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
                 {/* 3. Area de Escaneo / Imagen */}
                 <div className="relative aspect-square rounded-[40px] bg-white overflow-hidden shadow-2xl border-4 border-white">
                     <input type="file" ref={fileInputRef} onChange={handleScan} accept="image/*" className="hidden" title="Seleccionar imagen" />
-                    <input type="file" ref={cameraInputRef} onChange={handleScan} accept="image/*" className="hidden" title="Tomar foto" />
+                    <input type="file" ref={cameraInputRef} onChange={handleScan} accept="image/*" capture="environment" className="hidden" title="Tomar foto" />
 
                     {isScanning ? (
                         <div className="absolute inset-0 bg-slate-900/40 z-20 flex flex-col items-center justify-center gap-6 backdrop-blur-xl border border-white/20">
