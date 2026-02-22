@@ -12,6 +12,28 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
 
     const setScanResult = (val: any) => saveStore({ ...store, lastScan: val });
 
+    const compressImage = (base64: string, maxSize = 1280, quality = 0.7): Promise<string> => {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.src = base64;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+                if (width > height) {
+                    if (width > maxSize) { height *= maxSize / width; width = maxSize; }
+                } else {
+                    if (height > maxSize) { width *= maxSize / height; height = maxSize; }
+                }
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx?.drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+        });
+    };
+
     const handleScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             setIsScanning(true);
@@ -19,7 +41,8 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
                 const file = e.target.files[0];
                 const reader = new FileReader();
                 reader.onload = async () => {
-                    const base64 = reader.result as string;
+                    const rawBase64 = reader.result as string;
+                    const base64 = await compressImage(rawBase64);
 
                     const profileContext = {
                         paciente: store.profile.paciente,
