@@ -29,7 +29,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ currentView, setCurrentView }) =>
               }`}>
               <span
                 className="material-symbols-outlined text-[26px]"
-                style={{ fontVariationSettings: isActive ? "'FILL' 1, 'wght' 600" : "'FILL' 0, 'wght' 400" }}
+                style={{ '--fill': isActive ? 1 : 0, '--wght': isActive ? 600 : 400 } as React.CSSProperties}
               >
                 {item.icon}
               </span>

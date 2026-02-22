@@ -5,8 +5,7 @@ const LoginScreen: React.FC = () => {
     const { login } = useStore();
 
     return (
-        <div id="auth-screen" className="fixed top-0 left-0 w-full h-full z-[3000] flex items-center justify-center p-5 text-center"
-            style={{ background: 'radial-gradient(circle at top right, #e2e8f0, #f8fafc)' }}>
+        <div id="auth-screen" className="fixed top-0 left-0 w-full h-full z-[3000] flex items-center justify-center p-5 text-center bg-[radial-gradient(circle_at_top_right,#e2e8f0,#f8fafc)]">
             <div className="bg-white p-10 py-12 rounded-[30px] shadow-2xl max-w-[400px] w-full">
                 <h2 className="font-extrabold text-[28px] mb-2 text-slate-900">¡Bienvenido Pro! 🚀</h2>
                 <p className="text-slate-500 text-sm mb-8">Tu plan de nutrición premium, siempre sincronizado en la nube.</p>

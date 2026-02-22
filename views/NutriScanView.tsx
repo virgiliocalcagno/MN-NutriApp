@@ -100,7 +100,7 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
                         </div>
                     </div>
                     <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-blue-500 rounded-full transition-all duration-1000" style={{ width: `${Math.min(((store.calories || 0) / (store.caloriesTarget || 2000)) * 100, 100)}%` }}></div>
+                        <div className="h-full bg-blue-500 rounded-full transition-all duration-1000 dynamic-width" style={{ '--tw-progress': `${Math.min(((store.calories || 0) / (store.caloriesTarget || 2000)) * 100, 100)}%` } as React.CSSProperties}></div>
                     </div>
                 </div>
 
