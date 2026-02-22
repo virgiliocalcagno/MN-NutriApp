@@ -6,7 +6,9 @@ import { firebaseConfig } from '@/src/firebase';
 const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
     const { store, saveStore } = useStore();
     const [isScanning, setIsScanning] = useState(false);
+    const [showCaptureMenu, setShowCaptureMenu] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const cameraInputRef = useRef<HTMLInputElement>(null);
     const barRef = useRef<HTMLDivElement>(null);
     const scanResult = store.lastScan;
 
