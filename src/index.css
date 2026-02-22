@@ -49,6 +49,18 @@
   font-variation-settings: 'FILL' var(--fill, 0), 'wght' var(--wght, 400), 'GRAD' 0, 'opsz' 48;
 }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
 @keyframes scan {
   0% {
     top: 0%;

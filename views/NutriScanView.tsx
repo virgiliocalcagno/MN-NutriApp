@@ -54,14 +54,18 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
         });
     };
 
-    const handleScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleScan = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             setIsScanning(true);
-            try {
-                const file = e.target.files[0];
-                const reader = new FileReader();
-                reader.onload = async () => {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+
+            reader.onload = async () => {
+                try {
                     const rawBase64 = reader.result as string;
+                    if (!rawBase64) {
+                        throw new Error("No se pudo leer el archivo como base64.");
+                    }
                     const base64 = await compressImage(rawBase64);
 
                     const profileContext = {
@@ -82,15 +86,22 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
                         kcal: result.totalCalorias || result.kcal || (result.macros?.kcal) || "---"
                     });
 
-                    setIsScanning(false);
                     if (window.navigator?.vibrate) window.navigator.vibrate([100, 50, 100]);
-                };
-                reader.readAsDataURL(file);
-            } catch (err) {
-                console.error(err);
+                } catch (err) {
+                    console.error("Error durante el procesamiento o análisis de la imagen:", err);
+                    alert("Hubo un error al procesar la imagen. Por favor, inténtalo de nuevo con otra imagen.");
+                } finally {
+                    setIsScanning(false);
+                }
+            };
+
+            reader.onerror = () => {
+                console.error("Error al leer el archivo.");
                 setIsScanning(false);
-                alert("Error al analizar la imagen.");
-            }
+                alert("No se pudo leer el archivo de imagen. Por favor, selecciona otra imagen.");
+            };
+
+            reader.readAsDataURL(file);
         }
     };
 
@@ -148,8 +159,8 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
 
                 {/* 3. Area de Escaneo / Imagen */}
                 <div className="relative aspect-square rounded-[40px] bg-white overflow-hidden shadow-2xl border-4 border-white">
-                    <input type="file" ref={fileInputRef} onChange={handleScan} accept="image/*" className="hidden" title="Seleccionar imagen" />
-                    <input type="file" ref={cameraInputRef} onChange={handleScan} accept="image/*" capture="environment" className="hidden" title="Tomar foto" />
+                    <input type="file" ref={fileInputRef} onChange={handleScan} accept="image/*" className="visually-hidden" title="Seleccionar imagen" />
+                    <input type="file" ref={cameraInputRef} onChange={handleScan} accept="image/*" capture="environment" className="visually-hidden" title="Tomar foto" />
 
                     {isScanning ? (
                         <div className="absolute inset-0 bg-slate-900/40 z-20 flex flex-col items-center justify-center gap-6 backdrop-blur-xl border border-white/20">
