@@ -32,15 +32,34 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
                 case 'completed':
                     if (data.result) {
                         const result = data.result;
-                        setScanResult({
+
+                        // Use a fallback for the image since we no longer store it in Firestore (to save space)
+                        let imageUrl = result.image || '';
+
+                        // We will set the result first, then try to get the real storage URL if needed
+                        const finalResult = {
                             ...result,
-                            image: result.image, // The resized image URL from the function
+                            image: imageUrl,
                             plato: result.platos ? result.platos.join(", ") : (result.plato || "Alimento Detectado"),
                             impacto: result.semaforo || result.impacto || "VERDE",
                             hack: result.analisis || result.hack || "Análisis metabólico listo...",
                             tip: result.bioHack || result.tip || "Consejo experto para tu comida...",
                             kcal: result.totalCalorias || result.kcal || (result.macros?.kcal) || "---"
-                        });
+                        };
+
+                        setScanResult(finalResult);
+
+                        // If we have the storage path but no image URL yet, fetch it from Storage
+                        if (!imageUrl && data.storagePath) {
+                            import('firebase/storage').then(({ getStorage, ref, getDownloadURL }) => {
+                                const storage = getStorage();
+                                const fileRef = ref(storage, data.storagePath);
+                                getDownloadURL(fileRef).then(url => {
+                                    setScanResult({ ...finalResult, image: url });
+                                }).catch(err => console.error("Error fetching image URL:", err));
+                            });
+                        }
+
                         if (window.navigator?.vibrate) window.navigator.vibrate([100, 50, 100]);
                     }
                     setIsScanning(false);

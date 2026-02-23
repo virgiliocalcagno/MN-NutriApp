@@ -119,7 +119,8 @@ exports.processImageForAnalysis = onObjectFinalized({
     }
 
     const aiResult = JSON.parse(jsonMatch[0]);
-    aiResult.image = `data:image/jpeg;base64,${resizedBase64}`; // Include resized image for display
+    // Removed base64 image to avoid Firestore 1MB limit. 
+    // The frontend will use the storagePath to show the image.
 
     await jobRef.update({ status: 'completed', result: aiResult });
     console.log(`Job ${scanJobId} completed successfully.`);
