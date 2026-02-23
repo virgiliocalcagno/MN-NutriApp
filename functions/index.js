@@ -12,58 +12,57 @@ admin.initializeApp();
 const db = admin.firestore();
 
 exports.processImageForAnalysis = onObjectFinalized({
-  bucket: 'mn-nutriapp.firebasestorage.app',
-  region: 'us-central1',
-  timeoutSeconds: 300,
-  memory: '1GiB'
+    bucket: 'mn-nutriapp.firebasestorage.app',
+    region: 'us-central1',
+    timeoutSeconds: 300,
+    memory: '1GiB'
 }, async (event) => {
-  const fileBucket = event.data.bucket;
-  const filePath = event.data.name;
-  const contentType = event.data.contentType;
+    const fileBucket = event.data.bucket;
+    const filePath = event.data.name;
+    const contentType = event.data.contentType;
 
-  if (!contentType.startsWith('image/')) {
-    return console.log('This is not an image.');
-  }
+    if (!contentType.startsWith('image/')) {
+        return console.log('This is not an image.');
+    }
 
-  if (!filePath.startsWith('user-uploads/')) {
-    return console.log('Not a user upload, skipping.');
-  }
+    if (!filePath.startsWith('user-uploads/')) {
+        return console.log('Not a user upload, skipping.');
+    }
+    
+    // Extract userId and fileId (scanJobId) from the path
+    const parts = filePath.split('/');
+    const userId = parts[1];
+    const fileName = parts[2];
+    const scanJobId = path.basename(fileName, path.extname(fileName));
 
-  // Extract userId and fileId (scanJobId) from the path
-  const parts = filePath.split('/');
-  const userId = parts[1];
-  const fileName = parts[2];
-  const scanJobId = path.basename(fileName, path.extname(fileName));
-  console.log(`Processing NutriScan Job: ${scanJobId} for User: ${userId}`);
+    const jobRef = db.collection('scans').doc(scanJobId);
 
-  const jobRef = db.collection('scans').doc(scanJobId);
+    try {
+        const bucket = getStorage().bucket(fileBucket);
+        const tempFilePath = path.join(os.tmpdir(), fileName);
+        await bucket.file(filePath).download({ destination: tempFilePath });
+        console.log('Image downloaded locally to', tempFilePath);
 
-  try {
-    const bucket = getStorage().bucket(fileBucket);
-    const tempFilePath = path.join(os.tmpdir(), fileName);
-    await bucket.file(filePath).download({ destination: tempFilePath });
-    console.log('Image downloaded locally to', tempFilePath);
+        // Resize image
+        const resizedBuffer = await sharp(tempFilePath).resize(600).jpeg({ quality: 70 }).toBuffer();
+        const resizedBase64 = resizedBuffer.toString('base64');
+        
+        fs.unlinkSync(tempFilePath); // Clean up temp file
 
-    // Resize image
-    const resizedBuffer = await sharp(tempFilePath).resize(600).jpeg({ quality: 70 }).toBuffer();
-    const resizedBase64 = resizedBuffer.toString('base64');
-
-    fs.unlinkSync(tempFilePath); // Clean up temp file
-
-    // Get user profile for context
-    const userDoc = await db.collection('users').doc(userId).get();
-    const profile = userDoc.exists ? userDoc.data().profile : {};
-    const profileContext = {
-      paciente: profile.paciente || 'Nuevo Paciente',
-      objetivo: profile.objetivos ? profile.objetivos.join(", ") : 'Salud General',
-      condiciones: profile.comorbilidades ? profile.comorbilidades.join(", ") : 'Ninguna'
-    };
-
-    // Call Gemini AI
-    const vertexAI = new VertexAI({ project: 'mn-nutriapp', location: 'us-central1' });
-    const modelIA = vertexAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-
-    const prompt = `Analiza esta imagen de comida como un Coach Metabólico Experto y Analista Nutricional de MN-NutriApp.
+        // Get user profile for context
+        const userDoc = await db.collection('users').doc(userId).get();
+        const profile = userDoc.exists ? userDoc.data().profile : {};
+        const profileContext = {
+            paciente: profile.paciente || 'Nuevo Paciente',
+            objetivo: profile.objetivos ? profile.objetivos.join(", ") : 'Salud General',
+            condiciones: profile.comorbilidades ? profile.comorbilidades.join(", ") : 'Ninguna'
+        };
+        
+        // Call Gemini AI
+        const vertexAI = new VertexAI({ project: 'mn-nutriapp', location: 'us-central1' });
+        const modelIA = vertexAI.getGenerativeModel({ model: 'gemini-1.0-pro-vision' });
+        
+        const prompt = `Analiza esta imagen de comida como un Coach Metabólico Experto y Analista Nutricional de MN-NutriApp.
         
         PERFIL PACIENTE:
         - Nombre: ${profileContext.paciente}
@@ -89,29 +88,29 @@ exports.processImageForAnalysis = onObjectFinalized({
             "analisis": "Explicación técnica simplificada...",
             "bioHack": "Estrategia experta (ej: Añade 1 cda de Vinagre de Manzana antes)."
         }`;
+    
+        const imagePart = { inlineData: { mimeType: "image/jpeg", data: resizedBase64 } };
+        const textPart = { text: prompt };
+        const request = { contents: [{ role: 'user', parts: [textPart, imagePart] }] };
 
-    const imagePart = { inlineData: { mimeType: "image/jpeg", data: resizedBase64 } };
-    const textPart = { text: prompt };
-    const request = { contents: [{ role: 'user', parts: [textPart, imagePart] }] };
+        const result = await modelIA.generateContent(request);
+        const text = result.response.candidates[0].content.parts[0].text;
+        
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+            throw new Error("La IA no generó JSON. Raw: " + text);
+        }
+    
+        const aiResult = JSON.parse(jsonMatch[0]);
+        aiResult.image = `data:image/jpeg;base64,${resizedBase64}`; // Include resized image for display
 
-    const result = await modelIA.generateContent(request);
-    const text = result.response.candidates[0].content.parts[0].text;
+        await jobRef.update({ status: 'completed', result: aiResult });
+        console.log(`Job ${scanJobId} completed successfully.`);
 
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error("La IA no generó JSON. Raw: " + text);
+    } catch (error) {
+        console.error(`Error processing job ${scanJobId}:`, error);
+        await jobRef.update({ status: 'error', error: error.message });
     }
-
-    const aiResult = JSON.parse(jsonMatch[0]);
-    aiResult.image = `data:image/jpeg;base64,${resizedBase64}`; // Include resized image for display
-
-    await jobRef.update({ status: 'completed', result: aiResult });
-    console.log(`Job ${scanJobId} completed successfully.`);
-
-  } catch (error) {
-    console.error(`Error processing job ${scanJobId}:`, error);
-    await jobRef.update({ status: 'error', error: error.message });
-  }
 });
 
 exports.procesarNutricion = onRequest({
