@@ -29,7 +29,8 @@ Este archivo es tu **"Botón de Pánico"**. Aquí guardo los momentos en los que
 | `CP020` | 20/02/2026 | `d3e8f1a` | **MN-NutriApp v33.0**: Smart Hydration Tracker (30/60 Medical Rule). | ✅ Estable |
 | `CP021` | 20/02/2026 | `b2c4e5f` | **MN-NutriApp v33.1**: Functional Meal Tracking & UI Cleanup. | ✅ Estable |
 | `CP022` | 20/02/2026 | `a1b2c3d` | **MN-NutriApp v34.0**: Inventory & Shopping System (Stitch Design). | ✅ Estable |
-| `CP023` | 20/02/2026 | `1a49dc2` | **MN-NutriApp v34.1**: Standardized Imports & Legacy Cleanup. | 🚀 Activo |
+| `CP023` | 20/02/2026 | `1a49dc2` | **MN-NutriApp v34.1**: Standardized Imports & Legacy Cleanup. | ✅ Estable |
+| `CP024` | 23/02/2026 | `9e01951` | **NutriScan "Turbo" v35**: HEIC fix, 12MP support & client-side optimization. | 🚀 Activo |
 
 ---
 > [!IMPORTANT]
