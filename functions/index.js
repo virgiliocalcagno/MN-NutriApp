@@ -120,9 +120,50 @@ exports.processImageForAnalysis = onObjectFinalized({
 
     const aiResult = JSON.parse(jsonMatch[0]);
     // Removed base64 image to avoid Firestore 1MB limit. 
-    // The frontend will use the storagePath to show the image.
+    // The frontend will use the storagePath or thumbnailPath to show the image.
 
-    await jobRef.update({ status: 'completed', result: aiResult });
+    // --- NEW: Generate and Upload Thumbnail ---
+    let thumbnailPath = '';
+    try {
+      const thumbFileName = `thumb_${scanJobId}.jpg`;
+      const thumbFilePathLocal = path.join(os.tmpdir(), thumbFileName);
+      const thumbStoragePath = `user-uploads/${userId}/${thumbFileName}`;
+
+      // Re-read original to generate thumb (Sharp if possible, or direct copy if HEIC and we can't decode)
+      const bucket = getStorage().bucket(fileBucket);
+      const originalPath = path.join(os.tmpdir(), `orig_${fileName}`);
+      await bucket.file(filePath).download({ destination: originalPath });
+
+      try {
+        // Force 800px width, JPEG format, 80% quality
+        await sharp(originalPath)
+          .resize(800)
+          .jpeg({ quality: 80 })
+          .toFile(thumbFilePathLocal);
+
+        await bucket.upload(thumbFilePathLocal, {
+          destination: thumbStoragePath,
+          metadata: { contentType: 'image/jpeg' }
+        });
+        thumbnailPath = thumbStoragePath;
+        console.log('Thumbnail uploaded successfully:', thumbnailPath);
+        fs.unlinkSync(thumbFilePathLocal);
+      } catch (thumbErr) {
+        console.warn('Failed to generate optimized thumbnail with Sharp:', thumbErr.message);
+        // Fallback: If Sharp fails (HEIC), we don't have an easy way to thumb on server without decoders
+        // So we'll just leave thumbnailPath empty and the UI will fallback to original
+      }
+
+      if (fs.existsSync(originalPath)) fs.unlinkSync(originalPath);
+    } catch (e) {
+      console.error('Error during thumbnail process:', e);
+    }
+
+    await jobRef.update({
+      status: 'completed',
+      result: aiResult,
+      thumbnailPath: thumbnailPath // Save it for the frontend
+    });
     console.log(`Job ${scanJobId} completed successfully.`);
 
   } catch (error) {

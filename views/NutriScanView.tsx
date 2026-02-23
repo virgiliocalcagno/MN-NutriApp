@@ -34,10 +34,14 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
                     if (data.result) {
                         const result = data.result;
 
+                        // Prefer thumbnailPath, then storagePath
+                        const bestImagePath = data.thumbnailPath || data.storagePath || '';
+
                         // Initial result without image
                         const finalResult = {
                             ...result,
-                            storagePath: data.storagePath || '', // Persist path for later resolution if needed
+                            storagePath: data.storagePath || '',
+                            thumbnailPath: data.thumbnailPath || '',
                             image: result.image || '',
                             plato: result.platos ? result.platos.join(", ") : (result.plato || "Alimento Detectado"),
                             impacto: result.semaforo || result.impacto || "VERDE",
@@ -48,17 +52,22 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
 
                         setScanResult(finalResult);
 
-                        // Fetch image URL if missing
-                        if (!finalResult.image && data.storagePath) {
-                            console.log(`[NutriScan] Resolviendo Storage Path: ${data.storagePath}`);
-                            const fileRef = ref(storage, data.storagePath);
+                        // Resolve URL for the best available image
+                        if (!finalResult.image && bestImagePath) {
+                            console.log(`[NutriScan] Resolviendo Imagen del Servidor (${data.thumbnailPath ? 'Miniatura' : 'Original'})...`);
+                            const fileRef = ref(storage, bestImagePath);
                             getDownloadURL(fileRef)
                                 .then(url => {
-                                    console.log("[NutriScan] URL de imagen cargada con éxito.");
+                                    console.log("[NutriScan] Imagen cargada con éxito.");
                                     setScanResult({ ...finalResult, image: url });
                                 })
                                 .catch(err => {
                                     console.error("[NutriScan] Error resolviendo imagen:", err);
+                                    // Extreme fallback: try storagePath if thumbnail failed
+                                    if (bestImagePath !== data.storagePath && data.storagePath) {
+                                        const origRef = ref(storage, data.storagePath);
+                                        getDownloadURL(origRef).then(url => setScanResult({ ...finalResult, image: url }));
+                                    }
                                 });
                         }
 
