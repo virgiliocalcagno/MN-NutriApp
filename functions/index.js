@@ -33,8 +33,9 @@ exports.processImageForAnalysis = onObjectFinalized({
   const parts = filePath.split('/');
   const userId = parts[1];
   const fileName = parts[2];
+  const fileExt = path.extname(fileName).toLowerCase();
   const scanJobId = path.basename(fileName, path.extname(fileName));
-  console.log(`Processing NutriScan Job: ${scanJobId} for User: ${userId}`);
+  console.log(`Processing NutriScan Job: ${scanJobId} for User: ${userId} (${fileExt})`);
 
   const jobRef = db.collection('scans').doc(scanJobId);
 
@@ -44,9 +45,27 @@ exports.processImageForAnalysis = onObjectFinalized({
     await bucket.file(filePath).download({ destination: tempFilePath });
     console.log('Image downloaded locally to', tempFilePath);
 
-    // Resize image
-    const resizedBuffer = await sharp(tempFilePath).resize(600).jpeg({ quality: 70 }).toBuffer();
-    const resizedBase64 = resizedBuffer.toString('base64');
+    let resizedBase64 = '';
+    let mimeType = 'image/jpeg';
+
+    // Detect HEIC/HEIF - Sharp usually lacks the decoder for these in standard Cloud Functions
+    if (fileExt === '.heic' || fileExt === '.heif') {
+      console.log('HEIC/HEIF detected. Bypassing Sharp and converting directly to Base64...');
+      const buffer = fs.readFileSync(tempFilePath);
+      resizedBase64 = buffer.toString('base64');
+      mimeType = 'image/heic';
+    } else {
+      try {
+        // Normal processing with Sharp for other formats
+        const resizedBuffer = await sharp(tempFilePath).resize(1000).jpeg({ quality: 75 }).toBuffer();
+        resizedBase64 = resizedBuffer.toString('base64');
+      } catch (sharpErr) {
+        console.warn('Sharp failed, attempting direct conversion as fallback:', sharpErr.message);
+        const buffer = fs.readFileSync(tempFilePath);
+        resizedBase64 = buffer.toString('base64');
+        mimeType = contentType; // Use original content type
+      }
+    }
 
     fs.unlinkSync(tempFilePath); // Clean up temp file
 
@@ -87,7 +106,7 @@ exports.processImageForAnalysis = onObjectFinalized({
             "bioHack": "Estrategia experta (ej: Añade 1 cda de Vinagre de Manzana antes)."
         }`;
 
-    const imagePart = { inlineData: { mimeType: "image/jpeg", data: resizedBase64 } };
+    const imagePart = { inlineData: { mimeType: mimeType, data: resizedBase64 } };
     const textPart = { text: prompt };
     const request = { contents: [{ role: 'user', parts: [textPart, imagePart] }] };
 
