@@ -1,0 +1,25 @@
+[
+    {
+        "origin": [
+            "https://mn-nutriapp.web.app",
+            "https://mn-nutriapp.firebaseapp.com",
+            "http://localhost:5173"
+        ],
+        "method": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE",
+            "HEAD",
+            "OPTIONS"
+        ],
+        "responseHeader": [
+            "Content-Type",
+            "Authorization",
+            "Content-Length",
+            "User-Agent",
+            "x-goog-resumable"
+        ],
+        "maxAgeSeconds": 3600
+    }
+]

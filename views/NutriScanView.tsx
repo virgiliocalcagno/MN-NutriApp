@@ -1,8 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useStore } from '@/src/context/StoreContext';
-import { db } from '@/src/firebase';
-import { uploadImageForAnalysis } from '@/src/firebase';
+import { db, uploadImageForAnalysis } from '@/src/firebase';
 import { doc, setDoc, onSnapshot, serverTimestamp, collection } from 'firebase/firestore';
+import { compressImage } from '@/src/utils/image';
 
 const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
     const { user, store, saveStore } = useStore();
@@ -77,37 +77,58 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
             }
 
             setIsScanning(true);
-            setScanStatus("Subiendo imagen...");
-
-            // Generar un ID único real para evitar colisiones entre usuarios
-            const scansCol = collection(db, 'scans');
-            const jobRef = doc(scansCol);
-            const newJobId = jobRef.id;
-
-            setScanJobId(newJobId);
+            setScanStatus("Optimizando imagen...");
 
             try {
-                // 1. Create a job document in Firestore
+                // 1. Generate Job ID FIRST to synchronize with Storage
+                const scansCol = collection(db, 'scans');
+                const jobRef = doc(scansCol);
+                const jobId = jobRef.id;
+                setScanJobId(jobId);
+                console.log(`[NutriScan] Iniciando Job ID: ${jobId}`);
+
+                let fileToUpload = file;
+
+                // 2. Client-side compression if image > 0.5MB
+                if (file.size > 0.5 * 1024 * 1024) {
+                    console.log("[NutriScan] Comprimiendo imagen para optimizar memoria...");
+                    setScanStatus("Optimizando tamaño...");
+                    try {
+                        fileToUpload = await compressImage(file, 1200, 0.7); // Slightly larger but better quality
+                        console.log(`[NutriScan] Imagen optimizada: ${(fileToUpload.size / 1024 / 1024).toFixed(2)} MB`);
+                    } catch (compErr: any) {
+                        console.error("[NutriScan] Error de compresión:", compErr);
+                        // If it fails, we continue with the original, but warn in console
+                        console.warn("[NutriScan] No se pudo comprimir, intentando subir original...");
+                    }
+                }
+
+                setScanStatus("Subiendo a la nube...");
+
+                // 3. Create placeholder job in Firestore
                 await setDoc(jobRef, {
                     status: 'uploading',
                     userId: user.uid,
                     fileName: file.name,
                     createdAt: serverTimestamp(),
                 });
+                console.log("[NutriScan] Documento de Job creado en Firestore.");
 
-                // 2. Upload the file to Storage
-                const storagePath = await uploadImageForAnalysis(file, user.uid);
+                // 4. Upload to Storage using the jobId as filename
+                const storagePath = await uploadImageForAnalysis(fileToUpload, user.uid, jobId);
+                console.log(`[NutriScan] Imagen subida a Storage: ${storagePath}`);
 
-                // 3. Update job doc to trigger the cloud function
+                // 5. Update job doc to trigger the cloud function
                 await setDoc(jobRef, { storagePath, status: 'processing' }, { merge: true });
-                setScanStatus("Imagen subida. Esperando análisis...");
+                console.log("[NutriScan] Status actualizado a 'processing'.");
+                setScanStatus("IA analizando plato...");
 
             } catch (err: any) {
-                console.error("Error crítico en NutriScan (subida):", err);
-                const errorMsg = err.message || "Error desconocido durante la subida.";
+                console.error("[NutriScan] Error crítico:", err);
+                const errorMsg = err.message || "Error desconocido durante el proceso.";
                 alert(`❌ Error: \n${errorMsg} `);
-                if (jobRef) await setDoc(jobRef, { status: 'error', error: errorMsg }, { merge: true });
                 setIsScanning(false);
+                setScanJobId(null);
             } finally {
                 if (input) input.value = ''; // Reset file input
             }
