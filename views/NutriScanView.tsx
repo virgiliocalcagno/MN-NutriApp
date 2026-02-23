@@ -225,9 +225,16 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
                         </div>
                     ) : null}
 
-                    {scanResult?.image ? (
-                        <div className="h-full w-full relative">
-                            <img src={scanResult.image} alt="Plato" className="w-full h-full object-cover" />
+                    {scanResult ? (
+                        <div className="h-full w-full relative bg-slate-100">
+                            {scanResult.image ? (
+                                <img src={scanResult.image} alt="Plato" className="w-full h-full object-cover animate-in fade-in duration-500" />
+                            ) : (
+                                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+                                    <div className="size-10 border-4 border-blue-100 border-t-blue-500 rounded-full animate-spin"></div>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cargando imagen...</p>
+                                </div>
+                            )}
                             <div className="absolute top-6 left-6 bg-white/10 backdrop-blur-md border border-white/20 px-4 py-2 rounded-full flex items-center gap-2 animate-in slide-in-from-left duration-500">
                                 <div className="size-2 bg-blue-400 rounded-full animate-pulse"></div>
                                 <span className="text-[10px] font-black text-white uppercase tracking-wider">Detectando: {scanResult.plato || 'Alimento...'}</span>
