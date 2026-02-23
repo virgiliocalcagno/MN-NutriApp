@@ -13,27 +13,39 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
     const setScanResult = (val: any) => saveStore({ ...store, lastScan: val });
 
     const compressImage = async (file: File): Promise<string> => {
-        const options = {
-            maxSizeMB: 1,           // Límite de 1MB
-            maxWidthOrHeight: 1024, // Resolución ideal para IA
-            useWebWorker: true,    // Procesamiento en segundo plano
-            initialQuality: 0.7,
-            fileType: 'image/jpeg'
+        const tryCompression = async (useWorker: boolean) => {
+            const options = {
+                maxSizeMB: 0.8,
+                maxWidthOrHeight: 1024,
+                useWebWorker: useWorker,
+                initialQuality: 0.6,
+                fileType: 'image/jpeg'
+            };
+            return await imageCompression(file, options);
         };
 
         try {
-            console.log("NutriScan: Comprimiendo profesionalmente...");
-            const compressedFile = await imageCompression(file, options);
+            console.log("NutriScan: Iniciando compresión profesional...");
+            let compressedFile;
+            try {
+                // Intento 1: Con Web Worker (más rápido, no bloquea UI)
+                compressedFile = await tryCompression(true);
+            } catch (err) {
+                console.warn("NutriScan: Fallo con Worker, reintentando en hilo principal...", err);
+                // Intento 2: Sin Web Worker (más compatible en algunos móviles)
+                compressedFile = await tryCompression(false);
+            }
 
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onloadend = () => resolve(reader.result as string);
-                reader.onerror = reject;
+                reader.onerror = () => reject(new Error("Error al leer archivo comprimido."));
                 reader.readAsDataURL(compressedFile);
             });
-        } catch (error) {
-            console.error("Error en compresión:", error);
-            throw new Error("No se pudo optimizar la imagen.");
+        } catch (error: any) {
+            console.error("Fallo total en compresión:", error);
+            const technicalInfo = error?.message || "Error de memoria o formato";
+            throw new Error(`No se pudo optimizar la imagen.\nDetalle técnico: ${technicalInfo}\n\nSugerencia: Intenta cerrar otras apps o toma la foto con menos resolución.`);
         }
     };
 
