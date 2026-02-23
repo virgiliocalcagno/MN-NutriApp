@@ -33,13 +33,10 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
                     if (data.result) {
                         const result = data.result;
 
-                        // Use a fallback for the image since we no longer store it in Firestore (to save space)
-                        let imageUrl = result.image || '';
-
-                        // We will set the result first, then try to get the real storage URL if needed
+                        // Initial result without image (will fetch asynchronously if needed)
                         const finalResult = {
                             ...result,
-                            image: imageUrl,
+                            image: result.image || '',
                             plato: result.platos ? result.platos.join(", ") : (result.plato || "Alimento Detectado"),
                             impacto: result.semaforo || result.impacto || "VERDE",
                             hack: result.analisis || result.hack || "Análisis metabólico listo...",
@@ -50,11 +47,13 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
                         setScanResult(finalResult);
 
                         // If we have the storage path but no image URL yet, fetch it from Storage
-                        if (!imageUrl && data.storagePath) {
+                        if (!finalResult.image && data.storagePath) {
+                            console.log("[NutriScan] Obteniendo URL de Storage para visualización...");
                             import('firebase/storage').then(({ getStorage, ref, getDownloadURL }) => {
                                 const storage = getStorage();
                                 const fileRef = ref(storage, data.storagePath);
                                 getDownloadURL(fileRef).then(url => {
+                                    console.log("[NutriScan] URL de imagen resuelta:", url);
                                     setScanResult({ ...finalResult, image: url });
                                 }).catch(err => console.error("Error fetching image URL:", err));
                             });
