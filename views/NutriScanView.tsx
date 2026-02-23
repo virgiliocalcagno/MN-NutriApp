@@ -1,7 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { useStore } from '@/src/context/StoreContext';
 import { analyzeImageWithGemini } from '@/src/utils/ai';
-import imageCompression from 'browser-image-compression';
 
 const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
     const { store, saveStore } = useStore();
@@ -13,39 +12,30 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
     const setScanResult = (val: any) => saveStore({ ...store, lastScan: val });
 
     const compressImage = async (file: File): Promise<string> => {
-        const tryCompression = async (useWorker: boolean) => {
-            const options = {
-                maxSizeMB: 0.8,
-                maxWidthOrHeight: 1024,
-                useWebWorker: useWorker,
-                initialQuality: 0.6,
-                fileType: 'image/jpeg'
-            };
-            return await imageCompression(file, options);
-        };
-
         try {
-            console.log("NutriScan: Iniciando compresión profesional...");
-            let compressedFile;
-            try {
-                // Intento 1: Con Web Worker (más rápido, no bloquea UI)
-                compressedFile = await tryCompression(true);
-            } catch (err) {
-                console.warn("NutriScan: Fallo con Worker, reintentando en hilo principal...", err);
-                // Intento 2: Sin Web Worker (más compatible en algunos móviles)
-                compressedFile = await tryCompression(false);
-            }
+            console.log("NutriScan: Redimensionando por hardware (GPU)...");
 
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result as string);
-                reader.onerror = () => reject(new Error("Error al leer archivo comprimido."));
-                reader.readAsDataURL(compressedFile);
+            // MÉTODO DEFINITIVO: Redimensionar MIENTRAS se decodifica (Cero carga RAM original)
+            const bitmap = await createImageBitmap(file, {
+                resizeWidth: 800,
+                resizeQuality: 'low'
             });
+
+            const canvas = document.createElement('canvas');
+            canvas.width = bitmap.width;
+            canvas.height = bitmap.height;
+            const ctx = canvas.getContext('2d', { alpha: false });
+
+            if (!ctx) throw new Error("Canvas context error");
+
+            ctx.drawImage(bitmap, 0, 0);
+            const base64 = canvas.toDataURL('image/jpeg', 0.7);
+
+            bitmap.close(); // Liberar memoria GPU
+            return base64;
         } catch (error: any) {
-            console.error("Fallo total en compresión:", error);
-            const technicalInfo = error?.message || "Error de memoria o formato";
-            throw new Error(`No se pudo optimizar la imagen.\nDetalle técnico: ${technicalInfo}\n\nSugerencia: Intenta cerrar otras apps o toma la foto con menos resolución.`);
+            console.error("Fallo crítico GPU:", error);
+            throw new Error(`Error de hardware: El celular no pudo procesar esta foto. Prueba tomándola con menos resolución.`);
         }
     };
 
