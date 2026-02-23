@@ -16,8 +16,9 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
             console.log("NutriScan: Redimensionando por hardware (GPU)...");
 
             // MÉTODO DEFINITIVO: Redimensionar MIENTRAS se decodifica (Cero carga RAM original)
+            // Bajamos a 600px para máxima compatibilidad con memoria RAM limitada
             const bitmap = await createImageBitmap(file, {
-                resizeWidth: 800,
+                resizeWidth: 600,
                 resizeQuality: 'low'
             });
 
@@ -142,7 +143,7 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
                         <span className="material-symbols-outlined text-4xl font-fill">center_focus_weak</span>
                     </div>
                     <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-1">NUTRISCAN IA</h2>
-                    <p className="text-[10px] text-blue-500 font-bold uppercase tracking-[0.2em] mb-4">METABOLIC MASTER v34.1</p>
+                    <p className="text-[10px] text-blue-500 font-bold uppercase tracking-[0.2em] mb-4">METABOLIC MASTER v34.3-GPU</p>
                     <p className="text-xs text-slate-400 leading-relaxed max-w-[240px]">
                         Análisis bioquímico instantáneo de tus platos con consejos de bio-hacking personalizados.
                     </p>
