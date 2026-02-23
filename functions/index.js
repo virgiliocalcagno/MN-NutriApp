@@ -62,7 +62,7 @@ exports.processImageForAnalysis = onDocumentUpdated({
 
     const fullPrompt = `Analiza esta imagen de comida como un Coach Metabólico Experto y Analista Nutricional de MN-NutriApp.
         PERFIL PACIENTE:
-        - Meta: ${data.userGoal || 'Salud General'}
+        - Meta: ${afterData.userGoal || 'Salud General'}
         TU MISIÓN:
         1. IDENTIFICACIÓN PRECISA. 2. ESTIMACIÓN NUTRICIONAL. 3. SEMÁFORO METABÓLICO. 4. ANÁLISIS TÉCNICO. 5. BIO-HACK EXPERTO.
         RESPONDE EXCLUSIVAMENTE EN JSON:
