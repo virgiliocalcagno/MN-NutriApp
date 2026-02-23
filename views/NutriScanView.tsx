@@ -14,7 +14,6 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
     const compressImage = (base64: string, maxSize = 1280, quality = 0.7): Promise<string> => {
         return new Promise((resolve, reject) => {
             const img = new Image();
-            img.src = base64;
             img.onload = () => {
                 try {
                     const canvas = document.createElement('canvas');
@@ -48,8 +47,10 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
                 }
             };
             img.onerror = (error) => {
+                console.error("Image loading error in compressImage", error);
                 reject(error);
             };
+            img.src = base64; // Set src AFTER onload to avoid race conditions
         });
     };
 
@@ -74,7 +75,13 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
                         condiciones: store.profile.comorbilidades.join(", ") + (store.profile.alergias ? `, Alergias: ${store.profile.alergias}` : "")
                     };
 
+                    console.log("NutriScan: Invocando IA...");
                     const result = await analyzeImageWithGemini(base64, profileContext, (import.meta as any).env?.VITE_GEMINI_API_KEY);
+                    console.log("NutriScan: Resultado de IA recibido:", result);
+
+                    if (!result || result.error) {
+                        throw new Error(result?.error || "La IA no devolvió un resultado válido o hubo un error en la nube.");
+                    }
 
                     setScanResult({
                         ...result,
@@ -87,9 +94,11 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
                     });
 
                     if (window.navigator?.vibrate) window.navigator.vibrate([100, 50, 100]);
-                } catch (err) {
-                    console.error("Error durante el procesamiento o análisis de la imagen:", err);
-                    alert("Hubo un error al procesar la imagen. Por favor, inténtalo de nuevo con otra imagen.");
+                } catch (err: any) {
+                    console.error("Error crítico en handleScan:", err);
+                    const errorMsg = err.message || "Error desconocido";
+                    const errorDetails = typeof err === 'object' ? JSON.stringify(err) : String(err);
+                    alert(`❌ Error de procesamiento:\n${errorMsg}\n\nDetalles técnicos: ${errorDetails}`);
                 } finally {
                     setIsScanning(false);
                     if (input) input.value = '';
