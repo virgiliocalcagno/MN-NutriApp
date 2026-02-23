@@ -1,10 +1,9 @@
+```
 import React, { useRef, useState, useEffect } from 'react';
 import { useStore } from '@/src/context/StoreContext';
 import { db } from '@/src/firebase';
 import { uploadImageForAnalysis } from '@/src/firebase';
 import { doc, setDoc, onSnapshot, serverTimestamp, collection } from 'firebase/firestore';
-
-import { compressImage } from '@/src/utils/image';
 
 const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
     const { user, store, saveStore } = useStore();
@@ -50,7 +49,7 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
                     unsub(); // Stop listening
                     break;
                 case 'error':
-                    alert(`❌ Error del servidor: \n${data.error || 'Hubo un problema al analizar la imagen.'} `);
+                    alert(`❌ Error del servidor: \n${ data.error || 'Hubo un problema al analizar la imagen.' } `);
                     setIsScanning(false);
                     setScanJobId(null);
                     unsub(); // Stop listening
@@ -70,8 +69,8 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
 
         const input = e.target;
         if (input.files && input.files[0]) {
-            let file = input.files[0];
-            console.log(`NutriScan: Archivo original: ${file.name}, Tamaño: ${(file.size / 1024 / 1024).toFixed(2)} MB`);
+            const file = input.files[0];
+            console.log(`NutriScan: Archivo seleccionado: ${ file.name }, Tipo: ${ file.type }, Tamaño: ${ (file.size / 1024 / 1024).toFixed(2) } MB`);
 
             if (!file.type.startsWith('image/')) {
                 alert("El archivo seleccionado no es una imagen válida.");
@@ -79,25 +78,16 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
             }
 
             setIsScanning(true);
-            setScanStatus("Optimizando imagen...");
+            setScanStatus("Subiendo imagen...");
+
+            // Generar un ID único real para evitar colisiones entre usuarios
+            const scansCol = collection(db, 'scans');
+            const jobRef = doc(scansCol);
+            const newJobId = jobRef.id;
+            
+            setScanJobId(newJobId);
 
             try {
-                // Client-side compression to avoid memory issues and speed up upload
-                if (file.size > 0.5 * 1024 * 1024) { // Only compress if larger than 0.5MB
-                    console.log("Comprimiendo imagen para optimizar memoria...");
-                    file = await compressImage(file, 1024, 0.75);
-                    console.log(`Imagen optimizada: ${(file.size / 1024 / 1024).toFixed(2)} MB`);
-                }
-
-                setScanStatus("Subiendo imagen...");
-
-                // Generar un ID único real para evitar colisiones entre usuarios
-                const scansCol = collection(db, 'scans');
-                const jobRef = doc(scansCol);
-                const newJobId = jobRef.id;
-
-                setScanJobId(newJobId);
-
                 // 1. Create a job document in Firestore
                 await setDoc(jobRef, {
                     status: 'uploading',
@@ -108,22 +98,22 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
 
                 // 2. Upload the file to Storage
                 const storagePath = await uploadImageForAnalysis(file, user.uid);
-
+                
                 // 3. Update job doc to trigger the cloud function
                 await setDoc(jobRef, { storagePath, status: 'processing' }, { merge: true });
                 setScanStatus("Imagen subida. Esperando análisis...");
 
             } catch (err: any) {
-                console.error("Error crítico en NutriScan:", err);
+                console.error("Error crítico en NutriScan (subida):", err);
                 const errorMsg = err.message || "Error desconocido durante la subida.";
-                alert(`❌ Error: \n${errorMsg} `);
+                alert(`❌ Error: \n${ errorMsg } `);
+                if(jobRef) await setDoc(jobRef, { status: 'error', error: errorMsg }, { merge: true });
                 setIsScanning(false);
             } finally {
                 if (input) input.value = ''; // Reset file input
             }
         }
     };
-
 
     return (
         <div className="flex flex-col min-h-screen bg-slate-50/50 space-y-6 animate-in fade-in duration-500 pb-24">
@@ -155,7 +145,7 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
                             ref={(el) => {
                                 if (el) {
                                     const progress = Math.min(((store.calories || 0) / (store.caloriesTarget || 2000)) * 100, 100);
-                                    el.style.width = `${progress}% `;
+                                    el.style.width = `${ progress }% `;
                                 }
                             }}
                             className="h-full bg-blue-500 rounded-full transition-all duration-1000"
@@ -187,7 +177,7 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
                                 <div className="absolute inset-0 border-[6px] border-white/10 border-t-blue-400 rounded-full animate-spin"></div>
                                 <div className="absolute inset-0 flex items-center justify-center opacity-40">
                                     <span className="material-symbols-outlined text-4xl text-white">cloud_upload</span>
-                                </div>
+                                 </div>
                             </div>
                             <div className="text-center space-y-1">
                                 <p className="text-white font-black text-xs tracking-[0.3em] uppercase animate-pulse">{scanStatus || 'Iniciando...'}</p>
@@ -229,9 +219,9 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
                     <div className="space-y-6 animate-in fade-in slide-in-from-bottom duration-700">
                         <h3 className="text-2xl font-black text-slate-900 tracking-tight px-1">Análisis Nutricional</h3>
 
-                        <div className={`p - 6 rounded - [32px] border ${scanResult.impacto === 'ROJO' ? 'bg-red-50 border-red-100' : scanResult.impacto === 'AMARILLO' ? 'bg-amber-50 border-amber-100' : 'bg-emerald-50 border-emerald-100'} `}>
+                        <div className={`p - 6 rounded - [32px] border ${ scanResult.impacto === 'ROJO' ? 'bg-red-50 border-red-100' : scanResult.impacto === 'AMARILLO' ? 'bg-amber-50 border-amber-100' : 'bg-emerald-50 border-emerald-100' } `}>
                             <div className="flex items-center gap-2 mb-3">
-                                <div className={`size - 2 rounded - full ${scanResult.impacto === 'ROJO' ? 'bg-red-500' : scanResult.impacto === 'AMARILLO' ? 'bg-amber-500' : 'bg-emerald-500'} `}></div>
+                                <div className={`size - 2 rounded - full ${ scanResult.impacto === 'ROJO' ? 'bg-red-500' : scanResult.impacto === 'AMARILLO' ? 'bg-amber-500' : 'bg-emerald-500' } `}></div>
                                 <p className="text-[10px] font-black uppercase tracking-[.2em] text-slate-900">
                                     {scanResult.impacto === 'ROJO' ? 'ALERTA' : scanResult.impacto === 'AMARILLO' ? 'PRECAUCIÓN' : 'METABÓLICAMENTE ÓPTIMO'}
                                 </p>
@@ -249,7 +239,7 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
                                 { l: 'GRASA', v: (scanResult.macros?.f || '---'), i: 'oil_barrel', c: 'text-emerald-500' }
                             ].map((m, i) => (
                                 <div key={i} className="bg-white p-4 rounded-[28px] border border-slate-100 shadow-sm flex flex-col items-center transition-all hover:scale-105">
-                                    <span className={`material - symbols - outlined text - sm mb - 2 ${m.c} `}>{m.i}</span>
+                                    <span className={`material - symbols - outlined text - sm mb - 2 ${ m.c } `}>{m.i}</span>
                                     <p className="text-base font-black text-slate-900">{m.v}</p>
                                     <p className="text-[8px] text-slate-400 font-black uppercase tracking-tighter">{m.l}</p>
                                 </div>
@@ -284,7 +274,7 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
                                     calories: (store.calories || 0) + addedCals,
                                     lastScan: null
                                 });
-                                alert(`✅ ${addedCals} Kcal registradas en tu diario metabólico.`);
+                                alert(`✅ ${ addedCals } Kcal registradas en tu diario metabólico.`);
                                 if (setView) setView('home');
                             }}
                             className="w-full bg-slate-900 hover:bg-black text-white py-6 rounded-[28px] shadow-2xl shadow-slate-900/40 flex items-center justify-between px-8 active:scale-[0.98] transition-all group"
