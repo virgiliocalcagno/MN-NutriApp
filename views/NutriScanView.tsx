@@ -89,17 +89,18 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
 
                 let fileToUpload = file;
 
-                // 2. Client-side compression if image > 0.5MB
-                if (file.size > 0.5 * 1024 * 1024) {
-                    console.log("[NutriScan] Comprimiendo imagen para optimizar memoria...");
+                // 2. Client-side compression if image > 0.5MB OR it's HEIC (iPhone)
+                const isHeic = file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif');
+
+                if (file.size > 0.5 * 1024 * 1024 || isHeic) {
+                    console.log(`[NutriScan] Optimizando imagen (HEIC: ${isHeic})...`);
                     setScanStatus("Optimizando tamaño...");
                     try {
-                        fileToUpload = await compressImage(file, 1200, 0.7); // Slightly larger but better quality
-                        console.log(`[NutriScan] Imagen optimizada: ${(fileToUpload.size / 1024 / 1024).toFixed(2)} MB`);
+                        fileToUpload = await compressImage(file, 1200, 0.7);
+                        console.log(`[NutriScan] Imagen optimizada: ${(fileToUpload.size / 1024 / 1024).toFixed(2)} MB, Nombre: ${fileToUpload.name}`);
                     } catch (compErr: any) {
                         console.error("[NutriScan] Error de compresión:", compErr);
-                        // If it fails, we continue with the original, but warn in console
-                        console.warn("[NutriScan] No se pudo comprimir, intentando subir original...");
+                        console.warn("[NutriScan] No se pudo procesar, intentando subir original...");
                     }
                 }
 

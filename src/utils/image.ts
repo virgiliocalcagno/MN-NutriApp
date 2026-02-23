@@ -47,7 +47,11 @@ export const compressImage = async (file: File, maxWidth: number = 1024, quality
             canvas.toBlob(
                 (blob) => {
                     if (blob) {
-                        const compressedFile = new File([blob], file.name, {
+                        // Ensure the filename has a .jpg extension for server-side compatibility
+                        const baseName = file.name.replace(/\.[^/.]+$/, "");
+                        const newFileName = `${baseName}.jpg`;
+
+                        const compressedFile = new File([blob], newFileName, {
                             type: 'image/jpeg',
                             lastModified: Date.now(),
                         });
