@@ -1,5 +1,5 @@
 const { onRequest } = require("firebase-functions/v2/https");
-const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { onDocumentUpdated } = require("firebase-functions/v2/firestore");
 const { onObjectFinalized } = require("firebase-functions/v2/storage");
 const { VertexAI } = require('@google-cloud/vertexai');
 const admin = require('firebase-admin');
@@ -12,35 +12,33 @@ const sharp = require('sharp');
 admin.initializeApp();
 const db = admin.firestore();
 
-exports.processImageForAnalysis = onDocumentCreated({
+exports.processImageForAnalysis = onDocumentUpdated({
   document: "scans/{scanJobId}",
   memory: "1GiB",
   region: "us-central1"
 }, async (event) => {
-  const snapshot = event.data;
-  if (!snapshot) return;
+  const beforeData = event.data.before ? event.data.before.data() : {};
+  const afterData = event.data.after ? event.data.after.data() : {};
 
-  const data = snapshot.data();
-  // Only process if status is 'processing'
-  if (data.status !== 'processing' || !data.storagePath) {
-    console.log(`Scan job ${event.params.scanJobId} bypass: status is ${data.status}`);
+  // CRITICAL: Only trigger if status CHANGED TO 'processing'
+  if (afterData.status !== 'processing' || beforeData.status === 'processing' || !afterData.storagePath) {
+    console.log(`Bypassing scan ${event.params.scanJobId}. Status from ${beforeData.status} to ${afterData.status}`);
     return;
   }
 
   const scanJobId = event.params.scanJobId;
-  const userId = data.userId;
-  const storagePath = data.storagePath;
-  const jobRef = snapshot.ref;
+  const userId = afterData.userId;
+  const storagePath = afterData.storagePath;
+  const jobRef = event.data.after.ref;
 
   try {
-    console.log(`Processing NutriScan Job (Firestore Trigger): ${scanJobId}`);
+    console.log(`STARTING NutriScan Job (Updated Trigger): ${scanJobId}`);
     const fileBucket = 'mn-nutriapp.firebasestorage.app';
-    const filePath = storagePath;
     const bucket = getStorage().bucket(fileBucket);
-    const fileName = path.basename(filePath);
+    const fileName = path.basename(storagePath);
     const tempFilePath = path.join(os.tmpdir(), fileName);
 
-    await bucket.file(filePath).download({ destination: tempFilePath });
+    await bucket.file(storagePath).download({ destination: tempFilePath });
 
     let resizedBase64 = '';
     let mimeType = 'image/jpeg';
