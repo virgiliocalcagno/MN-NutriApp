@@ -12,31 +12,73 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
     const setScanResult = (val: any) => saveStore({ ...store, lastScan: val });
 
     const compressImage = async (file: File): Promise<string> => {
-        try {
-            console.log("NutriScan: Redimensionando por hardware (GPU)...");
+        const targetWidth = 600;
 
-            // MÉTODO DEFINITIVO: Redimensionar MIENTRAS se decodifica (Cero carga RAM original)
-            // Bajamos a 600px para máxima compatibilidad con memoria RAM limitada
+        // NIVEL 1: GPU Resizing (Lo más ligero si es soportado)
+        try {
+            console.log("NutriScan: Intento 1 (GPU)...");
             const bitmap = await createImageBitmap(file, {
-                resizeWidth: 600,
+                resizeWidth: targetWidth,
                 resizeQuality: 'low'
             });
-
             const canvas = document.createElement('canvas');
             canvas.width = bitmap.width;
             canvas.height = bitmap.height;
             const ctx = canvas.getContext('2d', { alpha: false });
+            if (ctx) {
+                ctx.drawImage(bitmap, 0, 0);
+                const base64 = canvas.toDataURL('image/jpeg', 0.6);
+                bitmap.close();
+                return base64;
+            }
+        } catch (e: any) {
+            console.warn("NutriScan: NIVEL 1 falló:", e.name, e.message);
+        }
 
-            if (!ctx) throw new Error("Canvas context error");
+        // NIVEL 2: Tradicional (URL -> Image -> Canvas)
+        try {
+            console.log("NutriScan: Intento 2 (Tradicional)...");
+            return await new Promise((resolve, reject) => {
+                const img = new Image();
+                const url = URL.createObjectURL(file);
+                img.onload = () => {
+                    URL.revokeObjectURL(url);
+                    const canvas = document.createElement('canvas');
+                    const scale = targetWidth / Math.max(img.width, img.height);
+                    canvas.width = img.width * scale;
+                    canvas.height = img.height * scale;
+                    const ctx = canvas.getContext('2d', { alpha: false });
+                    if (ctx) {
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        resolve(canvas.toDataURL('image/jpeg', 0.6));
+                    } else reject(new Error("Canvas context failed"));
+                };
+                img.onerror = () => {
+                    URL.revokeObjectURL(url);
+                    reject(new Error("Image decoding failed"));
+                };
+                img.src = url;
+            });
+        } catch (e: any) {
+            console.warn("NutriScan: NIVEL 2 falló:", e.name, e.message);
+        }
 
-            ctx.drawImage(bitmap, 0, 0);
-            const base64 = canvas.toDataURL('image/jpeg', 0.7);
-
-            bitmap.close(); // Liberar memoria GPU
-            return base64;
-        } catch (error: any) {
-            console.error("Fallo crítico GPU:", error);
-            throw new Error(`Error de hardware: El celular no pudo procesar esta foto. Prueba tomándola con menos resolución.`);
+        // NIVEL 3: Hard Fallback (FileReader -> Image)
+        try {
+            console.log("NutriScan: Intento 3 (FileReader)...");
+            const base64Orig = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+            // Si llegamos aquí, al menos el archivo se leyó. Intentamos devolverlo tal cual si es pequeño
+            // o intentar un último redimensionamiento desesperado.
+            if (base64Orig.length < 1000000) return base64Orig;
+            throw new Error("Imagen demasiado grande incluso para FileReader");
+        } catch (e: any) {
+            console.error("NutriScan: TODOS LOS NIVELES FALLARON.");
+            throw new Error(`Error técnico: ${e.name || 'Error'}: ${e.message || 'Memoria llena'}. Prueba con una captura de pantalla de la foto.`);
         }
     };
 
@@ -143,7 +185,7 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
                         <span className="material-symbols-outlined text-4xl font-fill">center_focus_weak</span>
                     </div>
                     <h2 className="text-2xl font-black text-slate-900 tracking-tight mb-1">NUTRISCAN IA</h2>
-                    <p className="text-[10px] text-blue-500 font-bold uppercase tracking-[0.2em] mb-4">METABOLIC MASTER v34.3-GPU</p>
+                    <p className="text-[10px] text-blue-500 font-bold uppercase tracking-[0.2em] mb-4">METABOLIC MASTER v34.4-ULTRA</p>
                     <p className="text-xs text-slate-400 leading-relaxed max-w-[240px]">
                         Análisis bioquímico instantáneo de tus platos con consejos de bio-hacking personalizados.
                     </p>
