@@ -7,7 +7,6 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
     const [isScanning, setIsScanning] = useState(false);
     const [showCaptureMenu, setShowCaptureMenu] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const cameraInputRef = useRef<HTMLInputElement>(null);
     const scanResult = store.lastScan;
 
     const setScanResult = (val: any) => saveStore({ ...store, lastScan: val });
@@ -41,7 +40,7 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
                     if (!ctx) {
                         return reject(new Error('Failed to get canvas context'));
                     }
-                    
+
                     ctx.drawImage(img, 0, 0, width, height);
                     resolve(canvas.toDataURL('image/jpeg', quality));
                 } catch (error) {
@@ -55,9 +54,10 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
     };
 
     const handleScan = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
+        const input = e.target;
+        if (input.files && input.files[0]) {
             setIsScanning(true);
-            const file = e.target.files[0];
+            const file = input.files[0];
             const reader = new FileReader();
 
             reader.onload = async () => {
@@ -92,6 +92,7 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
                     alert("Hubo un error al procesar la imagen. Por favor, inténtalo de nuevo con otra imagen.");
                 } finally {
                     setIsScanning(false);
+                    if (input) input.value = '';
                 }
             };
 
@@ -99,6 +100,7 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
                 console.error("Error al leer el archivo.");
                 setIsScanning(false);
                 alert("No se pudo leer el archivo de imagen. Por favor, selecciona otra imagen.");
+                if (input) input.value = '';
             };
 
             reader.readAsDataURL(file);
@@ -160,7 +162,6 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
                 {/* 3. Area de Escaneo / Imagen */}
                 <div className="relative aspect-square rounded-[40px] bg-white overflow-hidden shadow-2xl border-4 border-white">
                     <input type="file" ref={fileInputRef} onChange={handleScan} accept="image/*" className="visually-hidden" title="Seleccionar imagen" />
-                    <input type="file" ref={cameraInputRef} onChange={handleScan} accept="image/*" capture="environment" className="visually-hidden" title="Tomar foto" />
 
                     {isScanning ? (
                         <div className="absolute inset-0 bg-slate-900/40 z-20 flex flex-col items-center justify-center gap-6 backdrop-blur-xl border border-white/20">
@@ -289,7 +290,10 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
                             <button
                                 onClick={() => {
                                     setShowCaptureMenu(false);
-                                    cameraInputRef.current?.click();
+                                    if (fileInputRef.current) {
+                                        fileInputRef.current.setAttribute('capture', 'environment');
+                                        fileInputRef.current.click();
+                                    }
                                 }}
                                 className="flex flex-col items-center gap-4 p-8 bg-blue-50 rounded-[32px] border border-blue-100 active:scale-95 transition-all"
                             >
@@ -302,7 +306,10 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
                             <button
                                 onClick={() => {
                                     setShowCaptureMenu(false);
-                                    fileInputRef.current?.click();
+                                    if (fileInputRef.current) {
+                                        fileInputRef.current.removeAttribute('capture');
+                                        fileInputRef.current.click();
+                                    }
                                 }}
                                 className="flex flex-col items-center gap-4 p-8 bg-slate-50 rounded-[32px] border border-slate-100 active:scale-95 transition-all"
                             >
