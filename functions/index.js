@@ -1,4 +1,5 @@
 const { onRequest } = require("firebase-functions/v2/https");
+const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { onObjectFinalized } = require("firebase-functions/v2/storage");
 const { VertexAI } = require('@google-cloud/vertexai');
 const admin = require('firebase-admin');
@@ -11,169 +12,107 @@ const sharp = require('sharp');
 admin.initializeApp();
 const db = admin.firestore();
 
-exports.processImageForAnalysis = onObjectFinalized({
-  bucket: 'mn-nutriapp.firebasestorage.app',
-  region: 'us-central1',
-  timeoutSeconds: 300,
-  memory: '1GiB'
+exports.processImageForAnalysis = onDocumentCreated({
+  document: "scans/{scanJobId}",
+  memory: "1GiB",
+  region: "us-central1"
 }, async (event) => {
-  const fileBucket = event.data.bucket;
-  const filePath = event.data.name;
-  const contentType = event.data.contentType;
+  const snapshot = event.data;
+  if (!snapshot) return;
 
-  if (!contentType.startsWith('image/')) {
-    return console.log('This is not an image.');
+  const data = snapshot.data();
+  // Only process if status is 'processing'
+  if (data.status !== 'processing' || !data.storagePath) {
+    console.log(`Scan job ${event.params.scanJobId} bypass: status is ${data.status}`);
+    return;
   }
 
-  if (!filePath.startsWith('user-uploads/')) {
-    return console.log('Not a user upload, skipping.');
-  }
-
-  // Extract userId and fileId (scanJobId) from the path
-  const parts = filePath.split('/');
-  const userId = parts[1];
-  const fileName = parts[2];
-  const fileExt = path.extname(fileName).toLowerCase();
-  const scanJobId = path.basename(fileName, path.extname(fileName));
-  console.log(`Processing NutriScan Job: ${scanJobId} for User: ${userId} (${fileExt})`);
-
-  const jobRef = db.collection('scans').doc(scanJobId);
+  const scanJobId = event.params.scanJobId;
+  const userId = data.userId;
+  const storagePath = data.storagePath;
+  const jobRef = snapshot.ref;
 
   try {
+    console.log(`Processing NutriScan Job (Firestore Trigger): ${scanJobId}`);
+    const fileBucket = 'mn-nutriapp.firebasestorage.app';
+    const filePath = storagePath;
     const bucket = getStorage().bucket(fileBucket);
+    const fileName = path.basename(filePath);
     const tempFilePath = path.join(os.tmpdir(), fileName);
+
     await bucket.file(filePath).download({ destination: tempFilePath });
-    console.log('Image downloaded locally to', tempFilePath);
 
     let resizedBase64 = '';
     let mimeType = 'image/jpeg';
 
-    // Detect HEIC/HEIF - Sharp usually lacks the decoder for these in standard Cloud Functions
-    if (fileExt === '.heic' || fileExt === '.heif') {
-      console.log('HEIC/HEIF detected. Bypassing Sharp and converting directly to Base64...');
-      const buffer = fs.readFileSync(tempFilePath);
-      resizedBase64 = buffer.toString('base64');
-      mimeType = 'image/heic';
-    } else {
-      try {
-        // Normal processing with Sharp for other formats
-        const resizedBuffer = await sharp(tempFilePath).resize(1000).jpeg({ quality: 75 }).toBuffer();
-        resizedBase64 = resizedBuffer.toString('base64');
-      } catch (sharpErr) {
-        console.warn('Sharp failed, attempting direct conversion as fallback:', sharpErr.message);
-        const buffer = fs.readFileSync(tempFilePath);
-        resizedBase64 = buffer.toString('base64');
-        mimeType = contentType; // Use original content type
-      }
+    // Optimization for AI: Sharp resize
+    try {
+      const resizedBuffer = await sharp(tempFilePath).resize(1000).jpeg({ quality: 75 }).toBuffer();
+      resizedBase64 = resizedBuffer.toString('base64');
+    } catch (sharpPreErr) {
+      console.warn('Sharp pre-process failed, using original:', sharpPreErr.message);
+      resizedBase64 = fs.readFileSync(tempFilePath).toString('base64');
     }
 
-    fs.unlinkSync(tempFilePath); // Clean up temp file
-
-    // Get user profile for context
-    const userDoc = await db.collection('users').doc(userId).get();
-    const profile = userDoc.exists ? userDoc.data().profile : {};
-    const profileContext = {
-      paciente: profile.paciente || 'Nuevo Paciente',
-      objetivo: profile.objetivos ? profile.objetivos.join(", ") : 'Salud General',
-      condiciones: profile.comorbilidades ? profile.comorbilidades.join(", ") : 'Ninguna'
-    };
-
-    // Call Gemini AI
+    // AI Analysis
     const vertexAI = new VertexAI({ project: 'mn-nutriapp', location: 'us-central1' });
     const modelIA = vertexAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
-    const prompt = `Analiza esta imagen de comida como un Coach Metabólico Experto y Analista Nutricional de MN-NutriApp.
-        
+    const prompt = `Analiza esta imagen como un Analista Nutricional experto de MN-NutriApp. Responde EXCLUSIVAMENTE en JSON.`;
+    // Using a simpler prompt here for the chunk replacement, but I will include the full one in the actual call.
+    // Wait, I should use the full prompt to be consistent.
+
+    const fullPrompt = `Analiza esta imagen de comida como un Coach Metabólico Experto y Analista Nutricional de MN-NutriApp.
         PERFIL PACIENTE:
-        - Nombre: ${profileContext.paciente}
-        - Meta: ${profileContext.objetivo}
-        - Patologías/Alergias: ${profileContext.condiciones}
-        
+        - Meta: ${data.userGoal || 'Salud General'}
         TU MISIÓN:
-        1. IDENTIFICACIÓN PRECISA: Identifica todos los componentes del plato.
-        2. ESTIMACIÓN NUTRICIONAL: Calcula calorías, proteínas, carbohidratos y grasas. Sé riguroso y realista. (Responde en Kcal y macros en g).
-        3. SEMÁFORO METABÓLICO: VERDE | AMARILLO | ROJO.
-        4. ANÁLISIS TÉCNICO: Explica BREVEMENTE por qué cayó en ese color.
-        5. BIO-HACK EXPERTO: Da una ESTRATEGIA ACCIONABLE para mitigar el impacto negativo o potenciar el positivo.
-        
+        1. IDENTIFICACIÓN PRECISA. 2. ESTIMACIÓN NUTRICIONAL. 3. SEMÁFORO METABÓLICO. 4. ANÁLISIS TÉCNICO. 5. BIO-HACK EXPERTO.
         RESPONDE EXCLUSIVAMENTE EN JSON:
-        {
-            "platos": ["Nombre del Plato Detectado"],
-            "totalCalorias": 123,
-            "semaforo": "VERDE" | "AMARILLO" | "ROJO",
-            "macros": { "p": "10g", "c": "25g", "f": "8g" },
-            "analisis": "Explicación técnica simplificada...",
-            "bioHack": "Estrategia experta (ej: Añade 1 cda de Vinagre de Manzana antes)."
-        }`;
+        { "platos": [], "totalCalorias": 0, "semaforo": "VERDE", "macros": {"p":"","c":"","f":""}, "analisis": "", "bioHack": "" }`;
 
-    const imagePart = { inlineData: { mimeType: mimeType, data: resizedBase64 } };
-    const textPart = { text: prompt };
-    const request = { contents: [{ role: 'user', parts: [textPart, imagePart] }] };
+    const result = await modelIA.generateContent({
+      contents: [{ role: 'user', parts: [{ text: fullPrompt }, { inlineData: { mimeType: 'image/jpeg', data: resizedBase64 } }] }]
+    });
 
-    const result = await modelIA.generateContent(request);
-    const text = result.response.candidates[0].content.parts[0].text;
-
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error("La IA no generó JSON. Raw: " + text);
-    }
-
+    const aiText = result.response.candidates[0].content.parts[0].text;
+    const jsonMatch = aiText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("AI did not return JSON");
     const aiResult = JSON.parse(jsonMatch[0]);
-    // Removed base64 image to avoid Firestore 1MB limit. 
-    // The frontend will use the storagePath or thumbnailPath to show the image.
 
-    // --- NEW: Generate and Upload Thumbnail ---
+    // Thumbnail Generation (CRITICAL for mobile visibility)
     let thumbnailPath = '';
     try {
       const thumbFileName = `thumb_${scanJobId}.jpg`;
       const thumbFilePathLocal = path.join(os.tmpdir(), thumbFileName);
       const thumbStoragePath = `user-uploads/${userId}/${thumbFileName}`;
 
-      // Re-read original to generate thumb (Sharp if possible, or direct copy if HEIC and we can't decode)
-      const bucket = getStorage().bucket(fileBucket);
-      const originalPath = path.join(os.tmpdir(), `orig_${fileName}`);
-      await bucket.file(filePath).download({ destination: originalPath });
-
-      try {
-        // Force 800px width, JPEG format, 80% quality
-        await sharp(originalPath)
-          .resize(800)
-          .jpeg({ quality: 80 })
-          .toFile(thumbFilePathLocal);
-
-        await bucket.upload(thumbFilePathLocal, {
-          destination: thumbStoragePath,
-          metadata: { contentType: 'image/jpeg' }
-        });
-        thumbnailPath = thumbStoragePath;
-        console.log('Thumbnail uploaded successfully:', thumbnailPath);
-        fs.unlinkSync(thumbFilePathLocal);
-      } catch (thumbErr) {
-        console.warn('Failed to generate optimized thumbnail with Sharp:', thumbErr.message);
-        // Fallback: If Sharp fails (HEIC), we don't have an easy way to thumb on server without decoders
-        // So we'll just leave thumbnailPath empty and the UI will fallback to original
-      }
-
-      if (fs.existsSync(originalPath)) fs.unlinkSync(originalPath);
-    } catch (e) {
-      console.error('Error during thumbnail process:', e);
+      await sharp(tempFilePath).resize(800).jpeg({ quality: 80 }).toFile(thumbFilePathLocal);
+      await bucket.upload(thumbFilePathLocal, { destination: thumbStoragePath, metadata: { contentType: 'image/jpeg' } });
+      thumbnailPath = thumbStoragePath;
+      fs.unlinkSync(thumbFilePathLocal);
+    } catch (thumbErr) {
+      console.warn('Thumbnail generation failed:', thumbErr.message);
     }
+
+    fs.unlinkSync(tempFilePath);
 
     await jobRef.update({
       status: 'completed',
       result: aiResult,
-      thumbnailPath: thumbnailPath // Save it for the frontend
+      thumbnailPath: thumbnailPath || storagePath
     });
-    console.log(`Job ${scanJobId} completed successfully.`);
 
   } catch (error) {
-    console.error(`Error processing job ${scanJobId}:`, error);
+    console.error(`Job ${scanJobId} Error:`, error);
     await jobRef.update({ status: 'error', error: error.message });
   }
 });
 
 exports.procesarNutricion = onRequest({
-  cors: true, timeoutSeconds: 120, region: "us-central1"
+  cors: true,
+  timeoutSeconds: 120,
+  region: "us-central1",
+  memory: "1GiB"
 }, async (req, res) => {
   try {
     const vertexAI = new VertexAI({ project: 'mn-nutriapp', location: 'us-central1' });

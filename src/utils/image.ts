@@ -4,9 +4,36 @@
  */
 
 export const compressImage = async (file: File, maxWidth: number = 1024, quality: number = 0.75): Promise<File> => {
+    // 1. Handle HEIC/HEIF conversion first
+    let fileToProcess = file;
+    const isHEIC = file.type === 'image/heic' || file.type === 'image/heif' || file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif');
+
+    if (isHEIC) {
+        console.log("[NutriScan] Detectado HEIC/HEIF. Convirtiendo a JPEG localmente...");
+        try {
+            const heic2any = (await import('heic2any')).default;
+            const convertedBlob = await heic2any({
+                blob: file,
+                toType: "image/jpeg",
+                quality: 0.8
+            });
+
+            // heic2any can return an array if the HEIC has multiple images
+            const resultBlob = Array.isArray(convertedBlob) ? convertedBlob[0] : convertedBlob;
+
+            fileToProcess = new File([resultBlob], file.name.replace(/\.(heic|heif)$/i, ".jpg"), {
+                type: 'image/jpeg'
+            });
+            console.log("[NutriScan] Conversión HEIC a JPEG exitosa.");
+        } catch (error) {
+            console.error("[NutriScan] Error convirtiendo HEIC:", error);
+            // Fallback: Continue with original file, although it might fail in img.onload
+        }
+    }
+
     return new Promise((resolve, reject) => {
         // Use createObjectURL instead of FileReader to save memory on mobile
-        const imageUrl = URL.createObjectURL(file);
+        const imageUrl = URL.createObjectURL(fileToProcess);
         const img = new Image();
 
         img.onload = () => {
@@ -47,8 +74,8 @@ export const compressImage = async (file: File, maxWidth: number = 1024, quality
             canvas.toBlob(
                 (blob) => {
                     if (blob) {
-                        // Ensure the filename has a .jpg extension for server-side compatibility
-                        const baseName = file.name.replace(/\.[^/.]+$/, "");
+                        // Ensure the filename has a .jpg extension
+                        const baseName = fileToProcess.name.replace(/\.[^/.]+$/, "");
                         const newFileName = `${baseName}.jpg`;
 
                         const compressedFile = new File([blob], newFileName, {
@@ -67,7 +94,7 @@ export const compressImage = async (file: File, maxWidth: number = 1024, quality
 
         img.onerror = () => {
             URL.revokeObjectURL(imageUrl);
-            reject(new Error("Error al cargar la imagen. Es posible que el formato no sea compatible o el archivo sea demasiado pesado."));
+            reject(new Error(`Error al cargar la imagen (${fileToProcess.name}). Es posible que el formato no sea compatible.`));
         };
 
         img.src = imageUrl;
