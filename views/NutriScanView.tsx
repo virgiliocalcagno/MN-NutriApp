@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { useStore } from '@/src/context/StoreContext';
 import { analyzeImageWithGemini } from '@/src/utils/ai';
+import imageCompression from 'browser-image-compression';
 
 const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
     const { store, saveStore } = useStore();
@@ -11,64 +12,28 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
 
     const setScanResult = (val: any) => saveStore({ ...store, lastScan: val });
 
-    const compressImage = async (source: File | string, maxSize = 1200, quality = 0.7): Promise<string> => {
+    const compressImage = async (file: File): Promise<string> => {
+        const options = {
+            maxSizeMB: 1,           // Límite de 1MB
+            maxWidthOrHeight: 1024, // Resolución ideal para IA
+            useWebWorker: true,    // Procesamiento en segundo plano
+            initialQuality: 0.7,
+            fileType: 'image/jpeg'
+        };
+
         try {
-            let imgSource: ImageBitmap | HTMLImageElement;
+            console.log("NutriScan: Comprimiendo profesionalmente...");
+            const compressedFile = await imageCompression(file, options);
 
-            if (source instanceof File && typeof window.createImageBitmap === 'function') {
-                imgSource = await createImageBitmap(source);
-            } else {
-                imgSource = await new Promise((resolve, reject) => {
-                    const img = new Image();
-                    let objectUrl: string | null = null;
-                    img.onload = () => resolve(img);
-                    img.onerror = () => {
-                        if (objectUrl) URL.revokeObjectURL(objectUrl);
-                        reject(new Error("Error al decodificar la imagen."));
-                    };
-                    if (source instanceof File) {
-                        objectUrl = URL.createObjectURL(source);
-                        img.src = objectUrl;
-                    } else {
-                        img.src = source;
-                    }
-                });
-            }
-
-            const canvas = document.createElement('canvas');
-            let width = imgSource.width;
-            let height = imgSource.height;
-
-            if (width > height) {
-                if (width > maxSize) {
-                    height *= maxSize / width;
-                    width = maxSize;
-                }
-            } else {
-                if (height > maxSize) {
-                    width *= maxSize / height;
-                    height = maxSize;
-                }
-            }
-
-            canvas.width = width;
-            canvas.height = height;
-
-            const ctx = canvas.getContext('2d', { alpha: false });
-            if (!ctx) throw new Error('Canvas context error');
-
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
-            ctx.drawImage(imgSource, 0, 0, width, height);
-
-            const base64 = canvas.toDataURL('image/jpeg', quality);
-
-            if (imgSource instanceof ImageBitmap) imgSource.close();
-
-            return base64;
-        } catch (error: any) {
-            console.error("compressImage error:", error);
-            throw new Error(`Error de memoria: Procura usar una foto menos pesada o reinicia la app.`);
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(compressedFile);
+            });
+        } catch (error) {
+            console.error("Error en compresión:", error);
+            throw new Error("No se pudo optimizar la imagen.");
         }
     };
 
