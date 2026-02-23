@@ -11,61 +11,65 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
 
     const setScanResult = (val: any) => saveStore({ ...store, lastScan: val });
 
-    const compressImage = (source: File | string, maxSize = 1280, quality = 0.7): Promise<string> => {
-        return new Promise((resolve, reject) => {
-            const img = new Image();
-            let objectUrl: string | null = null;
+    const compressImage = async (source: File | string, maxSize = 1200, quality = 0.7): Promise<string> => {
+        try {
+            let imgSource: ImageBitmap | HTMLImageElement;
 
-            img.onload = () => {
-                try {
-                    const canvas = document.createElement('canvas');
-                    let width = img.width;
-                    let height = img.height;
-
-                    if (width > height) {
-                        if (width > maxSize) {
-                            height *= maxSize / width;
-                            width = maxSize;
-                        }
-                    } else {
-                        if (height > maxSize) {
-                            width *= maxSize / height;
-                            height = maxSize;
-                        }
-                    }
-
-                    canvas.width = width;
-                    canvas.height = height;
-
-                    const ctx = canvas.getContext('2d');
-                    if (!ctx) {
-                        return reject(new Error('Failed to get canvas context'));
-                    }
-
-                    ctx.drawImage(img, 0, 0, width, height);
-                    const base64 = canvas.toDataURL('image/jpeg', quality);
-
-                    if (objectUrl) URL.revokeObjectURL(objectUrl);
-                    resolve(base64);
-                } catch (error) {
-                    if (objectUrl) URL.revokeObjectURL(objectUrl);
-                    reject(error);
-                }
-            };
-
-            img.onerror = () => {
-                if (objectUrl) URL.revokeObjectURL(objectUrl);
-                console.error("Error al cargar la imagen para compresión.");
-                reject(new Error("No se pudo cargar la imagen localmente. El archivo podría estar dañado o ser demasiado grande."));
-            };
-
-            if (source instanceof File) {
-                objectUrl = URL.createObjectURL(source);
-                img.src = objectUrl;
+            if (source instanceof File && typeof window.createImageBitmap === 'function') {
+                imgSource = await createImageBitmap(source);
             } else {
-                img.src = source;
+                imgSource = await new Promise((resolve, reject) => {
+                    const img = new Image();
+                    let objectUrl: string | null = null;
+                    img.onload = () => resolve(img);
+                    img.onerror = () => {
+                        if (objectUrl) URL.revokeObjectURL(objectUrl);
+                        reject(new Error("Error al decodificar la imagen."));
+                    };
+                    if (source instanceof File) {
+                        objectUrl = URL.createObjectURL(source);
+                        img.src = objectUrl;
+                    } else {
+                        img.src = source;
+                    }
+                });
             }
-        });
+
+            const canvas = document.createElement('canvas');
+            let width = imgSource.width;
+            let height = imgSource.height;
+
+            if (width > height) {
+                if (width > maxSize) {
+                    height *= maxSize / width;
+                    width = maxSize;
+                }
+            } else {
+                if (height > maxSize) {
+                    width *= maxSize / height;
+                    height = maxSize;
+                }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = canvas.getContext('2d', { alpha: false });
+            if (!ctx) throw new Error('Canvas context error');
+
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(imgSource, 0, 0, width, height);
+
+            const base64 = canvas.toDataURL('image/jpeg', quality);
+
+            if (imgSource instanceof ImageBitmap) imgSource.close();
+
+            return base64;
+        } catch (error: any) {
+            console.error("compressImage error:", error);
+            throw new Error(`Error de memoria: Procura usar una foto menos pesada o reinicia la app.`);
+        }
     };
 
     const handleScan = (e: React.ChangeEvent<HTMLInputElement>) => {
