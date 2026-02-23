@@ -11,9 +11,11 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
 
     const setScanResult = (val: any) => saveStore({ ...store, lastScan: val });
 
-    const compressImage = (base64: string, maxSize = 1280, quality = 0.7): Promise<string> => {
+    const compressImage = (source: File | string, maxSize = 1280, quality = 0.7): Promise<string> => {
         return new Promise((resolve, reject) => {
             const img = new Image();
+            let objectUrl: string | null = null;
+
             img.onload = () => {
                 try {
                     const canvas = document.createElement('canvas');
@@ -41,16 +43,28 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
                     }
 
                     ctx.drawImage(img, 0, 0, width, height);
-                    resolve(canvas.toDataURL('image/jpeg', quality));
+                    const base64 = canvas.toDataURL('image/jpeg', quality);
+
+                    if (objectUrl) URL.revokeObjectURL(objectUrl);
+                    resolve(base64);
                 } catch (error) {
+                    if (objectUrl) URL.revokeObjectURL(objectUrl);
                     reject(error);
                 }
             };
-            img.onerror = (error) => {
-                console.error("Image loading error in compressImage", error);
-                reject(error);
+
+            img.onerror = () => {
+                if (objectUrl) URL.revokeObjectURL(objectUrl);
+                console.error("Error al cargar la imagen para compresión.");
+                reject(new Error("No se pudo cargar la imagen localmente. El archivo podría estar dañado o ser demasiado grande."));
             };
-            img.src = base64; // Set src AFTER onload to avoid race conditions
+
+            if (source instanceof File) {
+                objectUrl = URL.createObjectURL(source);
+                img.src = objectUrl;
+            } else {
+                img.src = source;
+            }
         });
     };
 
@@ -59,15 +73,18 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
         if (input.files && input.files[0]) {
             setIsScanning(true);
             const file = input.files[0];
-            const reader = new FileReader();
 
-            reader.onload = async () => {
+            console.log(`NutriScan: Archivo seleccionado: ${file.name}, Tipo: ${file.type}, Tamaño: ${(file.size / 1024 / 1024).toFixed(2)} MB`);
+
+            const processImage = async () => {
                 try {
-                    const rawBase64 = reader.result as string;
-                    if (!rawBase64) {
-                        throw new Error("No se pudo leer el archivo como base64.");
+                    // Validaciones básicas
+                    if (!file.type.startsWith('image/')) {
+                        throw new Error("El archivo seleccionado no es una imagen válida.");
                     }
-                    const base64 = await compressImage(rawBase64);
+
+                    console.log("NutriScan: Iniciando compresión optimizada...");
+                    const base64 = await compressImage(file);
 
                     const profileContext = {
                         paciente: store.profile.paciente,
@@ -95,24 +112,16 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
 
                     if (window.navigator?.vibrate) window.navigator.vibrate([100, 50, 100]);
                 } catch (err: any) {
-                    console.error("Error crítico en handleScan:", err);
-                    const errorMsg = err.message || "Error desconocido";
-                    const errorDetails = typeof err === 'object' ? JSON.stringify(err) : String(err);
-                    alert(`❌ Error de procesamiento:\n${errorMsg}\n\nDetalles técnicos: ${errorDetails}`);
+                    console.error("Error crítico en NutriScan:", err);
+                    const errorMsg = err.message || "Error desconocido durante el procesamiento.";
+                    alert(`❌ Error:\n${errorMsg}`);
                 } finally {
                     setIsScanning(false);
                     if (input) input.value = '';
                 }
             };
 
-            reader.onerror = () => {
-                console.error("Error al leer el archivo.");
-                setIsScanning(false);
-                alert("No se pudo leer el archivo de imagen. Por favor, selecciona otra imagen.");
-                if (input) input.value = '';
-            };
-
-            reader.readAsDataURL(file);
+            processImage();
         }
     };
 
