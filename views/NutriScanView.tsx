@@ -1,7 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useStore } from '@/src/context/StoreContext';
-import { db, uploadImageForAnalysis } from '@/src/firebase';
+import { db, storage, uploadImageForAnalysis } from '@/src/firebase';
 import { doc, setDoc, onSnapshot, serverTimestamp, collection } from 'firebase/firestore';
+import { ref, getDownloadURL } from 'firebase/storage';
 import { compressImage } from '@/src/utils/image';
 
 const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
@@ -33,9 +34,10 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
                     if (data.result) {
                         const result = data.result;
 
-                        // Initial result without image (will fetch asynchronously if needed)
+                        // Initial result without image
                         const finalResult = {
                             ...result,
+                            storagePath: data.storagePath || '', // Persist path for later resolution if needed
                             image: result.image || '',
                             plato: result.platos ? result.platos.join(", ") : (result.plato || "Alimento Detectado"),
                             impacto: result.semaforo || result.impacto || "VERDE",
@@ -46,17 +48,18 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
 
                         setScanResult(finalResult);
 
-                        // If we have the storage path but no image URL yet, fetch it from Storage
+                        // Fetch image URL if missing
                         if (!finalResult.image && data.storagePath) {
-                            console.log("[NutriScan] Obteniendo URL de Storage para visualización...");
-                            import('firebase/storage').then(({ getStorage, ref, getDownloadURL }) => {
-                                const storage = getStorage();
-                                const fileRef = ref(storage, data.storagePath);
-                                getDownloadURL(fileRef).then(url => {
-                                    console.log("[NutriScan] URL de imagen resuelta:", url);
+                            console.log(`[NutriScan] Resolviendo Storage Path: ${data.storagePath}`);
+                            const fileRef = ref(storage, data.storagePath);
+                            getDownloadURL(fileRef)
+                                .then(url => {
+                                    console.log("[NutriScan] URL de imagen cargada con éxito.");
                                     setScanResult({ ...finalResult, image: url });
-                                }).catch(err => console.error("Error fetching image URL:", err));
-                            });
+                                })
+                                .catch(err => {
+                                    console.error("[NutriScan] Error resolviendo imagen:", err);
+                                });
                         }
 
                         if (window.navigator?.vibrate) window.navigator.vibrate([100, 50, 100]);
@@ -76,6 +79,19 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
 
         return () => unsub();
     }, [scanJobId]);
+
+    // Secondary Resolver: If the app reloads and we have a path but no image URL
+    useEffect(() => {
+        if (scanResult && !scanResult.image && scanResult.storagePath) {
+            console.log("[NutriScan] Auto-resolviendo al cargar vista...");
+            const fileRef = ref(storage, scanResult.storagePath);
+            getDownloadURL(fileRef)
+                .then(url => {
+                    setScanResult({ ...scanResult, image: url });
+                })
+                .catch(err => console.warn("[NutriScan] Falló auto-resolución:", err));
+        }
+    }, []);
 
 
     const handleScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
