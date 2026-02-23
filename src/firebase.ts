@@ -26,21 +26,22 @@ export const facebookProvider = new FacebookAuthProvider();
  * Sube un archivo a Firebase Storage.
  * @param file El archivo a subir.
  * @param userId El ID del usuario que sube el archivo.
+ * @param customId (Opcional) ID predefinido para sincronizar con Firestore.
  * @returns La ruta completa del archivo en Storage.
  */
-export const uploadImageForAnalysis = async (file: File, userId: string): Promise<string> => {
+export const uploadImageForAnalysis = async (file: File, userId: string, customId?: string): Promise<string> => {
     if (!userId) {
         throw new Error("El ID de usuario es necesario para subir la imagen.");
     }
-    const fileId = uuidv4();
+    const fileId = customId || uuidv4();
     const fileExtension = file.name.split('.').pop() || 'jpg';
     const storagePath = `user-uploads/${userId}/${fileId}.${fileExtension}`;
-    
+
     const storageRef = ref(storage, storagePath);
 
-    console.log(`Subiendo archivo a: ${storagePath}`);
+    console.log(`Subiendo archivo a: ${storagePath} (ID: ${fileId})`);
     await uploadBytes(storageRef, file);
     console.log(`Archivo subido exitosamente.`);
-    
+
     return storagePath;
 };
