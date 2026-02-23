@@ -43,9 +43,9 @@ const NutriScanView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) =>
                             storagePath: data.storagePath || '',
                             thumbnailPath: data.thumbnailPath || '',
                             image: result.image || '',
-                            plato: result.platos ? result.platos.join(", ") : (result.plato || "Alimento Detectado"),
+                            plato: Array.isArray(result.platos) ? result.platos.join(", ") : (result.platos || "Alimento Detectado"),
                             impacto: result.semaforo || result.impacto || "VERDE",
-                            hack: result.analisis || result.hack || "Análisis metabólico listo...",
+                            hack: result.bioHack || result.analisis || result.hack || "Análisis metabólico listo...",
                             tip: result.bioHack || result.tip || "Consejo experto para tu comida...",
                             kcal: result.totalCalorias || result.kcal || (result.macros?.kcal) || "---"
                         };

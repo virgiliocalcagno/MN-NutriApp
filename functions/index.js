@@ -61,12 +61,29 @@ exports.processImageForAnalysis = onDocumentUpdated({
     // Wait, I should use the full prompt to be consistent.
 
     const fullPrompt = `Analiza esta imagen de comida como un Coach Metabólico Experto y Analista Nutricional de MN-NutriApp.
+        
         PERFIL PACIENTE:
         - Meta: ${afterData.userGoal || 'Salud General'}
+        
         TU MISIÓN:
-        1. IDENTIFICACIÓN PRECISA. 2. ESTIMACIÓN NUTRICIONAL. 3. SEMÁFORO METABÓLICO. 4. ANÁLISIS TÉCNICO. 5. BIO-HACK EXPERTO.
+        1. IDENTIFICACIÓN PRECISA: Identifica todos los componentes del plato.
+        2. ESTIMACIÓN NUTRICIONAL: Calcula calorías, proteínas, carbohidratos y grasas. Sé riguroso y realista.
+        3. SEMÁFORO METABÓLICO: 
+           - VERDE: Combustión óptima, baja carga glucémica.
+           - AMARILLO: Cuidado con proporciones o salsas.
+           - ROJO: Picos de insulina probables, inflamatorio.
+        4. ANÁLISIS TÉCNICO: Explica BREVEMENTE por qué cayó en ese color.
+        5. BIO-HACK EXPERTO: Da una ESTRATEGIA ACCIONABLE para mitigar el impacto negativo o potenciar el positivo.
+        
         RESPONDE EXCLUSIVAMENTE EN JSON:
-        { "platos": [], "totalCalorias": 0, "semaforo": "VERDE", "macros": {"p":"","c":"","f":""}, "analisis": "", "bioHack": "" }`;
+        {
+            "platos": ["Nombre del Plato Detectado"],
+            "totalCalorias": 123,
+            "semaforo": "VERDE" | "AMARILLO" | "ROJO",
+            "macros": { "p": "10g", "c": "25g", "f": "8g" },
+            "analisis": "Explicación técnica simplificada...",
+            "bioHack": "Estrategia experta (ej: Añade 1 cda de Vinagre de Manzana antes)."
+        }`;
 
     const result = await modelIA.generateContent({
       contents: [{ role: 'user', parts: [{ text: fullPrompt }, { inlineData: { mimeType: 'image/jpeg', data: resizedBase64 } }] }]
