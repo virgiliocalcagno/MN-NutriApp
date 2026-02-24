@@ -136,12 +136,31 @@ RESPONDE SOLO CON ESTE JSON:
     "sangre": "...", "tipoSangre": "...", "alergias": "...", 
     "objetivos": [], "comorbilidades": [], "suplementos": [], "proximaCita": "..."
   },
-  "semana": { "LUNES": {"DESAYUNO": "...", "MERIENDA_AM": "...", "ALMUERZO": "...", "MERIENDA_PM": "...", "CENA": "..." } },
+  "semana": { 
+    "LUNES": {
+      "DESAYUNO": "...",
+      "MERIENDA_AM": "...",
+      "ALMUERZO": "...",
+      "MERIENDA_PM": "...",
+      "CENA": "..."
+    }
+  },
   "ejercicios": { "LUNES": [ {"n": "Nombre Ejercicio", "i": "3 series de 12", "link": ""} ] },
   "compras": [ ["Producto", "Cantidad", 1, "Categoria", "Pasillo"] ],
   "metas": { "calorias": 2000, "agua": 2800 },
-  "horarios": { "DESAYUNO": "08:30 AM", "ALMUERZO": "01:30 PM", "CENA": "07:30 PM" }
-}`;
+  "horarios": { 
+    "DESAYUNO": "08:30 AM", 
+    "MERIENDA_AM": "11:00 AM",
+    "ALMUERZO": "01:30 PM", 
+    "MERIENDA_PM": "04:30 PM",
+    "CENA": "07:30 PM" 
+  }
+}
+
+IMPORTANTE: 
+- SIEMPRE incluye las 5 comidas (DESAYUNO, MERIENDA_AM, ALMUERZO, MERIENDA_PM, CENA) para cada día. 
+- Si el PDF no menciona una merienda, pon "Opción según plan nutricional" o "Fruta de temporada".
+- Respeta estrictamente los nombres de las claves en MAYÚSCULAS.`;
 
       const parts: any[] = [{ text: promptText }];
       if (pdfPlanBase64) parts.push({ inlineData: { mimeType: "application/pdf", data: pdfPlanBase64.replace(/^data:application\/pdf;base64,/, "") } });
