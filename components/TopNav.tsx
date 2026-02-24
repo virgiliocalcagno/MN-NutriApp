@@ -7,7 +7,7 @@ interface TopNavProps {
     setCurrentView: (view: View) => void;
 }
 
-const TopNav: React.FC<TopNavProps> = () => {
+const TopNav: React.FC<TopNavProps> = ({ setCurrentView }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const { setShowScheduleModal, setShowNotificationsModal } = useStore();
 
@@ -50,6 +50,13 @@ const TopNav: React.FC<TopNavProps> = () => {
                         >
                             <span className="material-symbols-outlined text-emerald-500 fill-1">schedule</span>
                             <span className="text-sm font-bold uppercase tracking-wider">Horarios</span>
+                        </button>
+                        <button
+                            onClick={() => { setIsMenuOpen(false); setCurrentView('profile'); }}
+                            className="w-full flex items-center gap-3 px-4 py-4 text-slate-600 hover:bg-slate-50 transition-colors text-left border-t border-slate-50"
+                        >
+                            <span className="material-symbols-outlined text-purple-500 fill-1">account_circle</span>
+                            <span className="text-sm font-bold uppercase tracking-wider">Mi Perfil</span>
                         </button>
                     </div>
                 )}

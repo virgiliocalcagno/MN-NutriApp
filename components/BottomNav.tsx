@@ -10,8 +10,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ currentView, setCurrentView }) =>
   const navItems = [
     { id: 'home', label: 'Menú', icon: 'home' },
     { id: 'fitness', label: 'Zona Fit', icon: 'fitness_center' },
-    { id: 'inventory', label: 'Plan', icon: 'inventory_2' },
-    { id: 'profile', label: 'Perfil', icon: 'person' }
+    { id: 'inventory', label: 'Plan', icon: 'inventory_2' }
   ] as const;
 
   return (
