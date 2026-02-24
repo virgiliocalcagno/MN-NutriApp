@@ -102,85 +102,39 @@ export const processPdfWithGemini = async (
   if (apiKey && apiKey.length > 20) {
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
-      console.log("AI Process: Using gemini-1.5-flash (Estable) for PDF");
+      console.log("AI Process: Usando motor estable para PDF");
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash", generationConfig: { temperature: 0 } });
 
       const currentProfileContext = perfil ? `
-PERFIL ACTUAL DEL PACIENTE (Usar como base y NO borrar informacion preexistente si no se contradice):
-- Objetivos: ${perfil.objetivos?.join(', ') || 'Ninguno'}
+LO QUE YA SABEMOS DEL PACIENTE:
+- Metas: ${perfil.objetivos?.join(', ') || 'Ninguna'}
 - Alergias: ${perfil.alergias || 'Ninguna'}
-- Comorbilidades: ${perfil.comorbilidades?.join(', ') || 'Ninguna'}
-- Suplementacion: ${perfil.suplementos?.join(', ') || 'Ninguna'}
-- Observaciones: ${perfil.observaciones || 'Ninguna'}
+- Problemas de salud: ${perfil.comorbilidades?.join(', ') || 'Ninguna'}
+- Pastillas/Suplementos: ${perfil.suplementos?.join(', ') || 'Ninguno'}
+- Notas: ${perfil.observaciones || 'Ninguna'}
 ` : '';
 
-      const promptText = `Actua como procesador medico experto para MN-NutriApp. Extrae y CONSOLIDA la informacion de los documentos PDF adjuntos con el perfil actual.
+      const promptText = `Eres un asesor de nutrición muy práctico y amable para la app MN-NutriApp. Tu trabajo es leer el PDF y organizar la información para el paciente de forma clara.
 
-REGLAS CRITICAS:
-1. HOLISMO: Tu objetivo es completar el rompecabezas de la salud del paciente. Si el PDF actual aporta datos clínicos (ej. analíticas de sangre) pero no nutrición, mantén la nutrición previa y añade los hallazgos médicos.
-2. Identifica obligatoriamente el nombre del Paciente y del Medico.
-3. Extrae medidas actuales: peso, grasa %, cintura, cuello, brazos si estan disponibles.
-4. Extrae el menu semanal completo y rutinas de ejercicio.
-   *EJERCICIOS*: Si no hay en el PDF, genera una rutina Bio-Hack basada en los objetivos.
-5. Clinica: Identifica suplementacion activa y fecha de proxima cita.
-   *REGLA DE ORO*: Si el Perfil Actual tiene alergias o comorbilidades y el PDF no las menciona, MANTENLAS. Solo actualiza si hay un cambio explícito.
+REGLAS SENCILLAS:
+1. NO BORRES nada de lo que ya sabemos (alergias o metas) a menos que el PDF diga algo muy distinto. Queremos sumar información, no perderla.
+2. Identifica el nombre del Paciente y el Doctor.
+3. Busca el peso, grasa, y medidas si están ahí.
+4. Saca el menú de la semana y los ejercicios.
+   *EJERCICIOS*: Si no hay ejercicios en el PDF, inventa una rutina sencilla de una semana que ayude al paciente con sus metas.
+5. Lista de suplementos y cuándo es la próxima cita.
 
 ${currentProfileContext}
 
---- REGLA MAS IMPORTANTE: LISTA DE COMPRAS ---
-Genera el array "compras" siguiendo ESTOS PASOS EXACTOS:
+--- LISTA DE COMPRAS (Súper Importante) ---
+Mira el menú completo y haz una lista de qué hay que comprar en el supermercado:
+- Agrupa las cosas: si hay pollo en varios días, pon "Pollo" una sola vez con el total para la semana.
+- Usa medidas de aquí (República Dominicana): libras (lb), onzas (oz), cartón de huevos, paquetes, botellas, o unidades.
+- NO uses gramos ni mililitros.
+- Si dice "claras de huevo", pon "Huevos" (porque se compra el cartón).
+- Ordena por pasillos: Carnes, Frutas, Verduras, Lácteos, Panadería, etc.
 
-PASO 1 - ESCANEO EXHAUSTIVO:
-Lee CADA comida de CADA dia que aparezca en el PDF, sin importar cuantos dias o tiempos de comida tenga el plan. Recorre TODOS los dias y TODOS los tiempos de comida presentes (DESAYUNO, MERIENDA, ALMUERZO, CENA, etc.). NO te saltes NINGUN dia ni NINGUN tiempo de comida que exista en el documento.
-
-PASO 2 - EXTRACCION Y CONVERSION A PRODUCTOS DE SUPERMERCADO:
-Para cada comida, extrae TODOS los ingredientes. PERO convierte cada ingrediente de receta a un PRODUCTO REAL que se compra en un supermercado de Republica Dominicana.
-CONVERSIONES OBLIGATORIAS:
-- "Claras de huevo" o "Clara de huevo" -> "Huevos" (se compran enteros, el usuario usa la clara)
-- "Pechuga de pollo" o "Pollo desmechado" -> "Pechuga de pollo"
-- "Carne molida de res" -> "Carne molida"
-- "Filete de salmon" -> "Salmon"
-- "Jugo de limon" -> "Limones"
-- "Dientes de ajo" -> "Ajo"
-MANTENER como producto propio: "Aceite de oliva", "Galletas de arroz", "Pan pita integral", "Proteina en polvo", "Queso mozzarella", "Col rizada", "Pastrami de pavo"
-
-PASO 2.5 - SEPARACION DE INGREDIENTES COMBINADOS:
-Si el PDF describe una comida con multiples ingredientes unidos por "y", "con", "+" o comas, SEPARALOS en productos individuales.
-Ejemplo: "Pastrami de pavo y queso" -> DOS items: "Pastrami de pavo" y "Queso"
-Ejemplo: "Tortilla con pollo y aguacate" -> TRES items: "Tortilla", "Pollo", "Aguacate"
-EXCEPCION: NO separes nombres propios de productos como "Aceite de oliva", "Pan pita integral", "Galletas de arroz", "Col rizada", "Proteina en polvo".
-
-PASO 3 - CONSOLIDACION Y CALCULO SEMANAL EN UNIDADES DOMINICANAS:
-Agrupa ingredientes identicos. Calcula la cantidad TOTAL SEMANAL y expresala en las unidades que se VENDEN en los supermercados de Republica Dominicana:
-- Carnes: en LIBRAS (lb). Ejemplo: "2 lb semanal"
-- Huevos: en UNIDADES o CARTON. Si necesita 15 huevos -> "1 carton (30 uds)" porque se vende en carton de 15 o 30
-- Frutas y verduras: en UNIDADES o LIBRAS. Ejemplo: "7 unidades", "2 lb semanal"
-- Lacteos y quesos: en ONZAS (oz) o UNIDADES. Ejemplo: "16 oz", "1 paquete"
-- Arroz, avena, granos: en LIBRAS. Ejemplo: "2 lb"
-- Aceites: en ONZAS (oz) o BOTELLA. Ejemplo: "1 botella"
-- Pan, tortillas, casabe, galletas: en PAQUETES o UNIDADES. Ejemplo: "2 paquetes"
-- Tuberculos (platano, batata): en UNIDADES. Ejemplo: "14 unidades"
-- Embutidos: en LIBRAS o PAQUETE. Ejemplo: "1 lb", "1 paquete"
-NO uses kilos, gramos, mililitros ni cucharaditas. Solo unidades dominicanas: libras, onzas, unidades, paquetes, carton, docena, botella.
-
-PASO 4 - CATEGORIZACION POR PASILLO DE SUPERMERCADO:
-Usa EXACTAMENTE estos pasillos (columna 4 = Categoria, columna 5 = Pasillo):
-- Carnes y Pescados: pollo, cerdo, res, salmon, bacalao, atun, pescado, alitas, pastrami. Pasillo: "Carnes"
-- Frutas: banana, melon, fresas, naranja, lechosa, sandia, blueberries, limon. Pasillo: "Frutas"
-- Verduras y Hortalizas: lechuga, tomate, zucchini, zanahoria, espinaca, pepino, brocoli, auyama, remolacha, col rizada, repollo, champinones, cebolla, berro. Pasillo: "Verduras"
-- Lacteos y Huevos: huevos, queso mozzarella, leche descremada. Pasillo: "Lacteos"
-- Panaderia y Tortillas: tortilla integral, pan pita integral, casabe. Pasillo: "Panaderia"
-- Cereales y Granos: arroz, pasta, quinoa, avena, galletas de arroz. Pasillo: "Cereales"
-- Tuberculos: platano verde, platano maduro, batata. Pasillo: "Tuberculos"
-- Aceites y Condimentos: aceite de oliva, aceite de coco, curry, curcuma, paprika, sal, ajo, salsa BBQ. Pasillo: "Aceites y Condimentos"
-- Frutos Secos: macadamias, almendras, aceitunas, aguacate. Pasillo: "Frutos Secos"
-- Bebidas y Suplementos: proteina en polvo, te, cafe, edulcorante. Pasillo: "Bebidas"
-- Embutidos: jamon, pastrami de pavo. Pasillo: "Embutidos"
-
-PASO 5 - VERIFICACION FINAL:
-Revisa tu lista contra el PDF. Cada ingrediente DEBE estar presente como producto de supermercado. Verifica que NO haya ingredientes de receta (claras, dientes de ajo, etc.) sino productos comprables. Verifica que las cantidades esten en unidades dominicanas.
-
-RESPONDE UNICAMENTE CON ESTE FORMATO JSON:
+RESPONDE SOLO CON ESTE JSON (sin texto extra):
 {
   "perfilAuto": { 
     "paciente": "...", "doctor": "...", "edad": "...", "peso": "...", "pesoObjetivo": "...",
@@ -189,11 +143,12 @@ RESPONDE UNICAMENTE CON ESTE FORMATO JSON:
     "objetivos": [], "comorbilidades": [], "suplementos": [], "proximaCita": "..."
   },
   "semana": { "LUNES": {"DESAYUNO": "...", "MERIENDA_AM": "...", "ALMUERZO": "...", "MERIENDA_PM": "...", "CENA": "..." } },
-  "ejercicios": { "LUNES": [ {"n": "Ejercicio", "i": "3x12", "link": ""} ] },
-  "compras": [ ["Nombre Completo Literal", "Cantidad Total Semanal", 1, "Categoria", "Pasillo"] ],
+  "ejercicios": { "LUNES": [ {"n": "Nombre Ejercicio", "i": "3 series de 12", "link": ""} ] },
+  "compras": [ ["Producto", "Cantidad", 1, "Categoria", "Pasillo"] ],
   "metas": { "calorias": 2000, "agua": 2800 },
   "horarios": { "DESAYUNO": "08:30 AM", "ALMUERZO": "01:30 PM", "CENA": "07:30 PM" }
 }`;
+      `;
 
 
       const parts: any[] = [{ text: promptText }];
@@ -230,31 +185,29 @@ export const analyzeImageWithGemini = async (base64Image: string, perfil?: any, 
     const cleanBase64 = base64Image.replace(/^data:image\/\w+;base64,/, "");
     if (apiKey && apiKey.length > 20) {
       const genAI = new GoogleGenerativeAI(apiKey);
-      console.log("AI Scan: Using gemini-1.5-flash for Image");
+      console.log("AI Scan: Usando 1.5 Flash para imagen");
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-      const prompt = `Actúa como una Eminencia en Nutrición Clínica y Bio-hacking Metabólico. 
-Analiza esta imagen de comida para el paciente: ${perfil?.paciente || 'Usuario'}.
-Contexto del Paciente:
-- Objetivos: ${perfil?.objetivo || 'General'}
-- Condiciones/Alergias: ${perfil?.condiciones || 'Ninguna'}
+      const prompt = `Dime qué hay en esta foto de comida de forma muy clara y sencilla.
+Para el paciente: ${ perfil?.paciente || 'Usuario' }.
 
-Tu tarea es:
-1. Identificar con precisión el/los plato(s).
-2. Determinar el impacto metabólico (VERDE, AMARILLO, ROJO) considerando el perfil del paciente.
-3. Proporcionar un análisis bioquímico profundo sobre cómo afecta este plato a sus objetivos.
-4. Entregar un Bio-Hack técnico (ej. orden de consumo para aplanar curva de glucosa, suplemento recomendado, o ajuste de porciones).
-5. Calcular macros (p, c, f en gramos) y calorías totales de forma realista.
+Tu tarea:
+      1. ¿Qué plato es ? Sé descriptivo.
+2. ¿Le conviene comer esto ? Di VERDE(sí), AMARILLO(con cuidado) o ROJO(mejor evitar).
+3. Explica por qué le conviene o no, pero en palabras normales, sin mucha ciencia.
+4. Dame un consejo útil y rápido sobre este plato.
+5. Calcula cuántas calorías y macros tiene(aprox).
 
-RESPONDE ÚNICAMENTE EN ESTE FORMATO JSON PURO:
-{
-  "platos": ["Nombre detallado"],
-  "semaforo": "VERDE | AMARILLO | ROJO",
-  "analisis": "Texto breve pero técnico...",
-  "bioHack": "Consejo experto...",
-  "macros": { "p": "30g", "c": "20g", "f": "15g" },
-  "totalCalorias": 350
-}`;
+RESPONDE SOLO CON ESTE JSON:
+      {
+        "platos": ["Nombre de la comida"],
+          "semaforo": "VERDE | AMARILLO | ROJO",
+            "analisis": "Explicación sencilla...",
+              "bioHack": "Consejo práctico...",
+                "macros": { "p": "30g", "c": "20g", "f": "15g" },
+        "totalCalorias": 350
+      } `;
+`;
 
       const result = await model.generateContent([{ inlineData: { mimeType: "image/jpeg", data: cleanBase64 } }, { text: prompt }]);
       const text = result.response.text();
@@ -389,27 +342,27 @@ REGLAS:
   };
 };
 
-export async function getFitnessAdvice(profile: Profile, apiKey: string): Promise<string> {
-  const genAI = new GoogleGenerativeAI(apiKey);
-  console.log("AI Fitness: Using gemini-1.5-flash for Advice");
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+const genAI = new GoogleGenerativeAI(apiKey);
+console.log("AI Fitness: Usando 1.5 Flash para consejo simple");
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-  const prompt = `Actúa como un médico experto en medicina deportiva y bio-hacking. 
-  Genera 3 recomendaciones de élite BREVES y ACCIÓNABLES para el entrenamiento de este usuario basándose en su perfil clínico.
-  
-  PERFIL:
-  - Objetivos: ${profile.objetivos.join(', ')}
-  - Comorbilidades: ${profile.comorbilidades.join(', ')}
-  - Edad: ${profile.edad}, Peso: ${profile.peso}, Grasa%: ${profile.grasa}
-  - Peso Objetivo: ${profile.pesoObjetivo || 'No definido'}
-  
-  REGLAS:
-  1. Si tiene HIPERTENSIÓN: Recomienda evitar maniobras de Valsalva y priorizar cardio de estado estable.
-  2. Si busca MASA MUSCULAR: Recomienda protocolos de hipertrofia y tiempos de descanso específicos.
-  3. Si busca BAJAR PESO: Recomienda entrenamiento de fuerza combinado con cardio HIIT si su salud lo permite.
-  4. Usa un lenguaje MOTIVADOR y SENCILLO. Evita tecnicismos que puedan confundir.
-  
-  FORMATO: Devuelve solo los 3 puntos con un emoji cada uno, sin introducciones.`;
+const prompt = `Dime 3 consejos cortos y fáciles para que esta persona entrene mejor.
+Usa un lenguaje motivador y súper sencillo.
+
+PERFIL:
+- Metas: ${profile.objetivos.join(', ')}
+- Salud: ${profile.comorbilidades.join(', ')}
+- Edad: ${profile.edad}, Peso: ${profile.peso}
+- Peso meta: ${profile.pesoObjetivo || 'No definido'}
+
+REGLAS:
+1. Si tiene presión alta: Dile que no aguante la respiración y que vaya suave.
+2. Si quiere músculo: Dile que descanse bien entre series.
+3. Si quiere bajar de peso: Dile que mueva peso y haga algo de cardio.
+4. No uses palabras raras.
+
+FORMATO: Pon solo 3 puntos cortos con un dibujo (emoji), nada más.`;
+`;
 
   try {
     const result = await model.generateContent(prompt);
