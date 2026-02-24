@@ -11,7 +11,7 @@ export interface AIResponse {
     calorias: number;
     agua: number;
   };
-  horarios?: Record<string, string>; // e.g., {"DESAYUNO": "08:00 AM", ...}
+  horarios?: Record<string, string>;
 }
 
 export interface RecipeDetails {
@@ -34,7 +34,6 @@ export interface RecipeDetails {
   };
 }
 
-// Maps recipe ingredient names to actual supermarket product names
 const INGREDIENT_TO_PRODUCT: Record<string, string> = {
   'clara de huevo': 'Huevos',
   'claras de huevo': 'Huevos',
@@ -60,7 +59,6 @@ const INGREDIENT_TO_PRODUCT: Record<string, string> = {
   'ralladura de limon': 'Limones',
 };
 
-// Post-process AI compras to normalize ingredient names to real products
 const normalizeCompras = (data: AIResponse): AIResponse => {
   if (!data.compras || !Array.isArray(data.compras)) return data;
 
@@ -75,15 +73,11 @@ const normalizeCompras = (data: AIResponse): AIResponse => {
     return item;
   });
 
-  // Deduplicate after normalization (e.g. if 'Claras de huevo' and 'Huevo' both became 'Huevos')
   const seen = new Map<string, number>();
   const deduped: typeof normalized = [];
   for (const item of normalized) {
     const key = item[0].toLowerCase();
-    if (seen.has(key)) {
-      // Already exists, skip duplicate (keep first occurrence)
-      continue;
-    }
+    if (seen.has(key)) continue;
     seen.set(key, deduped.length);
     deduped.push(item);
   }
@@ -126,15 +120,13 @@ REGLAS SENCILLAS:
 
 ${currentProfileContext}
 
---- LISTA DE COMPRAS (Súper Importante) ---
+--- LISTA DE COMPRAS ---
 Mira el menú completo y haz una lista de qué hay que comprar en el supermercado:
 - Agrupa las cosas: si hay pollo en varios días, pon "Pollo" una sola vez con el total para la semana.
-- Usa medidas de aquí (República Dominicana): libras (lb), onzas (oz), cartón de huevos, paquetes, botellas, o unidades.
-- NO uses gramos ni mililitros.
-- Si dice "claras de huevo", pon "Huevos" (porque se compra el cartón).
+- Usa medidas de República Dominicana: libras (lb), onzas (oz), cartón de huevos, paquetes, botellas, o unidades.
 - Ordena por pasillos: Carnes, Frutas, Verduras, Lácteos, Panadería, etc.
 
-RESPONDE SOLO CON ESTE JSON (sin texto extra):
+RESPONDE SOLO CON ESTE JSON:
 {
   "perfilAuto": { 
     "paciente": "...", "doctor": "...", "edad": "...", "peso": "...", "pesoObjetivo": "...",
@@ -148,8 +140,6 @@ RESPONDE SOLO CON ESTE JSON (sin texto extra):
   "metas": { "calorias": 2000, "agua": 2800 },
   "horarios": { "DESAYUNO": "08:30 AM", "ALMUERZO": "01:30 PM", "CENA": "07:30 PM" }
 }`;
-      `;
-
 
       const parts: any[] = [{ text: promptText }];
       if (pdfPlanBase64) parts.push({ inlineData: { mimeType: "application/pdf", data: pdfPlanBase64.replace(/^data:application\/pdf;base64,/, "") } });
@@ -189,25 +179,24 @@ export const analyzeImageWithGemini = async (base64Image: string, perfil?: any, 
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
       const prompt = `Dime qué hay en esta foto de comida de forma muy clara y sencilla.
-Para el paciente: ${ perfil?.paciente || 'Usuario' }.
+Para el paciente: ${perfil?.paciente || 'Usuario'}.
 
 Tu tarea:
-      1. ¿Qué plato es ? Sé descriptivo.
-2. ¿Le conviene comer esto ? Di VERDE(sí), AMARILLO(con cuidado) o ROJO(mejor evitar).
+1. ¿Qué plato es? Sé descriptivo.
+2. ¿Le conviene comer esto? Di VERDE (sí), AMARILLO (con cuidado) o ROJO (mejor evitar).
 3. Explica por qué le conviene o no, pero en palabras normales, sin mucha ciencia.
 4. Dame un consejo útil y rápido sobre este plato.
-5. Calcula cuántas calorías y macros tiene(aprox).
+5. Calcula cuántas calorías y macros tiene (aprox).
 
 RESPONDE SOLO CON ESTE JSON:
-      {
-        "platos": ["Nombre de la comida"],
-          "semaforo": "VERDE | AMARILLO | ROJO",
-            "analisis": "Explicación sencilla...",
-              "bioHack": "Consejo práctico...",
-                "macros": { "p": "30g", "c": "20g", "f": "15g" },
-        "totalCalorias": 350
-      } `;
-`;
+{
+  "platos": ["Nombre de la comida"],
+  "semaforo": "VERDE | AMARILLO | ROJO",
+  "analisis": "Explicación sencilla...",
+  "bioHack": "Consejo práctico...",
+  "macros": { "p": "30g", "c": "20g", "f": "15g" },
+  "totalCalorias": 350
+}`;
 
       const result = await model.generateContent([{ inlineData: { mimeType: "image/jpeg", data: cleanBase64 } }, { text: prompt }]);
       const text = result.response.text();
@@ -228,49 +217,39 @@ RESPONDE SOLO CON ESTE JSON:
 };
 
 export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: string): Promise<RecipeDetails> => {
-  console.log("Iniciando motor v32.0 (NutriScan Pro) para:", mealDesc);
-
   const effectiveApiKey = apiKey || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
-  console.log("Motor AI: API Key presente:", effectiveApiKey ? "SI (Largo: " + effectiveApiKey.length + ")" : "NO");
-
   if (effectiveApiKey && effectiveApiKey.length > 20) {
     try {
       const genAI = new GoogleGenerativeAI(effectiveApiKey);
-      console.log("AI Recipe: Using gemini-2.0-flash for Recipe");
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+      console.log("AI Recipe: Usando motor estable para receta");
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-      const prompt = `Eres un Chef de Alta Cocina y Experto en Bio-hacking Nutricional.
-Transforma estos ingredientes en una receta profesional con datos nutricionales reales.
+      const prompt = `Convierte estos ingredientes en una receta casera y súper fácil de hacer.
+Usa palabras que cualquiera entienda, nada de términos gourmet.
 
-INGREDIENTES: "${mealDesc}"
+COMIDA: "${mealDesc}"
 
-RESPONDE ÚNICAMENTE con un JSON puro (sin markdown, sin backticks) con esta estructura EXACTA:
+RESPONDE SOLO CON ESTE JSON:
 {
-  "titulo": "Nombre sencillo del plato",
-  "foto_prompt": "English query for high-end food photography, clean background, 4k",
-  "tiempo": "25 min",
-  "dificultad": "Media",
-  "kcal": 620,
-  "nutrientes": { "proteina": "45g", "grasas": "18g", "carbos": "30g" },
-  "ingredientes_lista": ["150g Salmón fresco", "1/2 taza Quinoa cocida", "6 espárragos trigueros"],
+  "titulo": "Nombre fácil del plato",
+  "foto_prompt": "English query for high-quality food photo, clean background",
+  "tiempo": "20 min",
+  "dificultad": "Fácil",
+  "kcal": 500,
+  "nutrientes": { "proteina": "20g", "grasas": "10g", "carbos": "40g" },
+  "ingredientes_lista": ["Ingrediente 1", "Ingrediente 2"],
   "pasos_preparacion": [
-    { "titulo": "Sellado Técnico", "descripcion": "Aplica calor directo para caramelizar la superficie y sellar jugos." }
+    { "titulo": "Paso 1", "descripcion": "Explicación simple." }
   ],
   "bio_hack": {
-    "titulo": "SECUENCIACIÓN METABÓLICA",
-    "explicacion": "Consume en este orden para optimizar glucosa:",
-    "pasos": ["1. Fibra", "2. Proteína", "3. Carbohidrato"]
+    "titulo": "CONSEJO DEL ASESOR",
+    "explicacion": "Un consejo práctico para comer mejor este plato.",
+    "pasos": ["Tip 1", "Tip 2"]
   }
-}
-
-REGLAS:
-- tiempo: Estimado realista.
-- dificultad: Baja, Media o Alta.
-- foto_prompt: Keywords en inglés para Unsplash.`;
+}`;
 
       const result = await model.generateContent(prompt);
       const text = result.response.text();
-
       const cleanJson = text.replace(/```json|```/g, "").trim();
       const jsonMatch = cleanJson.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
@@ -300,53 +279,33 @@ REGLAS:
           }
         };
       }
-      return {
-        titulo: "Error",
-        kcal: 0,
-        ingredientes: [],
-        preparacion: [],
-        bioHack: { titulo: "Error", explicacion: "No se pudo generar la receta.", pasos: [] },
-        nutrientes: { proteina: "", grasas: "", carbos: "" }
-      };
     } catch (e) {
-      console.error("Gemini v31.1 Error Crítico:", e);
-      return {
-        titulo: "Error de Conexión",
-        kcal: 0,
-        ingredientes: [],
-        preparacion: [],
-        bioHack: { titulo: "Error", explicacion: "Error de conexión con la IA.", pasos: [] },
-        nutrientes: { proteina: "", grasas: "", carbos: "" }
-      };
+      console.error("Gemini Error Crítico:", e);
     }
   }
 
-  // FALLBACK v31.1
   return {
     titulo: mealDesc,
     kcal: 0,
     ingredientes: ["Ingredientes del plato"],
-    preparacion: [
-      { titulo: "Preparación base", descripcion: "Acondiciona el ingrediente principal retirando humedad." },
-      { titulo: "Cocción", descripcion: "Aplica la técnica de calor principal respetando los tiempos." },
-      { titulo: "Ensamble", descripcion: "Integra los acompañamientos en una base armónica." },
-      { titulo: "Finalización", descripcion: "Toque de aceite de oliva en crudo para realzar sabores." }
-    ],
+    preparacion: [{ titulo: "Paso 1", descripcion: "Preparación base del plato." }],
     bioHack: {
-      titulo: "SECUENCIACIÓN METABÓLICA",
-      pasos: ["1. Vegetales (Fibra)", "2. Proteína", "3. Carbohidratos"],
-      explicacion: "Consume en este orden para optimizar tu curva de glucosa."
+      titulo: "CONSEJO PRÁCTICO",
+      pasos: ["Come despacio", "Disfruta tu comida"],
+      explicacion: "Mantén una alimentación equilibrada para mejores resultados."
     },
     nutrientes: { proteina: "", grasas: "", carbos: "" },
     imageUrl: `https://via.placeholder.com/600x400.png?text=${encodeURIComponent(mealDesc)}`
   };
 };
 
-const genAI = new GoogleGenerativeAI(apiKey);
-console.log("AI Fitness: Usando 1.5 Flash para consejo simple");
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+export async function getFitnessAdvice(profile: Profile, apiKey: string): Promise<string> {
+  try {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    console.log("AI Fitness: Usando motor estable para consejo fit");
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-const prompt = `Dime 3 consejos cortos y fáciles para que esta persona entrene mejor.
+    const prompt = `Dime 3 consejos cortos y fáciles para que esta persona entrene mejor.
 Usa un lenguaje motivador y súper sencillo.
 
 PERFIL:
@@ -362,12 +321,9 @@ REGLAS:
 4. No uses palabras raras.
 
 FORMATO: Pon solo 3 puntos cortos con un dibujo (emoji), nada más.`;
-`;
 
-  try {
     const result = await model.generateContent(prompt);
-    const text = result.response.text();
-    return text;
+    return result.response.text();
   } catch (error) {
     console.error("Fitness Advice AI Error:", error);
     return "• Prioriza el descanso activo.\n• Mantén una hidratación constante.\n• Escucha a tu cuerpo durante el esfuerzo.";
