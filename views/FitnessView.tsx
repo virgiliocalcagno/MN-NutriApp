@@ -215,9 +215,9 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
               </div>
             </div>
 
-            {/* Radial Progress with Long Press */}
+            {/* Water Drop with Filling Animation */}
             <div
-              className="relative size-64 flex items-center justify-center cursor-pointer select-none active:scale-95 transition-all"
+              className="relative size-52 flex items-center justify-center cursor-pointer select-none active:scale-95 transition-all"
               onContextMenu={(e) => { e.preventDefault(); setShowHistory(true); }}
               onTouchStart={() => {
                 longPressTimer.current = window.setTimeout(() => setShowHistory(true), 800);
@@ -232,20 +232,45 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
                 if (longPressTimer.current) clearTimeout(longPressTimer.current);
               }}
             >
-              <svg className="size-full -rotate-90">
-                <circle cx="128" cy="128" r="100" fill="none" stroke="#f1f5f9" strokeWidth="12" />
-                <circle
-                  cx="128" cy="128" r="100" fill="none" stroke="#1e60f1" strokeWidth="12"
-                  strokeDasharray="628"
-                  strokeDashoffset={628 - (628 * hydrationPercent / 100)}
-                  strokeLinecap="round"
-                  className="transition-all duration-1000"
+              <svg viewBox="0 0 100 120" className="w-full h-full drop-shadow-xl">
+                <defs>
+                  <clipPath id="waterDropClip">
+                    <path d="M50,115 C30,115 15,100 15,80 C15,60 50,20 50,15 C50,20 85,60 85,80 C85,100 70,115 50,115 Z" />
+                  </clipPath>
+                </defs>
+                {/* Background Drop */}
+                <path
+                  d="M50,115 C30,115 15,100 15,80 C15,60 50,20 50,15 C50,20 85,60 85,80 C85,100 70,115 50,115 Z"
+                  fill="#f1f5f9"
+                  stroke="#e2e8f0"
+                  strokeWidth="0.5"
                 />
+
+                {/* Animated Filling Layer */}
+                <g clipPath="url(#waterDropClip)">
+                  <rect
+                    x="0"
+                    y={115 - (hydrationPercent * 1.15)}
+                    width="100"
+                    height="120"
+                    fill="#1e60f1"
+                    className="transition-all duration-1000 ease-out"
+                  />
+                  {/* Subtle Wave Top Effect */}
+                  <path
+                    d={`M-10,${115 - (hydrationPercent * 1.15)} Q25,${115 - (hydrationPercent * 1.15) - 5} 50,${115 - (hydrationPercent * 1.15)} T110,${115 - (hydrationPercent * 1.15)} V130 H-10 Z`}
+                    fill="#1e60f1"
+                    className="animate-pulse"
+                  />
+                </g>
               </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <h3 className="text-[44px] font-black text-slate-800 leading-none">{currentWater}</h3>
-                <p className="text-slate-400 font-bold text-sm mt-1">/ {meta} ml</p>
-                <p className="text-[#1e60f1] font-black text-[10px] uppercase tracking-widest mt-3">{(store.waterHistory?.length || 0)}/8 TOMAS</p>
+
+              <div className="absolute inset-0 flex flex-col items-center justify-center pt-8">
+                <h3 className={`text-[40px] font-black leading-none transition-colors duration-500 ${hydrationPercent > 50 ? 'text-white' : 'text-slate-800'}`}>{currentWater}</h3>
+                <p className={`font-bold text-xs mt-1 transition-colors duration-500 ${hydrationPercent > 50 ? 'text-white/70' : 'text-slate-400'}`}>/ {meta} ml</p>
+                <div className={`px-2 py-0.5 rounded-full mt-3 transition-colors duration-500 ${hydrationPercent > 50 ? 'bg-white/20 text-white' : 'bg-blue-50 text-[#1e60f1]'}`}>
+                  <p className="font-black text-[9px] uppercase tracking-widest">{(store.waterHistory?.length || 0)}/8 TOMAS</p>
+                </div>
               </div>
             </div>
 
