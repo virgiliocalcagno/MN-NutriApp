@@ -235,24 +235,33 @@ const InventoryView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => 
                     </div>
                 ) : (
                     <div className="animate-in slide-in-from-bottom-4 duration-700">
-                        <div className="bg-slate-900 p-8 rounded-[40px] shadow-2xl shadow-slate-900/20 mb-10 border border-white/5">
-                            <h3 className="text-white font-black text-xs tracking-[0.2em] uppercase mb-4 opacity-60">Nuevo en Despensa</h3>
-                            <div className="flex gap-3">
-                                <input
-                                    type="text"
-                                    placeholder="Nombre del producto..."
-                                    value={newItemName}
-                                    onChange={(e) => setNewItemName(e.target.value)}
-                                    className="flex-1 bg-white/10 rounded-2xl px-6 py-4 focus:outline-none text-sm font-bold text-white placeholder:text-white/20 border border-white/5"
-                                />
+                        <section className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm mb-10 overflow-hidden relative">
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className="size-8 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
+                                    <span className="material-symbols-outlined text-[18px]">add_circle</span>
+                                </div>
+                                <h3 className="text-slate-900 font-extrabold text-[15px] tracking-tight">Nuevo Insumo</h3>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row gap-3">
+                                <div className="relative flex-1">
+                                    <input
+                                        type="text"
+                                        placeholder="Ej: Leche de almendras..."
+                                        value={newItemName}
+                                        onChange={(e) => setNewItemName(e.target.value)}
+                                        className="w-full bg-slate-50 rounded-2xl px-5 py-4 focus:outline-none text-[15px] font-bold text-slate-900 placeholder:text-slate-400 border border-slate-100 focus:border-primary/30 transition-all"
+                                    />
+                                </div>
                                 <button
                                     onClick={() => { if (newItemName) { addCustomItem(newItemName); setNewItemName(''); } }}
-                                    className="bg-primary text-white px-8 rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-xl shadow-primary/30 active:scale-95 transition-all"
+                                    className="bg-primary text-white h-[58px] px-8 rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 active:scale-95 transition-all flex items-center justify-center gap-2"
                                 >
-                                    AÑADIR
+                                    <span>AÑADIR</span>
+                                    <span className="material-symbols-outlined text-lg">add</span>
                                 </button>
                             </div>
-                        </div>
+                        </section>
 
                         <div className="space-y-12">
                             {Object.entries(groupItems(fullInventory, 'category')).sort().map(([group, items]) => (
@@ -292,48 +301,64 @@ const InventoryView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => 
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
                     <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={() => setSelectedItemForStatus(null)}></div>
                     <div className="relative w-full max-w-sm bg-white rounded-[40px] p-8 space-y-6 animate-in zoom-in duration-400 shadow-2xl">
-                        <div className="flex items-center justify-between">
-                            <div className="flex-1 min-w-0 mr-3">
+                        <div className="flex items-center justify-between gap-4">
+                            <div className="flex-1 min-w-0">
                                 {editingName !== null ? (
-                                    <div className="flex items-center gap-2">
-                                        <input
-                                            type="text"
-                                            value={editingName}
-                                            onChange={(e) => setEditingName(e.target.value)}
-                                            onKeyDown={(e) => { if (e.key === 'Enter') renameItem(selectedItemForStatus.id, editingName); }}
-                                            autoFocus
-                                            className="flex-1 text-[18px] font-black text-slate-900 tracking-tight bg-slate-50 rounded-2xl px-4 py-2 border border-slate-200 focus:outline-none focus:border-primary"
-                                            title="Editar nombre del producto"
-                                        />
-                                        <button
-                                            onClick={() => renameItem(selectedItemForStatus.id, editingName)}
-                                            className="size-10 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center active:scale-90 transition-all border border-emerald-100"
-                                        >
-                                            <span className="material-symbols-outlined text-lg">check</span>
-                                        </button>
-                                        <button
-                                            onClick={() => setEditingName(null)}
-                                            className="size-10 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center active:scale-90 transition-all border border-slate-100"
-                                        >
-                                            <span className="material-symbols-outlined text-lg">close</span>
-                                        </button>
+                                    <div className="flex flex-col gap-4">
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Editando producto</p>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="text"
+                                                value={editingName}
+                                                onChange={(e) => setEditingName(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') renameItem(selectedItemForStatus.id, editingName);
+                                                    if (e.key === 'Escape') setEditingName(null);
+                                                }}
+                                                autoFocus
+                                                className="flex-1 text-[17px] font-extrabold text-slate-900 tracking-tight bg-slate-50 rounded-2xl px-4 py-4 border border-slate-100 focus:outline-none focus:border-primary transition-all w-full"
+                                                title="Editar nombre del producto"
+                                            />
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => renameItem(selectedItemForStatus.id, editingName)}
+                                                className="flex-1 bg-primary text-white h-14 rounded-2xl flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg shadow-primary/10"
+                                            >
+                                                <span className="material-symbols-outlined text-[20px]">check</span>
+                                                <span className="text-[11px] font-black uppercase tracking-widest">GUARDAR</span>
+                                            </button>
+                                            <button
+                                                onClick={() => setEditingName(null)}
+                                                className="size-14 bg-slate-50 text-slate-400 rounded-2xl flex items-center justify-center active:scale-95 transition-all border border-slate-100"
+                                            >
+                                                <span className="material-symbols-outlined">close</span>
+                                            </button>
+                                        </div>
                                     </div>
                                 ) : (
-                                    <div className="flex items-center gap-2">
-                                        <h3 className="text-[20px] font-black text-slate-900 tracking-tight leading-none truncate">{selectedItemForStatus.name}</h3>
-                                        <button
-                                            onClick={() => setEditingName(selectedItemForStatus.name)}
-                                            className="size-8 bg-slate-50 text-slate-400 rounded-lg flex items-center justify-center active:scale-90 transition-all border border-slate-100 hover:text-primary hover:border-primary/20 shrink-0"
-                                        >
-                                            <span className="material-symbols-outlined text-[14px]">edit</span>
-                                        </button>
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <h3 className="text-[22px] font-black text-slate-900 tracking-tight leading-none">{selectedItemForStatus.name}</h3>
+                                                <button
+                                                    onClick={() => setEditingName(selectedItemForStatus.name)}
+                                                    className="size-10 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center active:scale-90 transition-all border border-slate-100 hover:text-primary hover:border-primary/20 shrink-0"
+                                                >
+                                                    <span className="material-symbols-outlined text-[18px]">edit</span>
+                                                </button>
+                                            </div>
+                                            <button
+                                                onClick={() => setSelectedItemForStatus(null)}
+                                                className="size-11 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center active:scale-90 transition-all border border-slate-100 shrink-0"
+                                            >
+                                                <span className="material-symbols-outlined text-xl">close</span>
+                                            </button>
+                                        </div>
+                                        <p className="text-[9px] text-slate-400 font-black uppercase tracking-[0.2em]">Estado de Abastecimiento</p>
                                     </div>
                                 )}
-                                <p className="text-[9px] text-slate-400 font-black uppercase tracking-[0.2em] mt-3">Estado de Abastecimiento</p>
                             </div>
-                            <button onClick={() => { setSelectedItemForStatus(null); setEditingName(null); }} className="size-11 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center active:scale-90 transition-all border border-slate-100 shrink-0">
-                                <span className="material-symbols-outlined text-xl">close</span>
-                            </button>
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
