@@ -12,6 +12,7 @@ import { useStore } from '@/src/context/StoreContext';
 import BottomNav from '@/components/BottomNav';
 import NutriScanView from '@/views/NutriScanView';
 import ScheduleModal from '@/components/ScheduleModal';
+import NotificationsModal from '@/components/NotificationsModal';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>('welcome');
@@ -55,6 +56,7 @@ const App: React.FC = () => {
         <BottomNav currentView={currentView} setCurrentView={setCurrentView} />
       )}
       <ScheduleModal />
+      <NotificationsModal />
     </div>
   );
 };

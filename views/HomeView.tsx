@@ -197,10 +197,8 @@ const RecipeModal: React.FC<{
   const [details, setDetails] = React.useState<RecipeDetails | null>(null);
 
   React.useEffect(() => {
-    // v20.0: Atomic reset of loading/details when ID changes
     setLoading(true);
     setDetails(null);
-
     let isMounted = true;
 
     const fetchDetails = async () => {
@@ -211,163 +209,166 @@ const RecipeModal: React.FC<{
           setLoading(false);
         }
       } catch (e) {
-        console.error("Critical Recipe Loading Error:", e);
+        console.error("Recipe Error:", e);
         if (isMounted) setLoading(false);
       }
     };
-
     fetchDetails();
-
-    return () => {
-      isMounted = false; // Cleanup to prevent state updates on unmounted component
-    };
-  }, [meal.id]); // Target the unique ID
+    return () => { isMounted = false; };
+  }, [meal.id]);
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden">
-      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose} />
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-500" onClick={onClose} />
 
-      <div className="relative w-full max-w-lg bg-white overflow-hidden shadow-2xl animate-in slide-in-from-bottom duration-500 h-full flex flex-col mx-4 sm:my-8 rounded-[48px] sm:h-auto sm:max-h-[95vh]">
+      <div className="relative w-full max-w-xl bg-white shadow-2xl animate-in slide-in-from-bottom duration-500 h-[92vh] sm:h-auto sm:max-h-[85vh] flex flex-col rounded-t-[48px] sm:rounded-[48px] overflow-hidden">
 
-        {/* HEADER: White Background + Centered Title */}
-        <div className="flex items-center justify-between px-6 h-20 bg-white border-b border-slate-50 shrink-0">
-          <button onClick={onClose} className="text-blue-600 active:scale-95 transition-all">
-            <span className="material-symbols-outlined text-2xl font-black">arrow_back</span>
+        {/* HERO IMAGE SECTION */}
+        <div className="relative h-64 sm:h-72 w-full shrink-0 group">
+          <img
+            src={details?.imageUrl || "https://placehold.co/800x600?text=Cocinando..."}
+            alt={details?.titulo || meal.description}
+            className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+
+          <button
+            onClick={onClose}
+            className="absolute top-6 left-6 size-11 bg-white/20 backdrop-blur-xl border border-white/30 rounded-full flex items-center justify-center text-white active:scale-90 transition-all z-10"
+          >
+            <span className="material-symbols-outlined text-2xl font-bold">close</span>
           </button>
-          <h4 className="text-[11px] font-black tracking-[0.25em] text-slate-400 text-center uppercase">DETALLE DE {meal.type}</h4>
-          <button className="text-blue-600 active:scale-95 transition-all">
-            <span className="material-symbols-outlined text-2xl font-black">share</span>
-          </button>
+
+          <div className="absolute bottom-6 left-6 right-6">
+            <div className="flex gap-2 mb-2">
+              <span className="bg-blue-600 text-white text-[8px] font-black tracking-widest uppercase px-2.5 py-1 rounded-full">ALTA COCINA AI</span>
+              {details?.dificultad && <span className="bg-white/20 backdrop-blur-md text-white text-[8px] font-black tracking-widest uppercase px-2.5 py-1 rounded-full border border-white/10">{details.dificultad}</span>}
+            </div>
+            <h2 className="text-white text-2xl sm:text-3xl font-black leading-tight drop-shadow-md">
+              {details?.titulo || meal.description}
+            </h2>
+          </div>
         </div>
 
-        {/* CONTENT AREA: Light Gray Background */}
-        <div className="flex-1 overflow-y-auto bg-[#f8f9fd] no-scrollbar">
+        {/* CONTENT AREA */}
+        <div className="flex-1 overflow-y-auto no-scrollbar bg-white">
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-64 px-12 text-center space-y-6">
-              <div className="relative size-24">
-                <div className="absolute inset-0 border-4 border-slate-100 rounded-full"></div>
-                <div className="absolute inset-0 border-4 border-[#1e60f1] border-t-transparent rounded-full animate-spin"></div>
-                <div className="absolute inset-0 flex items-center justify-center text-blue-100">
-                  <span className="material-symbols-outlined text-4xl animate-pulse">nutrition</span>
-                </div>
-              </div>
-              <p className="text-[#1e60f1] font-black text-[12px] tracking-[0.3em] uppercase animate-pulse">Cocinando tu receta saludable...</p>
+            <div className="flex flex-col items-center justify-center h-full py-20 px-12 text-center animate-pulse">
+              <div className="size-16 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin mb-4" />
+              <p className="text-slate-400 font-black text-[10px] tracking-widest uppercase">Diseñando experiencia culinaria...</p>
             </div>
           ) : details ? (
-            <div className="animate-in fade-in duration-700">
-              {/* TÍTULO + BADGES ARRIBA */}
-              <div className="px-6 pt-8 pb-4">
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <span className="bg-blue-600 text-white text-[9px] font-black tracking-[0.2em] uppercase px-3 py-1.5 rounded-full">
-                    PRO NUTRICIÓN
-                  </span>
-                  {details.tiempo && (
-                    <span className="bg-slate-100 text-slate-500 text-[9px] font-black tracking-[0.2em] uppercase px-3 py-1.5 rounded-full flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[10px]">schedule</span>
-                      {details.tiempo}
-                    </span>
-                  )}
-                  {details.dificultad && (
-                    <span className="bg-slate-100 text-slate-500 text-[9px] font-black tracking-[0.2em] uppercase px-3 py-1.5 rounded-full flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[10px]">stairs</span>
-                      {details.dificultad}
-                    </span>
-                  )}
-                </div>
-                <h2 className="text-[26px] font-black text-slate-900 leading-[1.1] tracking-tight">
-                  {details.titulo || meal.description}
-                </h2>
-              </div>
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 pb-32">
 
-              {/* IMAGEN LIMPIA CON OVERLAY DE KCAL */}
-              <div className="mx-6 rounded-[32px] overflow-hidden aspect-[16/10] shadow-2xl relative group bg-slate-100">
-                <img
-                  src={details.imageUrl || getProductImage(meal.description, 'Gral')}
-                  alt={details.titulo || meal.description}
-                  className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
-                  onError={(e) => { (e.target as HTMLImageElement).src = getProductImage(meal.description, 'Gral'); }}
-                />
-                <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md px-4 py-2 rounded-2xl shadow-lg border border-white/20">
-                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter text-center">Energía</p>
-                  <p className="text-xl font-black text-slate-900 leading-none">{details.kcal} <span className="text-[10px] text-slate-400">kcal</span></p>
+              {/* MACRO BAR */}
+              <div className="flex justify-between items-center px-6 py-8 border-b border-slate-50">
+                <div className="text-center">
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter mb-1">Proteína</p>
+                  <p className="text-lg font-black text-emerald-600 leading-none">{details.nutrientes.proteina || "—"}</p>
+                </div>
+                <div className="h-8 w-px bg-slate-100" />
+                <div className="text-center">
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter mb-1">Grasas</p>
+                  <p className="text-lg font-black text-orange-500 leading-none">{details.nutrientes.grasas || "—"}</p>
+                </div>
+                <div className="h-8 w-px bg-slate-100" />
+                <div className="text-center">
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter mb-1">Carbos</p>
+                  <p className="text-lg font-black text-blue-500 leading-none">{details.nutrientes.carbos || "—"}</p>
+                </div>
+                <div className="h-8 w-px bg-slate-100" />
+                <div className="text-center bg-slate-50 px-4 py-2 rounded-2xl">
+                  <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter mb-0.5">Energía</p>
+                  <p className="text-xl font-black text-slate-900 leading-none">{details.kcal}<span className="text-[10px] ml-0.5 opacity-40">kcal</span></p>
                 </div>
               </div>
 
-              {/* INGREDIENTES */}
-              <div className="px-6 mt-8">
-                <div className="flex items-center gap-3 mb-5">
-                  <span className="material-symbols-outlined text-[#1e60f1] text-[24px] fill-1">shopping_basket</span>
-                  <h3 className="text-[17px] font-black text-slate-800">Ingredientes</h3>
+              {/* INGREDIENTS */}
+              <section className="px-6 py-8">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="size-8 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
+                    <span className="material-symbols-outlined text-xl fill-1">pantry</span>
+                  </div>
+                  <h3 className="text-lg font-black text-slate-800">Cesta de Ingredientes</h3>
                 </div>
-                <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {details.ingredientes.map((ing, i) => (
-                    <div key={i} className="flex items-start gap-3 py-2 border-b border-slate-50 last:border-0">
-                      <span className="mt-1.5 size-2 bg-slate-300 rounded-full shrink-0"></span>
-                      <p className="text-[14px] font-semibold text-slate-600">{ing}</p>
+                    <div key={i} className="flex items-center gap-3 p-3 bg-slate-50/50 rounded-2xl border border-slate-100/50">
+                      <div className="size-2 bg-blue-400 rounded-full" />
+                      <p className="text-[13px] font-bold text-slate-600">{ing}</p>
                     </div>
                   ))}
                 </div>
-              </div>
+              </section>
 
-              {/* PREPARACIÓN PROFESIONAL */}
-              <div className="px-6 mt-10">
-                <div className="flex items-center gap-3 mb-6">
-                  <span className="material-symbols-outlined text-[#1e60f1] text-[24px] fill-1">restaurant</span>
-                  <h3 className="text-[17px] font-black text-slate-800">Preparación Profesional</h3>
+              {/* PREPARATION STEPS */}
+              <section className="px-6 py-8 bg-slate-50/30">
+                <div className="flex items-center gap-3 mb-8">
+                  <div className="size-8 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600">
+                    <span className="material-symbols-outlined text-xl fill-1">restaurant_menu</span>
+                  </div>
+                  <h3 className="text-lg font-black text-slate-800">Preparación de Autor</h3>
                 </div>
-                <div className="space-y-6 pl-2">
+                <div className="space-y-8 relative">
+                  <div className="absolute left-[15px] top-4 bottom-4 w-px bg-slate-200 border-dashed" />
                   {details.preparacion.map((step, i) => (
-                    <div key={i} className="flex gap-4">
-                      <div className="shrink-0 size-8 bg-[#1e60f1] rounded-full flex items-center justify-center text-white text-[13px] font-black shadow-lg shadow-blue-200 mt-0.5">
+                    <div key={i} className="flex gap-6 relative z-10">
+                      <div className="shrink-0 size-8 bg-white border-2 border-slate-100 rounded-full flex items-center justify-center text-[11px] font-black text-slate-400 shadow-sm">
                         {i + 1}
                       </div>
-                      <div className="flex-1 space-y-1">
-                        <h4 className="text-[14px] font-black text-slate-800">{step.titulo}</h4>
-                        <p className="text-[13px] font-medium text-slate-500 leading-relaxed">{step.descripcion}</p>
+                      <div className="flex-1">
+                        <h4 className="text-[13px] font-black text-slate-900 uppercase tracking-wide mb-1.5">{step.titulo}</h4>
+                        <p className="text-[13px] font-medium text-slate-500 leading-relaxed bg-white p-4 rounded-2xl border border-slate-100 shadow-sm italic">
+                          "{step.descripcion}"
+                        </p>
                       </div>
                     </div>
                   ))}
                 </div>
-              </div>
+              </section>
 
-              {/* BIO-HACK SECUENCIACIÓN */}
+              {/* BIO-HACK SECTION */}
               {details.bioHack && (
-                <div className="mx-5 mt-10 mb-32 bg-gradient-to-br from-[#eef2ff] to-[#e8f0fe] rounded-3xl p-7 border border-blue-100">
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="material-symbols-outlined text-[#1e60f1] text-2xl fill-1">biotech</span>
-                    <h4 className="text-[12px] font-black text-slate-800 tracking-wider uppercase">
-                      BIO-HACK: {details.bioHack.titulo}
-                    </h4>
+                <section className="m-6 p-8 bg-[#1e60f1] rounded-[40px] text-white shadow-xl shadow-blue-200 relative overflow-hidden group">
+                  <div className="absolute -right-10 -top-10 size-40 bg-white/10 rounded-full blur-3xl" />
+                  <div className="flex items-center gap-3 mb-4">
+                    <span className="material-symbols-outlined text-3xl">psychology</span>
+                    <h4 className="text-[11px] font-black tracking-[0.2em] uppercase">Mente & Metabolismo</h4>
                   </div>
-                  <p className="text-[13px] font-medium text-slate-500 leading-relaxed mb-5">
+                  <h3 className="text-2xl font-black mb-3 leading-tight">{details.bioHack.titulo}</h3>
+                  <p className="text-white/80 text-[13px] font-medium leading-relaxed mb-6 italic">
                     {details.bioHack.explicacion}
                   </p>
-                  <div className="space-y-2">
+                  <div className="flex flex-wrap gap-2">
                     {details.bioHack.pasos.map((paso, i) => (
-                      <div key={i} className="bg-white/80 px-4 py-2.5 rounded-xl border border-blue-100/50">
-                        <span className="text-[12px] font-bold text-slate-700">{paso}</span>
-                      </div>
+                      <span key={i} className="bg-white/20 backdrop-blur-md px-4 py-2 rounded-xl text-[11px] font-black border border-white/10">{paso}</span>
                     ))}
                   </div>
-                </div>
+                </section>
               )}
-
-              {/* FIXED FOOTER BUTTON */}
-              <div className="fixed bottom-10 left-0 right-0 flex justify-center z-50 pointer-events-none pb-8">
-                <button onClick={onClose} className="size-20 bg-[#1e60f1] rounded-full flex items-center justify-center text-white shadow-2xl shadow-blue-400 active:scale-95 transition-all pointer-events-auto">
-                  <span className="material-symbols-outlined text-4xl">check</span>
-                </button>
-              </div>
 
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-40 px-12 text-center opacity-50">
-              <span className="material-symbols-outlined text-red-400 text-6xl mb-4">gpp_maybe</span>
-              <p className="font-black text-slate-400 uppercase tracking-widest text-sm text-center">No pudimos cargar la receta</p>
-              <button onClick={onClose} className="mt-4 text-blue-600 font-bold underline active:scale-95">REINTENTAR</button>
+            <div className="flex flex-col items-center justify-center py-40 px-12 text-center">
+              <span className="material-symbols-outlined text-slate-200 text-6xl mb-4">sentiment_very_dissatisfied</span>
+              <p className="font-black text-slate-400 uppercase tracking-widest text-xs">No pudimos sincronizar esta receta</p>
+              <button onClick={onClose} className="mt-6 text-blue-600 font-black text-xs border-b-2 border-blue-600 pb-1">VOLVER AL MENÚ</button>
             </div>
           )}
         </div>
+
+        {/* FLOATING ACTION BOTTOM */}
+        {!loading && details && (
+          <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-white via-white/90 to-transparent flex justify-center z-[110]">
+            <button
+              onClick={onClose}
+              className="w-full h-16 bg-[#1e60f1] text-white rounded-3xl flex items-center justify-center gap-3 shadow-xl shadow-blue-400 active:scale-95 transition-all"
+            >
+              <span className="text-[13px] font-black tracking-[0.2em] uppercase">TODO LISTO</span>
+              <span className="material-symbols-outlined">verified</span>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

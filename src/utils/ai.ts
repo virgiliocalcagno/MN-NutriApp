@@ -96,8 +96,8 @@ export const processPdfWithGemini = async (
   if (apiKey && apiKey.length > 20) {
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
-      console.log("AI Process: Usando motor estable para PDF");
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash", generationConfig: { temperature: 0 } });
+      console.log("AI Process: Usando motor estable para PDF (2.5)");
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash", generationConfig: { temperature: 0 } });
 
       const currentProfileContext = perfil ? `
 LO QUE YA SABEMOS DEL PACIENTE:
@@ -175,8 +175,8 @@ export const analyzeImageWithGemini = async (base64Image: string, perfil?: any, 
     const cleanBase64 = base64Image.replace(/^data:image\/\w+;base64,/, "");
     if (apiKey && apiKey.length > 20) {
       const genAI = new GoogleGenerativeAI(apiKey);
-      console.log("AI Scan: Usando 1.5 Flash para imagen");
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      console.log("AI Scan: Usando 2.5 Flash para imagen");
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
       const prompt = `Dime qué hay en esta foto de comida de forma muy clara y sencilla.
 Para el paciente: ${perfil?.paciente || 'Usuario'}.
@@ -221,32 +221,41 @@ export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: 
   if (effectiveApiKey && effectiveApiKey.length > 20) {
     try {
       const genAI = new GoogleGenerativeAI(effectiveApiKey);
-      console.log("AI Recipe: Usando motor estable para receta");
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      console.log("AI Recipe: Usando motor 2.5 Flash para Alta Cocina");
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-      const prompt = `Convierte estos ingredientes en una receta casera y súper fácil de hacer.
-Usa palabras que cualquiera entienda, nada de términos gourmet.
+      const prompt = `Actúa como un Chef Michelin y Nutricionista Clínico experto.
+Transforma esta descripción de plato en una receta profesional y ACCURATE.
 
-COMIDA: "${mealDesc}"
+PLATO DEL MENÚ: "${mealDesc}"
+PACIENTE: ${perfil?.paciente || 'Usuario'}
+OBJETIVO: ${perfil?.objetivo || 'Salud General'}
 
-RESPONDE SOLO CON ESTE JSON:
+REGLAS DE ORO:
+1. PRECISIÓN: Sigue estrictamente los ingredientes sugeridos en el nombre del plato. No inventes ingredientes fuera de lugar.
+2. ALTA COCINA: Describe pasos técnicos pero entendibles (ej. "Sellar la proteína", "Emulsionar la salsa").
+3. BIO-HACK: El consejo debe ser técnico pero útil para la salud (limitar picos de glucosa, absorción de nutrientes).
+4. IMAGEN: Genera un query en inglés para una foto de comida de alta gama.
+
+RESPONDE ÚNICAMENTE CON UN JSON PURO:
 {
-  "titulo": "Nombre fácil del plato",
-  "foto_prompt": "English query for high-quality food photo, clean background",
-  "tiempo": "20 min",
-  "dificultad": "Fácil",
-  "kcal": 500,
-  "nutrientes": { "proteina": "20g", "grasas": "10g", "carbos": "40g" },
-  "ingredientes_lista": ["Ingrediente 1", "Ingrediente 2"],
+  "titulo": "Nombre sofisticado del plato",
+  "foto_prompt": "English query for professional food photography, minimalist, 8k",
+  "tiempo": "25 min",
+  "dificultad": "Media",
+  "kcal": 650,
+  "nutrientes": { "proteina": "45g", "grasas": "18g", "carbos": "32g" },
+  "ingredientes_lista": ["Ingrediente principal (ej. 200g Salmón)", "Acompañamiento 1", "Salsa/Aderezo"],
   "pasos_preparacion": [
-    { "titulo": "Paso 1", "descripcion": "Explicación simple." }
+    { "titulo": "Técnica de Cocción", "descripcion": "Sellar a fuego alto para caramelizar..." }
   ],
   "bio_hack": {
-    "titulo": "CONSEJO DEL ASESOR",
-    "explicacion": "Un consejo práctico para comer mejor este plato.",
-    "pasos": ["Tip 1", "Tip 2"]
+    "titulo": "OPTIMIZACIÓN METABÓLICA",
+    "explicacion": "Un consejo experto sobre este plato.",
+    "pasos": ["1. Fibra", "2. Proteína", "3. Carbohidrato"]
   }
-}`;
+}
+`;
 
       const result = await model.generateContent(prompt);
       const text = result.response.text();
@@ -255,7 +264,7 @@ RESPONDE SOLO CON ESTE JSON:
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
         const keyword = encodeURIComponent(parsed.foto_prompt || parsed.titulo || mealDesc);
-        const imageUrl = `https://loremflickr.com/800/600/food,gourmet,${keyword}`;
+        const imageUrl = `https://source.unsplash.com/featured/800x600?food,gourmet,${keyword.replace(/%20/g, ',')}`;
 
         return {
           titulo: parsed.titulo,
@@ -295,15 +304,15 @@ RESPONDE SOLO CON ESTE JSON:
       explicacion: "Mantén una alimentación equilibrada para mejores resultados."
     },
     nutrientes: { proteina: "", grasas: "", carbos: "" },
-    imageUrl: `https://via.placeholder.com/600x400.png?text=${encodeURIComponent(mealDesc)}`
+    imageUrl: `https://placehold.co/600x400?text=${encodeURIComponent(mealDesc)}`
   };
 };
 
 export async function getFitnessAdvice(profile: Profile, apiKey: string): Promise<string> {
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
-    console.log("AI Fitness: Usando motor estable para consejo fit");
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    console.log("AI Fitness: Usando motor estable 2.5");
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `Dime 3 consejos cortos y fáciles para que esta persona entrene mejor.
 Usa un lenguaje motivador y súper sencillo.
