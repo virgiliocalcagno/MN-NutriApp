@@ -11,6 +11,10 @@ interface StoreContextType {
     saveStore: (newStore: Store) => Promise<void>;
     login: (method: 'google' | 'facebook') => Promise<void>;
     logout: () => Promise<void>;
+    showScheduleModal: boolean;
+    setShowScheduleModal: (show: boolean) => void;
+    generateSchedule: (breakfastTime: string) => void;
+    resetSchedule: () => void;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
@@ -19,6 +23,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const [store, setStore] = useState<Store>(initialStore);
     const [loading, setLoading] = useState(true);
+    const [showScheduleModal, setShowScheduleModal] = useState(false);
 
     // Load from LocalStorage on mount (offline support)
     useEffect(() => {
@@ -129,8 +134,53 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
         localStorage.removeItem('mn_pro_clinic_v6');
     };
 
+    const generateSchedule = (breakfastTime: string) => {
+        const [hours, minutes] = breakfastTime.split(':').map(Number);
+        const date = new Date();
+        date.setHours(hours, minutes, 0);
+
+        const newSchedule: Record<string, string> = { ...store.schedule };
+        const mealKeys = ["DESAYUNO", "MERIENDA_AM", "ALMUERZO", "MERIENDA_PM", "CENA"];
+
+        // Get current menu for the selected day
+        const todayName = new Date().toLocaleDateString('es-ES', { weekday: 'long' }).toUpperCase();
+        const selectedDay = store.selectedDay || todayName;
+        const normalizedSelected = selectedDay.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
+        const originalKey = Object.keys(store.menu).find(key =>
+            key.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase() === normalizedSelected
+        );
+        const menuForDay = originalKey ? store.menu[originalKey] : {};
+        const currentMenuKeys = Object.keys(menuForDay);
+
+        mealKeys.forEach((standardKey, idx) => {
+            const mealDate = new Date(date.getTime() + idx * 3 * 60 * 60 * 1000);
+            const timeStr = mealDate.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            });
+
+            const matchingKey = currentMenuKeys.find(k => k.toUpperCase().replace(/\s+/g, '_') === standardKey);
+            if (matchingKey) {
+                newSchedule[matchingKey] = timeStr;
+            }
+        });
+
+        saveStore({ ...store, schedule: newSchedule });
+    };
+
+    const resetSchedule = () => {
+        saveStore({
+            ...store,
+            schedule: null
+        });
+    };
+
     return (
-        <StoreContext.Provider value={{ user, store, loading, saveStore, login, logout }}>
+        <StoreContext.Provider value={{
+            user, store, loading, saveStore, login, logout,
+            showScheduleModal, setShowScheduleModal, generateSchedule, resetSchedule
+        }}>
             {children}
         </StoreContext.Provider>
     );

@@ -11,6 +11,7 @@ import LoginScreen from '@/src/components/LoginScreen';
 import { useStore } from '@/src/context/StoreContext';
 import BottomNav from '@/components/BottomNav';
 import NutriScanView from '@/views/NutriScanView';
+import ScheduleModal from '@/components/ScheduleModal';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>('welcome');
@@ -53,6 +54,7 @@ const App: React.FC = () => {
       {currentView !== 'welcome' && (
         <BottomNav currentView={currentView} setCurrentView={setCurrentView} />
       )}
+      <ScheduleModal />
     </div>
   );
 };

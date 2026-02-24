@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View } from '../types';
+import { useStore } from '../src/context/StoreContext';
 
 interface TopNavProps {
     currentView: View;
@@ -7,6 +8,9 @@ interface TopNavProps {
 }
 
 const TopNav: React.FC<TopNavProps> = () => {
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const { setShowScheduleModal } = useStore();
+
     return (
         <header className="sticky top-0 z-50 bg-white border-b border-slate-100 px-6 py-4 flex items-center justify-between shadow-sm">
             {/* Logo/Branding */}
@@ -17,15 +21,46 @@ const TopNav: React.FC<TopNavProps> = () => {
                 <h1 className="text-xl font-extrabold tracking-tight text-primary">MN NutriApp</h1>
             </div>
 
-            {/* Actions */}
-            <div className="flex items-center gap-2">
-                <button className="p-2 rounded-full hover:bg-slate-50 text-slate-400 transition-colors">
-                    <span className="material-symbols-outlined text-2xl">notifications</span>
+            {/* Hamburger Menu Trigger */}
+            <div className="relative">
+                <button
+                    onClick={() => setIsMenuOpen(!isMenuOpen)}
+                    className="p-2 rounded-full hover:bg-slate-50 text-slate-400 transition-colors active:scale-95"
+                >
+                    <span className="material-symbols-outlined text-3xl font-bold">menu</span>
                 </button>
-                <button className="p-2 rounded-full hover:bg-slate-50 text-slate-400 transition-colors">
-                    <span className="material-symbols-outlined text-2xl">search</span>
-                </button>
+
+                {/* Dropdown Menu */}
+                {isMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-100 rounded-2xl shadow-xl z-[60] overflow-hidden animate-in slide-in-from-top-2 duration-200">
+                        <div className="p-2 bg-slate-50 border-b border-slate-100">
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-3 py-1">Acciones Pro</p>
+                        </div>
+                        <button
+                            onClick={() => { setIsMenuOpen(false); /* logic for notifications if any */ }}
+                            className="w-full flex items-center gap-3 px-4 py-4 text-slate-600 hover:bg-slate-50 transition-colors text-left"
+                        >
+                            <span className="material-symbols-outlined text-blue-500 fill-1">notifications</span>
+                            <span className="text-sm font-bold uppercase tracking-wider">Notificaciones</span>
+                        </button>
+                        <button
+                            onClick={() => { setIsMenuOpen(false); setShowScheduleModal(true); }}
+                            className="w-full flex items-center gap-3 px-4 py-4 text-slate-600 hover:bg-slate-50 transition-colors text-left border-t border-slate-50"
+                        >
+                            <span className="material-symbols-outlined text-emerald-500 fill-1">schedule</span>
+                            <span className="text-sm font-bold uppercase tracking-wider">Horarios</span>
+                        </button>
+                    </div>
+                )}
             </div>
+
+            {/* Click overlap to close menu */}
+            {isMenuOpen && (
+                <div
+                    className="fixed inset-0 z-50"
+                    onClick={() => setIsMenuOpen(false)}
+                />
+            )}
         </header>
     );
 };
