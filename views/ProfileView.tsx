@@ -114,30 +114,41 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
               isCustom: false
             }));
 
-            const caloriesTarget = data.metas?.calorias || 2000;
-            const waterGoal = data.metas?.agua || 2800;
-            const userBasis = updatedProfiles[newPatientName] || initialStore;
+            const caloriesTarget = data.metas?.calorias || store.caloriesTarget || 2000;
+            const waterGoal = data.metas?.agua || store.waterGoal || 2800;
+            const userBasis = updatedProfiles[newPatientName] || store;
             const hasNewPlan = data.semana && Object.keys(data.semana).length > 0;
 
+            // SMART MERGE LOGIC
+            const mergeLists = (old: string[] = [], next: string[] = []) => {
+              const combined = [...old, ...next].map(s => s.trim().toLowerCase());
+              const unique = Array.from(new Set(combined.filter(Boolean)));
+              return unique.map(s => s.charAt(0).toUpperCase() + s.slice(1));
+            };
+
+            const mergedProfile = {
+              ...currentProfile,
+              ...data.perfilAuto,
+              objetivos: mergeLists(currentProfile.objetivos, data.perfilAuto?.objetivos),
+              comorbilidades: mergeLists(currentProfile.comorbilidades, data.perfilAuto?.comorbilidades),
+              suplementos: mergeLists(currentProfile.suplementos, data.perfilAuto?.suplementos),
+              metaAgua: waterGoal,
+              evolution: evolution.length > 0 ? evolution : currentProfile.evolution || []
+            };
+
             saveStore({
-              ...initialStore,
-              ...userBasis,
-              profile: {
-                ...initialStore.profile,
-                ...data.perfilAuto,
-                metaAgua: waterGoal,
-                evolution: evolution.length > 0 ? evolution : userBasis.profile?.evolution || []
-              },
-              menu: data.semana || {},
-              exercises: data.ejercicios || {},
-              inventory: hasNewPlan ? newInventory : [...(userBasis.inventory || []), ...newInventory],
-              planIngredients: (data.compras || []).map(c => c[0]),
-              doneMeals: hasNewPlan ? {} : (userBasis.doneMeals || {}),
-              doneEx: hasNewPlan ? {} : (userBasis.doneEx || {}),
-              schedule: data.horarios || (hasNewPlan ? null : userBasis.schedule),
+              ...store,
+              profile: mergedProfile,
+              menu: hasNewPlan ? data.semana : store.menu,
+              exercises: (data.ejercicios && Object.keys(data.ejercicios).length > 0) ? data.ejercicios : store.exercises,
+              inventory: [...(store.inventory || []), ...newInventory],
+              planIngredients: mergeLists(store.planIngredients, (data.compras || []).map(c => c[0])),
+              doneMeals: hasNewPlan ? {} : store.doneMeals,
+              doneEx: (data.ejercicios && Object.keys(data.ejercicios).length > 0) ? {} : store.doneEx,
               caloriesTarget,
               waterGoal,
               profiles: updatedProfiles,
+              processedDocs: [...(store.processedDocs || []), file.name],
               lastUpdateDate: new Date().toISOString().split('T')[0]
             });
 
@@ -248,26 +259,34 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
                   <p className="text-xl font-black text-slate-900">{lastUploadData.items}</p>
                 </div>
                 <div className="bg-slate-50 p-4 rounded-3xl border border-slate-100">
-                  <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mb-1">Próxima Cita</p>
-                  <p className="text-sm font-black text-slate-900 truncate">{lastUploadData.cita || 'TBD'}</p>
+                  <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mb-1">Archivos</p>
+                  <p className="text-xl font-black text-slate-900">{(store.processedDocs?.length || 1)}</p>
                 </div>
               </div>
 
               <div className="bg-emerald-50 p-4 rounded-[24px] border border-emerald-100 flex items-center gap-4">
                 <div className="size-10 bg-white rounded-xl flex items-center justify-center text-emerald-500 shadow-sm shrink-0">
-                  <span className="material-symbols-outlined text-xl">auto_renew</span>
+                  <span className="material-symbols-outlined text-xl">library_add</span>
                 </div>
                 <p className="text-[11px] font-bold text-emerald-800 leading-tight">
-                  La despensa y el menú semanal han sido actualizados con éxito.
+                  Perfil actualizado con éxito. ¿Tienes otro documento para que el análisis sea aún más profundo?
                 </p>
               </div>
 
-              <button
-                onClick={() => setShowSuccessModal(false)}
-                className="w-full bg-slate-900 text-white py-5 rounded-[24px] font-black text-xs uppercase tracking-[0.2em] active:scale-95 transition-all shadow-xl shadow-slate-200"
-              >
-                EMPEZAR AHORA
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setShowSuccessModal(false); fileInputRef.current?.click(); }}
+                  className="flex-1 bg-white border-2 border-slate-900 text-slate-900 py-5 rounded-[24px] font-black text-xs uppercase tracking-[0.1em] active:scale-95 transition-all"
+                >
+                  SUBIR OTRO
+                </button>
+                <button
+                  onClick={() => setShowSuccessModal(false)}
+                  className="flex-1 bg-slate-900 text-white py-5 rounded-[24px] font-black text-xs uppercase tracking-[0.1em] active:scale-95 transition-all shadow-xl shadow-slate-200"
+                >
+                  LISTO
+                </button>
+              </div>
             </div>
           </div>
         </div>

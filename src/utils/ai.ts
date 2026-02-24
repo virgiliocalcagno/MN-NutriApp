@@ -105,13 +105,27 @@ export const processPdfWithGemini = async (
       console.log("AI Process: Using gemini-1.5-flash for PDF");
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash", generationConfig: { temperature: 0 } });
 
-      const promptText = `Actua como procesador medico experto para MN-NutriApp. Extrae la informacion directamente de los documentos PDF adjuntos.
+      const currentProfileContext = perfil ? `
+PERFIL ACTUAL DEL PACIENTE (Usar como base y NO borrar informacion preexistente si no se contradice):
+- Objetivos: ${perfil.objetivos?.join(', ') || 'Ninguno'}
+- Alergias: ${perfil.alergias || 'Ninguna'}
+- Comorbilidades: ${perfil.comorbilidades?.join(', ') || 'Ninguna'}
+- Suplementacion: ${perfil.suplementos?.join(', ') || 'Ninguna'}
+- Observaciones: ${perfil.observaciones || 'Ninguna'}
+` : '';
+
+      const promptText = `Actua como procesador medico experto para MN-NutriApp. Extrae y CONSOLIDA la informacion de los documentos PDF adjuntos con el perfil actual.
 
 REGLAS CRITICAS:
-1. Identifica obligatoriamente el nombre del Paciente y del Medico.
-2. Extrae medidas actuales: peso, grasa %, cintura, cuello, brazos si estan disponibles.
-3. Extrae el menu semanal completo y rutinas de ejercicio.
-4. Clinica: Identifica suplementacion activa y fecha de proxima cita. Actualiza comorbilidades.
+1. HOLISMO: Tu objetivo es completar el rompecabezas de la salud del paciente. Si el PDF actual aporta datos clínicos (ej. analíticas de sangre) pero no nutrición, mantén la nutrición previa y añade los hallazgos médicos.
+2. Identifica obligatoriamente el nombre del Paciente y del Medico.
+3. Extrae medidas actuales: peso, grasa %, cintura, cuello, brazos si estan disponibles.
+4. Extrae el menu semanal completo y rutinas de ejercicio.
+   *EJERCICIOS*: Si no hay en el PDF, genera una rutina Bio-Hack basada en los objetivos.
+5. Clinica: Identifica suplementacion activa y fecha de proxima cita.
+   *REGLA DE ORO*: Si el Perfil Actual tiene alergias o comorbilidades y el PDF no las menciona, MANTENLAS. Solo actualiza si hay un cambio explícito.
+
+${currentProfileContext}
 
 --- REGLA MAS IMPORTANTE: LISTA DE COMPRAS ---
 Genera el array "compras" siguiendo ESTOS PASOS EXACTOS:

@@ -98,6 +98,17 @@ export interface Store {
     profiles: Record<string, Partial<Store>>; // Multi-user isolation
     firebaseConfig?: { geminiApiKey: string };
     planIngredients?: string[]; // Literal shopping list from AI
+    notifications: {
+        enabled: boolean;
+        mode: 'sound' | 'vibrate' | 'both';
+        categories: {
+            meds: boolean;
+            meals: boolean;
+            appointments: boolean;
+            hydration: boolean;
+        }
+    };
+    processedDocs: string[]; // List of processed PDF filenames/hashes
 }
 
 export const initialStore: Store = {
@@ -130,5 +141,16 @@ export const initialStore: Store = {
     lastUpdateDate: new Date().toISOString().split('T')[0],
     profiles: {},
     firebaseConfig: { geminiApiKey: '' },
-    planIngredients: []
+    planIngredients: [],
+    notifications: {
+        enabled: true,
+        mode: 'both',
+        categories: {
+            meds: true,
+            meals: true,
+            appointments: true,
+            hydration: true
+        }
+    },
+    processedDocs: []
 };
