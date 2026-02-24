@@ -1,24 +1,13 @@
 import { MealItem, InventoryItem } from '../types/store';
 
-export const ORDEN_COMIDAS = [
-    "DESAYUNO",
-    "MERIENDA_AM", "MERIENDA_1", "MERIENDA_MAÑANA", "PRIMERA_MERIENDA",
-    "ALMUERZO", "COMIDA",
-    "MERIENDA_PM", "MERIENDA_2", "MERIENDA_TARDE", "SEGUNDA_MERIENDA", "MERIENDA",
-    "CENA"
-];
+export const ORDEN_COMIDAS = ["DESAYUNO", "MERIENDA_AM", "ALMUERZO", "MERIENDA_PM", "CENA"];
 
-export const normalizeMealName = (name: string) => {
-    let n = name.replace(/_/g, ' ').toUpperCase();
-    if (n.includes('MERIENDA AM') || n.includes('MERIENDA 1')) return 'Merienda AM';
-    if (n.includes('MERIENDA PM') || n.includes('MERIENDA 2') || (n === 'MERIENDA')) return 'Merienda PM';
-    return name.replace(/_/g, ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-};
+export const normalizeMealName = (name: string) => name.replace(/_/g, ' ');
 
 const getIconForMeal = (name: string) => {
     const n = name.toUpperCase();
     if (n.includes('DESAYUNO')) return 'coffee';
-    if (n.includes('ALMUERZO') || n.includes('COMIDA')) return 'restaurant';
+    if (n.includes('ALMUERZO')) return 'restaurant';
     if (n.includes('CENA')) return 'spa';
     if (n.includes('MERIENDA')) return 'bakery_dining';
     return 'restaurant_menu';
@@ -33,20 +22,20 @@ export const sortMeals = (menu: Record<string, string>) => {
         let idxA = ORDEN_COMIDAS.indexOf(keyA);
         let idxB = ORDEN_COMIDAS.indexOf(keyB);
 
-        // Fallback para variaciones que contienen palabras clave
+        // Fallback mínimo solo si no se encuentra la clave exacta
         if (idxA === -1) {
             if (keyA.includes('DESAYUNO')) idxA = 0;
+            else if (keyA.includes('ALMUERZO')) idxA = 2;
+            else if (keyA.includes('CENA')) idxA = 4;
             else if (keyA.includes('MERIENDA_AM')) idxA = 1;
-            else if (keyA.includes('ALMUERZO')) idxA = 5;
-            else if (keyA.includes('MERIENDA')) idxA = 8;
-            else if (keyA.includes('CENA')) idxA = 12;
+            else if (keyA.includes('MERIENDA')) idxA = 3;
         }
         if (idxB === -1) {
             if (keyB.includes('DESAYUNO')) idxB = 0;
+            else if (keyB.includes('ALMUERZO')) idxB = 2;
+            else if (keyB.includes('CENA')) idxB = 4;
             else if (keyB.includes('MERIENDA_AM')) idxB = 1;
-            else if (keyB.includes('ALMUERZO')) idxB = 5;
-            else if (keyB.includes('MERIENDA')) idxB = 8;
-            else if (keyB.includes('CENA')) idxB = 12;
+            else if (keyB.includes('MERIENDA')) idxB = 3;
         }
 
         const valA = idxA === -1 ? 99 : idxA;

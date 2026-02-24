@@ -112,55 +112,14 @@ LO QUE YA SABEMOS DEL PACIENTE:
 
       const promptText = `Eres un asesor de nutrición muy práctico y amable para la app MN-NutriApp. Tu trabajo es leer el PDF y organizar la información para el paciente de forma clara.
 
-REGLAS SENCILLAS:
-1. NO BORRES nada de lo que ya sabemos (alergias o metas) a menos que el PDF diga algo muy distinto. Queremos sumar información, no perderla.
-2. Identifica el nombre del Paciente y el Doctor.
-3. Busca el peso, grasa, y medidas si están ahí.
-4. Saca el menú de la semana y los ejercicios.
-   *EJERCICIOS*: Si no hay ejercicios en el PDF, inventa una rutina sencilla de una semana que ayude al paciente con sus metas.
-5. Lista de suplementos y cuándo es la próxima cita.
-
-${currentProfileContext}
-
---- LISTA DE COMPRAS ---
-Mira el menú completo y haz una lista de qué hay que comprar en el supermercado:
-- Agrupa las cosas: si hay pollo en varios días, pon "Pollo" una sola vez con el total para la semana.
-- Usa medidas de República Dominicana: libras (lb), onzas (oz), cartón de huevos, paquetes, botellas, o unidades.
-- Ordena por pasillos: Carnes, Frutas, Verduras, Lácteos, Panadería, etc.
-
-RESPONDE SOLO CON ESTE JSON:
-{
-  "perfilAuto": { 
-    "paciente": "...", "doctor": "...", "edad": "...", "peso": "...", "pesoObjetivo": "...",
-    "estatura": "...", "cintura": "...", "cuello": "...", "brazos": "...", "grasa": "...",
-    "sangre": "...", "tipoSangre": "...", "alergias": "...", 
-    "objetivos": [], "comorbilidades": [], "suplementos": [], "proximaCita": "..."
-  },
-  "semana": { 
-    "LUNES": {
-      "DESAYUNO": "...",
-      "MERIENDA_AM": "...",
-      "ALMUERZO": "...",
-      "MERIENDA_PM": "...",
-      "CENA": "..."
-    }
-  },
+  "semana": { "LUNES": {"DESAYUNO": "...", "MERIENDA_AM": "...", "ALMUERZO": "...", "MERIENDA_PM": "...", "CENA": "..." } },
   "ejercicios": { "LUNES": [ {"n": "Nombre Ejercicio", "i": "3 series de 12", "link": ""} ] },
   "compras": [ ["Producto", "Cantidad", 1, "Categoria", "Pasillo"] ],
   "metas": { "calorias": 2000, "agua": 2800 },
-  "horarios": { 
-    "DESAYUNO": "08:30 AM", 
-    "MERIENDA_AM": "11:00 AM",
-    "ALMUERZO": "01:30 PM", 
-    "MERIENDA_PM": "04:30 PM",
-    "CENA": "07:30 PM" 
-  }
+  "horarios": { "DESAYUNO": "08:30 AM", "ALMUERZO": "01:30 PM", "CENA": "07:30 PM" }
 }
 
-IMPORTANTE: 
-- SIEMPRE incluye las 5 comidas (DESAYUNO, MERIENDA_AM, ALMUERZO, MERIENDA_PM, CENA) para cada día. 
-- Si el PDF no menciona una merienda, pon "Opción según plan nutricional" o "Fruta de temporada".
-- Respeta estrictamente los nombres de las claves en MAYÚSCULAS.`;
+IMPORTANTE: Incluye siempre las 5 comidas (DESAYUNO, MERIENDA_AM, ALMUERZO, MERIENDA_PM, CENA) para cada día. Si no hay merienda, repite un snack saludable.`;
 
       const parts: any[] = [{ text: promptText }];
       if (pdfPlanBase64) parts.push({ inlineData: { mimeType: "application/pdf", data: pdfPlanBase64.replace(/^data:application\/pdf;base64,/, "") } });
