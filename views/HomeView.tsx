@@ -234,17 +234,17 @@ const RecipeModal: React.FC<{
 
           <button
             onClick={onClose}
-            className="absolute top-6 left-6 size-11 bg-white/20 backdrop-blur-xl border border-white/30 rounded-full flex items-center justify-center text-white active:scale-90 transition-all z-10"
+            className="absolute top-4 right-4 size-10 bg-black/20 backdrop-blur-xl border border-white/20 rounded-full flex items-center justify-center text-white active:scale-90 transition-all z-[120] hover:bg-black/40"
           >
-            <span className="material-symbols-outlined text-2xl font-bold">close</span>
+            <span className="material-symbols-outlined text-xl">close</span>
           </button>
 
-          <div className="absolute bottom-6 left-6 right-6">
-            <div className="flex gap-2 mb-2">
-              <span className="bg-blue-600 text-white text-[8px] font-black tracking-widest uppercase px-2.5 py-1 rounded-full">ALTA COCINA AI</span>
-              {details?.dificultad && <span className="bg-white/20 backdrop-blur-md text-white text-[8px] font-black tracking-widest uppercase px-2.5 py-1 rounded-full border border-white/10">{details.dificultad}</span>}
+          <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-20">
+            <div className="flex gap-2 mb-3">
+              <span className="bg-blue-600 text-white text-[8px] font-black tracking-widest uppercase px-2.5 py-1 rounded-full shadow-lg shadow-blue-900/20">ALTA COCINA AI</span>
+              {details?.dificultad && <span className="bg-white/10 backdrop-blur-md text-white text-[8px] font-black tracking-widest uppercase px-2.5 py-1 rounded-full border border-white/10">{details.dificultad}</span>}
             </div>
-            <h2 className="text-white text-2xl sm:text-3xl font-black leading-tight drop-shadow-md">
+            <h2 className="text-white text-xl sm:text-2xl font-black leading-tight drop-shadow-lg max-w-[90%] break-words">
               {details?.titulo || meal.description}
             </h2>
           </div>

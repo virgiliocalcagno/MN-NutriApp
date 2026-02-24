@@ -238,63 +238,72 @@ RESPONDE ÚNICAMENTE CON UN JSON PURO:
 `;
 
       const result = await model.generateContent(prompt);
-      const text = result.response.text();
-      const cleanJson = text.replace(/```json|```/g, "").trim();
-      const jsonMatch = cleanJson.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        const keyword = encodeURIComponent(parsed.foto_prompt || parsed.titulo || mealDesc);
-        const imageUrl = `https://source.unsplash.com/featured/800x600?food,gourmet,${keyword.replace(/%20/g, ',')}`;
+      const response = await result.response;
+      const text = response.text();
 
-        return {
-          titulo: parsed.titulo,
-          kcal: parsed.kcal || 0,
-          tiempo: parsed.tiempo || "20 min",
-          dificultad: parsed.dificultad || "Baja",
-          ingredientes: parsed.ingredientes_lista || [],
-          preparacion: (parsed.pasos_preparacion || []).map((p: any) =>
-            typeof p === 'string' ? { titulo: "Paso", descripcion: p } : { titulo: p.titulo, descripcion: p.descripcion }
-          ),
-          imageUrl: imageUrl,
-          bioHack: {
-            titulo: parsed.bio_hack?.titulo || "CONSEJO PRÁCTICO",
-            pasos: parsed.bio_hack?.pasos || [],
-            explicacion: parsed.bio_hack?.explicacion || ""
-          },
-          nutrientes: {
-            proteina: parsed.nutrientes?.proteina || "",
-            grasas: parsed.nutrientes?.grasas || "",
-            carbos: parsed.nutrientes?.carbos || ""
-          }
-        };
-      }
+      // Sanitización profunda del JSON
+      const jsonStart = text.indexOf('{');
+      const jsonEnd = text.lastIndexOf('}') + 1;
+      const jsonCandidate = jsonStart !== -1 ? text.substring(jsonStart, jsonEnd) : text;
+
+      const cleanJson = jsonCandidate.replace(/```json|```/g, "").trim();
+      const jsonMatch = cleanJson.match(/\{[\s\S]*\}/);
+
+      if (jsonMatch) {
+        try {
+          const parsed = JSON.parse(jsonMatch[0]);
+          const keyword = encodeURIComponent(parsed.foto_prompt || parsed.titulo || mealDesc);
+          const imageUrl = `https://source.unsplash.com/featured/800x600?food,gourmet,${keyword.replace(/%20/g, ',')}`;
+
+          return {
+            titulo: parsed.titulo,
+            kcal: parsed.kcal || 0,
+            tiempo: parsed.tiempo || "20 min",
+            dificultad: parsed.dificultad || "Baja",
+            ingredientes: parsed.ingredientes_lista || [],
+            preparacion: (parsed.pasos_preparacion || []).map((p: any) =>
+              typeof p === 'string' ? { titulo: "Paso", descripcion: p } : { titulo: p.titulo, descripcion: p.descripcion }
+            ),
+            imageUrl: imageUrl,
+            bioHack: {
+              titulo: parsed.bio_hack?.titulo || "CONSEJO PRÁCTICO",
+              pasos: parsed.bio_hack?.pasos || [],
+              explicacion: parsed.bio_hack?.explicacion || ""
+            },
+            nutrientes: {
+              proteina: parsed.nutrientes?.proteina || "",
+              grasas: parsed.nutrientes?.grasas || "",
+              carbos: parsed.nutrientes?.carbos || ""
+            }
+          };
+        }
     } catch (e) {
-      console.error("Gemini Error Crítico:", e);
+        console.error("Gemini Error Crítico:", e);
+      }
     }
-  }
 
   return {
-    titulo: mealDesc,
-    kcal: 0,
-    ingredientes: ["Ingredientes del plato"],
-    preparacion: [{ titulo: "Paso 1", descripcion: "Preparación base del plato." }],
-    bioHack: {
-      titulo: "CONSEJO PRÁCTICO",
-      pasos: ["Come despacio", "Disfruta tu comida"],
-      explicacion: "Mantén una alimentación equilibrada para mejores resultados."
-    },
-    nutrientes: { proteina: "", grasas: "", carbos: "" },
-    imageUrl: `https://placehold.co/600x400?text=${encodeURIComponent(mealDesc)}`
+      titulo: mealDesc,
+      kcal: 0,
+      ingredientes: ["Ingredientes del plato"],
+      preparacion: [{ titulo: "Paso 1", descripcion: "Preparación base del plato." }],
+      bioHack: {
+        titulo: "CONSEJO PRÁCTICO",
+        pasos: ["Come despacio", "Disfruta tu comida"],
+        explicacion: "Mantén una alimentación equilibrada para mejores resultados."
+      },
+      nutrientes: { proteina: "", grasas: "", carbos: "" },
+      imageUrl: `https://placehold.co/600x400?text=${encodeURIComponent(mealDesc)}`
+    };
   };
-};
 
-export async function getFitnessAdvice(profile: Profile, apiKey: string): Promise<string> {
-  try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    console.log("AI Fitness: Usando motor estable 2.5");
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  export async function getFitnessAdvice(profile: Profile, apiKey: string): Promise<string> {
+    try {
+      const genAI = new GoogleGenerativeAI(apiKey);
+      console.log("AI Fitness: Usando motor estable 2.5");
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-    const prompt = `Dime 3 consejos cortos y fáciles para que esta persona entrene mejor.
+      const prompt = `Dime 3 consejos cortos y fáciles para que esta persona entrene mejor.
 Usa un lenguaje motivador y súper sencillo.
 
 PERFIL:
@@ -311,10 +320,10 @@ REGLAS:
 
 FORMATO: Pon solo 3 puntos cortos con un dibujo (emoji), nada más.`;
 
-    const result = await model.generateContent(prompt);
-    return result.response.text();
-  } catch (error) {
-    console.error("Fitness Advice AI Error:", error);
-    return "• Prioriza el descanso activo.\n• Mantén una hidratación constante.\n• Escucha a tu cuerpo durante el esfuerzo.";
+      const result = await model.generateContent(prompt);
+      return result.response.text();
+    } catch (error) {
+      console.error("Fitness Advice AI Error:", error);
+      return "• Prioriza el descanso activo.\n• Mantén una hidratación constante.\n• Escucha a tu cuerpo durante el esfuerzo.";
+    }
   }
-}
