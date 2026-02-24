@@ -15,6 +15,8 @@ interface StoreContextType {
     setShowScheduleModal: (show: boolean) => void;
     generateSchedule: (breakfastTime: string) => void;
     resetSchedule: () => void;
+    showNotificationsModal: boolean;
+    setShowNotificationsModal: (show: boolean) => void;
 }
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
@@ -24,6 +26,7 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     const [store, setStore] = useState<Store>(initialStore);
     const [loading, setLoading] = useState(true);
     const [showScheduleModal, setShowScheduleModal] = useState(false);
+    const [showNotificationsModal, setShowNotificationsModal] = useState(false);
 
     // Load from LocalStorage on mount (offline support)
     useEffect(() => {
@@ -179,7 +182,8 @@ export const StoreProvider = ({ children }: { children: ReactNode }) => {
     return (
         <StoreContext.Provider value={{
             user, store, loading, saveStore, login, logout,
-            showScheduleModal, setShowScheduleModal, generateSchedule, resetSchedule
+            showScheduleModal, setShowScheduleModal, generateSchedule, resetSchedule,
+            showNotificationsModal, setShowNotificationsModal
         }}>
             {children}
         </StoreContext.Provider>

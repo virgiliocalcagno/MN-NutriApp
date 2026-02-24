@@ -9,7 +9,7 @@ interface TopNavProps {
 
 const TopNav: React.FC<TopNavProps> = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const { setShowScheduleModal } = useStore();
+    const { setShowScheduleModal, setShowNotificationsModal } = useStore();
 
     return (
         <header className="sticky top-0 z-50 bg-white border-b border-slate-100 px-6 py-4 flex items-center justify-between shadow-sm">
@@ -37,8 +37,9 @@ const TopNav: React.FC<TopNavProps> = () => {
                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-3 py-1">Acciones Pro</p>
                         </div>
                         <button
-                            onClick={() => { setIsMenuOpen(false); /* logic for notifications if any */ }}
+                            onClick={() => { setIsMenuOpen(false); setShowNotificationsModal(true); }}
                             className="w-full flex items-center gap-3 px-4 py-4 text-slate-600 hover:bg-slate-50 transition-colors text-left"
+                            title="Abrir Centro de Alertas"
                         >
                             <span className="material-symbols-outlined text-blue-500 fill-1">notifications</span>
                             <span className="text-sm font-bold uppercase tracking-wider">Notificaciones</span>

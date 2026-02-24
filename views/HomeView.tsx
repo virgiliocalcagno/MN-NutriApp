@@ -97,9 +97,6 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
             <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">{selectedDay}, {new Date().getDate()} {new Intl.DateTimeFormat('es-ES', { month: 'short' }).format(new Date())}</p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="size-11 bg-primary text-white rounded-2xl flex items-center justify-center shadow-lg shadow-primary/30 active:scale-95 transition-all">
-              <span className="material-symbols-outlined text-2xl font-fill">notifications</span>
-            </div>
           </div>
         </div>
       </header>
