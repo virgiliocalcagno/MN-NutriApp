@@ -146,30 +146,6 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
             </div>
           </div>
         </div>
-
-        {/* Clinical Dashboard Summary */}
-        <div className="grid grid-cols-3 gap-3">
-          <div className="bg-slate-50/80 p-4 rounded-3xl border border-slate-100/50 flex flex-col items-center justify-center group hover:bg-white hover:shadow-sm transition-all duration-300">
-            <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Meta Diaria</p>
-            <div className="flex items-baseline gap-1">
-              <span className="text-lg font-black text-slate-900">{store.caloriesTarget || 2000}</span>
-              <span className="text-[8px] font-bold text-slate-300 uppercase">kcal</span>
-            </div>
-          </div>
-          <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex flex-col items-center justify-center group hover:scale-[1.02] transition-transform duration-300">
-            <p className="text-[7px] font-black text-blue-500 uppercase tracking-widest mb-1.5">Próxima Cita</p>
-            <div className="flex items-baseline gap-1">
-              <span className="text-sm font-black text-blue-600">{store.profile?.proximaCita ? store.profile.proximaCita.split('/').slice(0, 2).join('/') : '--/--'}</span>
-            </div>
-          </div>
-          <div className="bg-slate-50/80 p-4 rounded-3xl border border-slate-100/50 flex flex-col items-center justify-center group hover:bg-white hover:shadow-sm transition-all duration-300">
-            <p className="text-[7px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Peso Actual</p>
-            <div className="flex items-baseline gap-1">
-              <span className="text-lg font-black text-slate-900">{store.profile?.peso || '--'}</span>
-              <span className="text-[8px] font-bold text-slate-300 uppercase">lbs</span>
-            </div>
-          </div>
-        </div>
       </header>
 
       <div className="px-6 space-y-6 pt-2">
