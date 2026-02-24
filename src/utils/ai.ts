@@ -65,6 +65,7 @@ const normalizeCompras = (data: AIResponse): AIResponse => {
   const normalized = data.compras.map(item => {
     if (!Array.isArray(item) || item.length < 1) return item;
     const name = item[0];
+    if (!name || typeof name !== 'string') return item;
     const nameLower = name.toLowerCase().trim();
     const mapped = INGREDIENT_TO_PRODUCT[nameLower];
     if (mapped) {
@@ -76,6 +77,7 @@ const normalizeCompras = (data: AIResponse): AIResponse => {
   const seen = new Map<string, number>();
   const deduped: typeof normalized = [];
   for (const item of normalized) {
+    if (!item[0] || typeof item[0] !== 'string') continue;
     const key = item[0].toLowerCase();
     if (seen.has(key)) continue;
     seen.set(key, deduped.length);
