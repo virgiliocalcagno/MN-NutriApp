@@ -102,8 +102,8 @@ export const processPdfWithGemini = async (
   if (apiKey && apiKey.length > 20) {
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
-      console.log("AI Process: Using gemini-1.5-flash for PDF");
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash", generationConfig: { temperature: 0 } });
+      console.log("AI Process: Using gemini-2.0-flash for PDF");
+      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash", generationConfig: { temperature: 0 } });
 
       const currentProfileContext = perfil ? `
 PERFIL ACTUAL DEL PACIENTE (Usar como base y NO borrar informacion preexistente si no se contradice):
@@ -206,7 +206,7 @@ RESPONDE UNICAMENTE CON ESTE FORMATO JSON:
       if (jsonMatch) return normalizeCompras(JSON.parse(jsonMatch[0]) as AIResponse);
       throw new Error("Formato inválido");
     } catch (e: any) {
-      console.warn("Gemini 2.5 falló, intentando Fallback...", e?.message || e?.status || e);
+      console.warn("Gemini 2.0 falló, intentando Fallback...", e?.message || e?.status || e);
     }
   }
 
@@ -230,8 +230,8 @@ export const analyzeImageWithGemini = async (base64Image: string, perfil?: any, 
     const cleanBase64 = base64Image.replace(/^data:image\/\w+;base64,/, "");
     if (apiKey && apiKey.length > 20) {
       const genAI = new GoogleGenerativeAI(apiKey);
-      console.log("AI Scan: Using gemini-1.5-flash for Image");
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      console.log("AI Scan: Using gemini-2.0-flash for Image");
+      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
       const prompt = `Actúa como una Eminencia en Nutrición Clínica y Bio-hacking Metabólico. 
 Analiza esta imagen de comida para el paciente: ${perfil?.paciente || 'Usuario'}.
@@ -283,8 +283,8 @@ export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: 
   if (effectiveApiKey && effectiveApiKey.length > 20) {
     try {
       const genAI = new GoogleGenerativeAI(effectiveApiKey);
-      console.log("AI Recipe: Using gemini-1.5-flash for Recipe");
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      console.log("AI Recipe: Using gemini-2.0-flash for Recipe");
+      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
       const prompt = `Eres un Chef de Alta Cocina y Experto en Bio-hacking Nutricional.
 Transforma estos ingredientes en una receta profesional con datos nutricionales reales.
@@ -391,8 +391,8 @@ REGLAS:
 
 export async function getFitnessAdvice(profile: Profile, apiKey: string): Promise<string> {
   const genAI = new GoogleGenerativeAI(apiKey);
-  console.log("AI Fitness: Using gemini-1.5-flash for Advice");
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  console.log("AI Fitness: Using gemini-2.0-flash for Advice");
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
   const prompt = `Actúa como un médico experto en medicina deportiva y bio-hacking. 
   Genera 3 recomendaciones de élite BREVES y ACCIÓNABLES para el entrenamiento de este usuario basándose en su perfil clínico.
