@@ -215,9 +215,9 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
               </div>
             </div>
 
-            {/* Water Drop with Filling Animation */}
+            {/* Premium Water Drop with Glassmorphism and Depth */}
             <div
-              className="relative size-52 flex items-center justify-center cursor-pointer select-none active:scale-95 transition-all"
+              className="relative size-56 flex items-center justify-center cursor-pointer select-none active:scale-95 transition-all"
               onContextMenu={(e) => { e.preventDefault(); setShowHistory(true); }}
               onTouchStart={() => {
                 longPressTimer.current = window.setTimeout(() => setShowHistory(true), 800);
@@ -232,44 +232,83 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
                 if (longPressTimer.current) clearTimeout(longPressTimer.current);
               }}
             >
-              <svg viewBox="0 0 100 120" className="w-full h-full drop-shadow-xl">
+              <svg viewBox="0 0 100 120" className="w-full h-full drop-shadow-2xl">
                 <defs>
-                  <clipPath id="waterDropClip">
-                    <path d="M50,115 C30,115 15,100 15,80 C15,60 50,20 50,15 C50,20 85,60 85,80 C85,100 70,115 50,115 Z" />
+                  <linearGradient id="waterGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#60a5fa" />
+                    <stop offset="100%" stopColor="#1e60f1" />
+                  </linearGradient>
+                  <clipPath id="waterDropRefined">
+                    <path d="M50,118 C28,118 10,98 10,75 C10,55 50,15 50,10 C50,15 90,55 90,75 C90,98 72,118 50,118 Z" />
                   </clipPath>
+                  <filter id="glass">
+                    <feGaussianBlur in="SourceGraphic" stdDeviation="1" />
+                  </filter>
                 </defs>
-                {/* Background Drop */}
+
+                {/* Background Glass Layer */}
                 <path
-                  d="M50,115 C30,115 15,100 15,80 C15,60 50,20 50,15 C50,20 85,60 85,80 C85,100 70,115 50,115 Z"
-                  fill="#f1f5f9"
+                  d="M50,118 C28,118 10,98 10,75 C10,55 50,15 50,10 C50,15 90,55 90,75 C90,98 72,118 50,118 Z"
+                  fill="white"
+                  fillOpacity="0.4"
                   stroke="#e2e8f0"
-                  strokeWidth="0.5"
+                  strokeWidth="1"
+                  className="backdrop-blur-sm"
                 />
 
-                {/* Animated Filling Layer */}
-                <g clipPath="url(#waterDropClip)">
+                {/* Animated Filling Liquid */}
+                <g clipPath="url(#waterDropRefined)">
                   <rect
                     x="0"
-                    y={115 - (hydrationPercent * 1.15)}
+                    y={118 - (hydrationPercent * 1.08)}
                     width="100"
                     height="120"
-                    fill="#1e60f1"
-                    className="transition-all duration-1000 ease-out"
+                    fill="url(#waterGradient)"
+                    className="transition-all duration-1000 ease-in-out"
                   />
-                  {/* Subtle Wave Top Effect */}
+                  {/* Organic Wave Effect */}
                   <path
-                    d={`M-10,${115 - (hydrationPercent * 1.15)} Q25,${115 - (hydrationPercent * 1.15) - 5} 50,${115 - (hydrationPercent * 1.15)} T110,${115 - (hydrationPercent * 1.15)} V130 H-10 Z`}
-                    fill="#1e60f1"
-                    className="animate-pulse"
+                    d={`M-10,${118 - (hydrationPercent * 1.08)} C20,${118 - (hydrationPercent * 1.08) - 4} 40,${118 - (hydrationPercent * 1.08) + 4} 60,${118 - (hydrationPercent * 1.08) - 2} C80,${118 - (hydrationPercent * 1.08) - 6} 110,${118 - (hydrationPercent * 1.08)} 110,${118 - (hydrationPercent * 1.08)} V130 H-10 Z`}
+                    fill="url(#waterGradient)"
+                    className="animate-pulse opacity-80"
+                  />
+                  {/* Surface Light Reflection */}
+                  <ellipse
+                    cx="50"
+                    cy={118 - (hydrationPercent * 1.08) + 2}
+                    rx="30"
+                    ry="3"
+                    fill="white"
+                    fillOpacity="0.2"
+                    className="transition-all duration-1000"
                   />
                 </g>
+
+                {/* Outer Glow / Reflection */}
+                <path
+                  d="M35,35 C30,40 25,50 25,65"
+                  fill="none"
+                  stroke="white"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeOpacity="0.3"
+                />
               </svg>
 
-              <div className="absolute inset-0 flex flex-col items-center justify-center pt-8">
-                <h3 className={`text-[40px] font-black leading-none transition-colors duration-500 ${hydrationPercent > 50 ? 'text-white' : 'text-slate-800'}`}>{currentWater}</h3>
-                <p className={`font-bold text-xs mt-1 transition-colors duration-500 ${hydrationPercent > 50 ? 'text-white/70' : 'text-slate-400'}`}>/ {meta} ml</p>
-                <div className={`px-2 py-0.5 rounded-full mt-3 transition-colors duration-500 ${hydrationPercent > 50 ? 'bg-white/20 text-white' : 'bg-blue-50 text-[#1e60f1]'}`}>
-                  <p className="font-black text-[9px] uppercase tracking-widest">{(store.waterHistory?.length || 0)}/8 TOMAS</p>
+              <div className="absolute inset-0 flex flex-col items-center justify-center pt-8 pointer-events-none">
+                <div className="text-center group-hover:scale-105 transition-transform duration-500">
+                  <span className={`text-[36px] font-black tracking-tight leading-none transition-colors duration-700 ${hydrationPercent > 55 ? 'text-white drop-shadow-md' : 'text-slate-800'}`}>
+                    {currentWater}
+                  </span>
+                  <div className={`flex items-center justify-center gap-1 mt-0.5 transition-colors duration-700 ${hydrationPercent > 55 ? 'text-white/80' : 'text-slate-400'}`}>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">ml</span>
+                  </div>
+                </div>
+
+                <div className={`mt-4 px-3 py-1 rounded-full backdrop-blur-md border transition-all duration-700 ${hydrationPercent > 55 ? 'bg-white/10 border-white/20 text-white' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>
+                  <p className="font-black text-[8px] uppercase tracking-widest leading-none">
+                    {(store.waterHistory?.length || 0)} / 8 Tomas
+                  </p>
                 </div>
               </div>
             </div>
