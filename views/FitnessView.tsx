@@ -89,10 +89,16 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
     return `${suggested.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })} (350ml)`;
   };
 
+  const normalizeDay = (day: string) => day.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
   const dias = ["DOMINGO", "LUNES", "MARTES", "MIERCOLES", "JUEVES", "VIERNES", "SABADO"];
   const todayName = dias[new Date().getDay()];
   const displayDay = store.selectedDay || todayName;
-  const exKey = Object.keys(store.exercises || {}).find(k => k.toUpperCase() === displayDay) || displayDay;
+
+  // Normalización para búsqueda de rutina
+  const normalizedDisplayDay = normalizeDay(displayDay);
+  const exKey = Object.keys(store.exercises || {}).find(k => normalizeDay(k) === normalizedDisplayDay) || displayDay;
+
   const exercisesList = store.exercises?.[exKey] || [];
   const completedList = store.doneEx?.[displayDay] || [];
 
