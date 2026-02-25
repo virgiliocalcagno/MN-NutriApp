@@ -507,73 +507,50 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
         </div>
       )}
 
-      {/* Header Premium Bio-hacker (v34.1) */}
-      <div className="bg-white px-6 pt-12 pb-10 rounded-b-[48px] shadow-sm border-b border-slate-100 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-400/5 rounded-full -ml-12 -mb-12 blur-2xl"></div>
-
-        <div className="flex flex-col items-center text-center relative z-10">
-          <div className="relative mb-6">
-            <div className="size-28 rounded-[32px] bg-slate-100 flex items-center justify-center border-4 border-white shadow-2xl overflow-hidden ring-1 ring-slate-100 rotate-3 transform transition-transform hover:rotate-0 duration-500">
+      {/* Header — Expediente Clínico Digital */}
+      <div className="bg-white px-6 pt-12 pb-8 rounded-b-[40px] shadow-sm border-b border-slate-100 relative">
+        <div className="flex flex-col items-center text-center">
+          <div className="relative mb-5">
+            <div className="size-24 rounded-3xl bg-slate-100 flex items-center justify-center border-2 border-white shadow-lg overflow-hidden">
               {user?.photoURL ? (
                 <img src={user.photoURL} alt="User" className="w-full h-full object-cover" />
               ) : (
-                <span className="material-symbols-outlined text-5xl text-slate-300">person</span>
+                <span className="material-symbols-outlined text-4xl text-slate-300">person</span>
               )}
-            </div>
-            <div className="absolute -bottom-2 -right-2 bg-[#1e60f1] text-white px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-lg border-2 border-white">
-              Elite
             </div>
           </div>
 
           <div {...longPressProps} className="space-y-1">
-            <h2 onClick={onLongPress} {...longPressProps} className="text-[28px] font-black text-slate-900 tracking-tight leading-tight select-none cursor-pointer">
+            <h2 onClick={onLongPress} {...longPressProps} className="text-2xl font-black text-slate-900 tracking-tight leading-tight select-none cursor-pointer">
               {isEditing ? (
                 <input
                   type="text"
                   value={editData.perfil_biometrico?.nombre_completo || ''}
                   onChange={e => setEditData({ ...editData, perfil_biometrico: { ...editData.perfil_biometrico, nombre_completo: e.target.value } })}
                   title="Nombre del paciente"
-                  className="bg-slate-50 border-none p-0 text-center focus:ring-0 rounded font-black max-w-[200px]"
+                  className="bg-slate-50 border-none p-1 text-center focus:ring-0 rounded-xl font-black max-w-[240px]"
                 />
               ) : (profile.perfil_biometrico?.nombre_completo || user?.displayName || 'Usuario')}
-              {!isLocked && <span className="material-symbols-outlined text-primary text-lg">edit</span>}
+              {!isLocked && <span className="material-symbols-outlined text-primary text-lg ml-1">edit</span>}
             </h2>
-            <p className="text-[10px] text-blue-500 font-black uppercase tracking-[0.3em] mb-2">Expediente Clínico Digital</p>
-            <div className="flex items-center justify-center gap-2">
-              <p className="text-[10px] font-bold text-primary bg-primary/5 px-3 py-1 rounded-full border border-primary/10">
+            <p className="text-[10px] text-blue-500 font-bold uppercase tracking-wider">Expediente Clínico Digital</p>
+            <div className="flex items-center justify-center gap-2 mt-1">
+              <p className="text-[10px] font-bold text-slate-400">
                 {isEditing ? (
-                  <span className="flex items-center gap-1 italic">Dr. <input value={editData.perfil_biometrico?.doctor || ''} onChange={e => setEditData({ ...editData, perfil_biometrico: { ...editData.perfil_biometrico, doctor: e.target.value } })} title="Nombre del doctor" className="bg-transparent border-none p-0 w-24 text-primary font-bold focus:ring-0 text-[10px]" /></span>
-                ) : `Dr. ${profile.perfil_biometrico?.doctor || 'Consultor Health'}`}
+                  <span className="flex items-center gap-1">Dr. <input value={editData.perfil_biometrico?.doctor || ''} onChange={e => setEditData({ ...editData, perfil_biometrico: { ...editData.perfil_biometrico, doctor: e.target.value } })} title="Nombre del doctor" className="bg-slate-50 border-none p-0.5 w-24 text-slate-600 font-bold focus:ring-0 text-[10px] rounded" /></span>
+                ) : `Dr. ${profile.perfil_biometrico?.doctor || 'Consultor'}`}
               </p>
-              <div className="size-1 bg-slate-200 rounded-full"></div>
-              <p className="text-[10px] font-black text-slate-400">
+              <span className="text-slate-200">·</span>
+              <p className="text-[10px] text-slate-400">
                 {isEditing ? (
-                  <select value={editData.perfil_biometrico?.genero || ''} onChange={e => setEditData({ ...editData, perfil_biometrico: { ...editData.perfil_biometrico, genero: e.target.value } })} title="Género" className="bg-transparent border-none p-0 text-[10px] font-black focus:ring-0">
-                    <option value="Hombre">MALE</option>
-                    <option value="Mujer">FEMALE</option>
+                  <select value={editData.perfil_biometrico?.genero || ''} onChange={e => setEditData({ ...editData, perfil_biometrico: { ...editData.perfil_biometrico, genero: e.target.value } })} title="Género" className="bg-transparent border-none p-0 text-[10px] font-bold focus:ring-0">
+                    <option value="Hombre">Hombre</option>
+                    <option value="Mujer">Mujer</option>
                   </select>
-                ) : (profile.perfil_biometrico?.genero || 'MALE').toUpperCase()}
+                ) : (profile.perfil_biometrico?.genero || 'N/A')}
               </p>
-            </div>
-          </div>
-
-          <div className="mt-8 grid grid-cols-2 gap-4 w-full">
-            <div className="bg-slate-50/50 p-4 rounded-[32px] border border-slate-100 flex flex-col items-center">
-              <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mb-1">Edad Metabólica</p>
-              <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-black text-slate-900">{calculateMetabolicAge()}</span>
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">Años</span>
-              </div>
-            </div>
-            <div className="bg-slate-50/50 p-4 rounded-[32px] border border-slate-100 flex flex-col items-center">
-              <p className="text-[9px] text-slate-400 font-black uppercase tracking-widest mb-1">Impacto Bio-Hack</p>
-              <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-black text-emerald-500">
-                  {profile.analisis_inbody_actual?.peso_actual_kg ? 85 : 0}
-                </span>
-                <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-tighter">%</span>
-              </div>
+              <span className="text-slate-200">·</span>
+              <p className="text-[10px] text-slate-300">{profile.expediente_control?.ultima_actualizacion || 'Sin datos'}</p>
             </div>
           </div>
         </div>
@@ -587,7 +564,7 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
 
         {showLogout && (
           <div className="absolute right-6 top-20 bg-white shadow-2xl rounded-2xl border border-slate-100 p-2 w-48 z-[110] animate-in slide-in-from-top-4">
-            <button onClick={logout} className="w-full text-left px-4 py-3 text-red-500 text-sm font-black hover:bg-red-50 rounded-xl flex items-center gap-3 transition-colors">
+            <button onClick={logout} className="w-full text-left px-4 py-3 text-red-500 text-sm font-bold hover:bg-red-50 rounded-xl flex items-center gap-3 transition-colors">
               <span className="material-symbols-outlined text-xl">logout</span>
               Cerrar Sesión
             </button>
@@ -999,85 +976,29 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
           </section>
         )}
 
-        {/* S7: CONTROL DE EXPEDIENTE */}
-        <section className="bg-slate-50 p-8 rounded-[40px] border border-dashed border-slate-200 space-y-6">
+        {/* Documentos y Control */}
+        <section className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm space-y-5">
           <div className="flex items-center gap-3">
             <div className="size-8 bg-slate-400 rounded-xl flex items-center justify-center text-white shadow-lg">
-              <span className="material-symbols-outlined text-sm font-fill">settings_ethernet</span>
+              <span className="material-symbols-outlined text-sm font-fill">folder_open</span>
             </div>
-            <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">S7: Control</h3>
+            <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">Documentos y Control</h3>
           </div>
 
-          <div className="grid grid-cols-1 gap-4">
+          <div className="space-y-4">
             <div className="flex justify-between items-center text-[10px] font-bold text-slate-500">
-              <p>ID EXPEDIENTE</p>
-              <p className="text-slate-900">{profile.expediente_control?.usuario_id || 'ID_NUEVO'}</p>
+              <p>ID Expediente</p>
+              <p className="text-slate-800">{profile.expediente_control?.usuario_id || 'Nuevo'}</p>
             </div>
             <div className="flex justify-between items-center text-[10px] font-bold text-slate-500">
-              <p>ÚLTIMA ACTUALIZACIÓN</p>
-              <p className="text-slate-900">{profile.expediente_control?.ultima_actualizacion || 'Hoy'}</p>
+              <p>Última actualización</p>
+              <p className="text-slate-800">{profile.expediente_control?.ultima_actualizacion || 'Hoy'}</p>
             </div>
 
-            <div className="pt-4 border-t border-slate-200">
+            {/* Document History */}
+            <div className="pt-3 border-t border-slate-100">
               <div className="flex items-center justify-between mb-3">
-                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Cola de Análisis ({selectedFiles.length}/3)</label>
-                {selectedFiles.length > 0 && (
-                  <button
-                    onClick={() => setSelectedFiles([])}
-                    className="text-[8px] font-black text-red-500 uppercase tracking-widest px-2 py-1 rounded-lg transition-colors"
-                  >
-                    LIMPIAR COLA
-                  </button>
-                )}
-              </div>
-
-              {selectedFiles.length > 0 ? (
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {selectedFiles.map((file, idx) => (
-                    <div key={idx} className="flex items-center gap-2 bg-blue-50 px-3 py-2 rounded-xl border border-blue-100 group">
-                      <span className="material-symbols-outlined text-[10px] text-blue-600">file_present</span>
-                      <span className="text-[9px] font-bold text-blue-900 truncate max-w-[120px]">{file.name}</span>
-                      <button
-                        onClick={() => setSelectedFiles(prev => prev.filter((_, i) => i !== idx))}
-                        className="size-4 bg-blue-100 text-blue-400 rounded-full flex items-center justify-center hover:text-red-500 hover:bg-red-50 transition-all"
-                      >
-                        <span className="material-symbols-outlined text-[10px]">close</span>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  className="mb-4 p-6 border-2 border-dashed border-slate-200 rounded-[32px] flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-slate-100 transition-all"
-                >
-                  <span className="material-symbols-outlined text-2xl text-slate-300">cloud_upload</span>
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Seleccionar PDFs (Max 3)</p>
-                </div>
-              )}
-
-              {selectedFiles.length > 0 && (
-                <button
-                  onClick={processBatch}
-                  disabled={isProcessing}
-                  className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-blue-200 active:scale-95 disabled:opacity-50 disabled:active:scale-100 transition-all flex items-center justify-center gap-2 mb-6"
-                >
-                  <span className="material-symbols-outlined text-sm font-fill">analytics</span>
-                  {uploadStatus === 'analyzing' ? 'IA ANALIZANDO...' : 'INICIAR ANÁLISIS CONJUNTO'}
-                </button>
-              )}
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf"
-                multiple
-                onChange={handleFileSelect}
-                className="hidden"
-              />
-
-              <div className="flex items-center justify-between mb-3 pt-4 border-t border-slate-100">
-                <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest block">Historial de Expedientes</label>
+                <p className="text-[10px] font-bold text-slate-400 uppercase">Documentos procesados</p>
                 {(store.processedDocs || []).length > 0 && (
                   <button
                     onClick={() => {
@@ -1085,18 +1006,18 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
                         saveStore(JSON.parse(JSON.stringify(initialStore)));
                       }
                     }}
-                    className="text-[8px] font-black text-red-500 uppercase tracking-widest hover:bg-red-50 px-2 py-1 rounded-lg transition-colors"
+                    className="text-[9px] font-bold text-red-400 uppercase px-2 py-1 rounded-lg hover:bg-red-50 transition-colors"
                   >
-                    LIMPIAR TODO
+                    Reiniciar todo
                   </button>
                 )}
               </div>
               <div className="flex flex-wrap gap-2">
                 {(store.processedDocs || []).length > 0 ? (
                   store.processedDocs.map((doc, idx) => (
-                    <div key={idx} className="flex items-center gap-2 bg-white px-3 py-2 rounded-xl border border-slate-100 group">
-                      <span className="material-symbols-outlined text-[10px] text-blue-400">description</span>
-                      <span className="text-[9px] font-bold text-slate-600 truncate max-w-[140px]">{doc}</span>
+                    <div key={idx} className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-xl text-[10px] font-bold text-slate-600 group">
+                      <span className="material-symbols-outlined text-[12px] text-blue-400">description</span>
+                      <span className="truncate max-w-[130px]">{doc}</span>
                       <button
                         onClick={() => {
                           if (window.confirm(`¿Eliminar ${doc}?`)) {
@@ -1104,46 +1025,57 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
                             saveStore({ ...store, processedDocs: newDocs });
                           }
                         }}
-                        className="size-4 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center hover:text-red-500 hover:bg-red-50 transition-all"
+                        className="text-slate-300 hover:text-red-500 transition-colors"
                       >
-                        <span className="material-symbols-outlined text-[10px]">close</span>
+                        <span className="material-symbols-outlined text-[12px]">close</span>
                       </button>
                     </div>
                   ))
-                ) : <p className="text-[9px] text-slate-400 italic">No hay documentos procesados.</p>}
+                ) : <p className="text-[10px] text-slate-300 italic">Sin documentos procesados</p>}
               </div>
             </div>
+
+            {/* Quick Upload Shortcut */}
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="p-4 border border-dashed border-slate-200 rounded-2xl flex items-center justify-center gap-2 cursor-pointer hover:bg-slate-50 transition-all"
+            >
+              <span className="material-symbols-outlined text-lg text-slate-300">cloud_upload</span>
+              <p className="text-[10px] font-bold text-slate-400">Subir PDFs (máx. 3)</p>
+            </div>
+
+            <input ref={fileInputRef} type="file" accept=".pdf" multiple onChange={handleFileSelect} className="hidden" />
           </div>
         </section>
 
-        {/* SOS Card */}
-        <section className="bg-red-50 p-8 rounded-[40px] border border-red-100 flex items-center justify-between group active:scale-[0.98] transition-all">
-          <div className="flex items-center gap-5">
-            <div className="size-14 bg-white rounded-[24px] flex items-center justify-center text-red-500 shadow-sm border border-red-100 group-hover:rotate-12 transition-transform duration-500">
-              <span className="material-symbols-outlined font-fill text-2xl">health_and_safety</span>
+        {/* Emergencia */}
+        <section className="bg-red-50 p-6 rounded-3xl border border-red-100 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="size-12 bg-white rounded-2xl flex items-center justify-center text-red-500 shadow-sm border border-red-100">
+              <span className="material-symbols-outlined font-fill text-xl">emergency</span>
             </div>
             <div>
-              <p className="text-[9px] text-red-400 font-black uppercase tracking-widest mb-1">Emergencia 24/7</p>
+              <p className="text-[9px] text-red-400 font-bold uppercase tracking-wider mb-0.5">Contacto de Emergencia</p>
               {isEditing ? (
                 <input
                   value={editData.emergencia || ''}
                   onChange={e => setEditData({ ...editData, emergencia: e.target.value })}
                   title="Contacto de Emergencia"
                   placeholder="Número de teléfono"
-                  className="text-lg font-black text-slate-900 bg-transparent border-none p-0 focus:ring-0 w-32"
+                  className="text-base font-bold text-slate-900 bg-transparent border-none p-0 focus:ring-0 w-32"
                 />
-              ) : <p className="text-lg font-black text-slate-900 tracking-tight">{profile.emergencia || "Configurar Contacto"}</p>}
+              ) : <p className="text-base font-bold text-slate-900">{profile.emergencia || "Configurar"}</p>}
             </div>
           </div>
           {(profile.emergencia && !isEditing) && (
-            <a href={`tel:${profile.emergencia}`} className="size-14 bg-red-600 rounded-full flex items-center justify-center text-white shadow-xl shadow-red-600/30 active:scale-90 transition-all">
-              <span className="material-symbols-outlined font-fill text-2xl">call</span>
+            <a href={`tel:${profile.emergencia}`} className="size-12 bg-red-600 rounded-full flex items-center justify-center text-white shadow-lg active:scale-90 transition-all">
+              <span className="material-symbols-outlined font-fill text-xl">call</span>
             </a>
           )}
         </section>
 
-        <div className="pt-6 text-center">
-          <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.4em]">MN-NutriApp Pro v34.2</p>
+        <div className="pt-4 text-center">
+          <p className="text-[10px] font-bold text-slate-200 uppercase tracking-widest">MN-NutriApp v35</p>
         </div>
       </main>
     </div >
