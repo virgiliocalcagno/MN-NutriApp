@@ -8,8 +8,8 @@ const ProgressView: React.FC = () => {
   const [analysisResult, setAnalysisResult] = useState<any>(null);
 
   const { profile, medals } = store;
-  const currentWeight = parseFloat(profile.peso || '0');
-  const targetWeight = parseFloat(profile.pesoIdeal || '0');
+  const currentWeight = parseFloat(profile.analisis_inbody_actual?.peso_actual_kg || '0');
+  const targetWeight = parseFloat(profile.metas_y_objetivos?.peso_ideal_meta || '0');
 
   // Mock history for chart (since store history format is unknown/complex)
   const data = [
@@ -64,14 +64,14 @@ const ProgressView: React.FC = () => {
         {analysisResult && (
           <div className="animate-in slide-in-from-top-4 duration-500 space-y-4">
             <div className={`p-5 rounded-2xl border-2 shadow-sm ${analysisResult.semaforo === 'VERDE' ? 'bg-emerald-50 border-emerald-100' :
-                analysisResult.semaforo === 'AMARILLO' ? 'bg-amber-50 border-amber-100' :
-                  'bg-rose-50 border-rose-100'
+              analysisResult.semaforo === 'AMARILLO' ? 'bg-amber-50 border-amber-100' :
+                'bg-rose-50 border-rose-100'
               }`}>
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className={`size-10 rounded-full flex items-center justify-center ${analysisResult.semaforo === 'VERDE' ? 'bg-emerald-500' :
-                      analysisResult.semaforo === 'AMARILLO' ? 'bg-amber-500' :
-                        'bg-rose-500'
+                    analysisResult.semaforo === 'AMARILLO' ? 'bg-amber-500' :
+                      'bg-rose-500'
                     } text-white shadow-lg`}>
                     <span className="material-symbols-outlined font-bold">
                       {analysisResult.semaforo === 'VERDE' ? 'check_circle' :
@@ -174,7 +174,7 @@ const ProgressView: React.FC = () => {
                 <span className="material-symbols-outlined text-primary text-sm">straighten</span>
                 <p className="text-slate-400 text-[10px] font-bold uppercase">Cintura</p>
               </div>
-              <p className="text-slate-900 text-xl font-bold">{profile.cintura || '--'} cm</p>
+              <p className="text-slate-900 text-xl font-bold">{profile.historico_antropometrico?.slice(-1)?.[0]?.cintura_cm || '--'} cm</p>
             </div>
             <div className="rounded-xl bg-blue-50/50 border border-blue-100 p-4">
               <div className="flex items-center gap-2 mb-1">

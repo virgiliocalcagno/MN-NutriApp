@@ -1,40 +1,84 @@
-export interface BiometricEntry {
-    date: string;
-    weight: string;
-    fat?: string;
-    waist?: string;
-    cuello?: string;
-    brazos?: string;
+// ─── S1: Identificación (Datos Generales) ───
+export interface PerfilBiometrico {
+    nombre_completo?: string;
+    doctor?: string;
+    edad?: string;
+    estatura_cm?: string;
+    genero?: string;
 }
 
+// ─── S2: Historial Clínico y Comorbilidades ───
+export interface DiagnosticoClinico {
+    diagnostico_nutricional?: string;
+    comorbilidades?: string[];
+    alergias?: string[];
+    sangre?: string;
+    medicamentos_actuales?: string[];
+    suplementacion?: string[];
+    observaciones_medicas?: string[];
+}
+
+// ─── S3: Objetivos y Metas del Plan ───
+export interface MetasYObjetivos {
+    peso_ideal_meta?: string;
+    control_peso_inmediato?: string;
+    control_grasa_kg?: string;
+    control_musculo_kg?: string;
+    pbf_objetivo_porcentaje?: string;
+    vet_kcal_diarias?: number;
+    agua_objetivo_ml?: number;
+    objetivos_generales?: string[];
+}
+
+// ─── S4: Composición Corporal (InBody) ───
+export interface AnalisisInBody {
+    fecha_test?: string;
+    peso_actual_kg?: string;
+    smm_masa_musculo_esqueletica_kg?: string;
+    pbf_porcentaje_grasa_corporal?: string;
+    grasa_visceral_nivel?: string;
+    inbody_score?: string;
+    tasa_metabolica_basal_kcal?: string;
+}
+
+// ─── S5: Prescripción de Ejercicio ───
+export interface PrescripcionEjercicio {
+    fcm_latidos_min?: string;
+    fc_promedio_entrenamiento?: string;
+    fuerza_dias_semana?: string;
+    fuerza_minutos_sesion?: string;
+    aerobico_dias_semana?: string;
+    aerobico_minutos_sesion?: string;
+}
+
+// ─── S6: Histórico Antropométrico (Evolución) ───
+export interface HistoricoAntropometrico {
+    fecha: string;
+    peso_lbs: string;
+    cintura_cm?: string;
+    cuello_cm?: string;
+    brazo_der_cm?: string;
+    brazo_izq_cm?: string;
+}
+
+// ─── S7: Control de Expediente ───
+export interface ExpedienteControl {
+    usuario_id?: string;
+    ultima_actualizacion?: string;
+    campos_completados?: number;
+    campos_pendientes?: number;
+}
+
+// ─── Profile Compuesto (7 Secciones) ───
 export interface Profile {
-    paciente: string;
-    doctor: string;
-    edad: string;
-    peso: string;
-    pesoObjetivo?: string;
-    sexo: string;
-    pesoIdeal: string;
-    metaAgua: number;
-    estatura: string;
-    cintura: string;
-    cuello?: string;
-    brazos?: string;
-    grasa?: string;
-    emergencia: string;
-    observaciones: string;
-    sangre: string;
-    tipoSangre?: string;
-    alergias: string;
-    objetivos: string[];
-    comorbilidades: string[];
-    suplementos?: string[];
-    proximaCita?: string;
-    evolution: BiometricEntry[];
-    metas?: {
-        calorias: number;
-        agua: number;
-    };
+    perfil_biometrico?: PerfilBiometrico;
+    diagnostico_clinico?: DiagnosticoClinico;
+    metas_y_objetivos?: MetasYObjetivos;
+    analisis_inbody_actual?: AnalisisInBody;
+    prescripcion_ejercicio?: PrescripcionEjercicio;
+    historico_antropometrico?: HistoricoAntropometrico[];
+    expediente_control?: ExpedienteControl;
+    emergencia?: string;
 }
 
 export interface MealItem {
@@ -125,12 +169,14 @@ export const initialStore: Store = {
     selectedDay: '',
     schedule: null,
     profile: {
-        paciente: '', doctor: '', edad: '', peso: '', sexo: 'Hombre', pesoIdeal: '',
-        pesoObjetivo: '', metaAgua: 2800, estatura: '', cintura: '', cuello: '', brazos: '', grasa: '',
-        emergencia: '', observaciones: '',
-        sangre: '', tipoSangre: '', alergias: '', objetivos: [], comorbilidades: [],
-        suplementos: [], proximaCita: '',
-        evolution: []
+        perfil_biometrico: {},
+        diagnostico_clinico: { comorbilidades: [], alergias: [], medicamentos_actuales: [], suplementacion: [], observaciones_medicas: [] },
+        metas_y_objetivos: { objetivos_generales: [] },
+        analisis_inbody_actual: {},
+        prescripcion_ejercicio: {},
+        historico_antropometrico: [],
+        expediente_control: {},
+        emergencia: ''
     },
     historial: [],
     medals: { silver: 0, gold: 0 },

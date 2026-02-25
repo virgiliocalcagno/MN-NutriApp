@@ -1,13 +1,13 @@
-
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Profile } from "../types/store";
 
 export interface AIResponse {
+  tipo_documento?: 'PLAN_NUTRICIONAL' | 'INBODY' | 'FICHA_MEDICA' | string;
   perfilAuto: Partial<Profile>;
   semana: Record<string, Record<string, string>>;
   ejercicios: Record<string, any[]>;
   compras: [string, string, number, string, string][];
-  metas: {
+  metas?: {
     calorias: number;
     agua: number;
   };
@@ -103,23 +103,77 @@ export const processPdfWithGemini = async (
 
       const currentProfileContext = perfil ? `
 LO QUE YA SABEMOS DEL PACIENTE:
-- Metas: ${perfil.objetivos?.join(', ') || 'Ninguna'}
-- Alergias: ${perfil.alergias || 'Ninguna'}
-- Problemas de salud: ${perfil.comorbilidades?.join(', ') || 'Ninguna'}
-- Pastillas/Suplementos: ${perfil.suplementos?.join(', ') || 'Ninguno'}
-- Notas: ${perfil.observaciones || 'Ninguna'}
+- Nombre: ${perfil.perfil_biometrico?.nombre_completo || 'Desconocido'}
+- Metas: ${perfil.metas_y_objetivos?.objetivos_generales?.join(', ') || 'Ninguna'}
+- Alergias: ${perfil.diagnostico_clinico?.alergias?.join(', ') || 'Ninguna'}
+- Problemas: ${perfil.diagnostico_clinico?.comorbilidades?.join(', ') || 'Ninguna'}
+- Medicinas: ${perfil.diagnostico_clinico?.medicamentos_actuales?.join(', ') || 'Ninguna'}
+- InBody Anterior (Peso): ${perfil.analisis_inbody_actual?.peso_actual_kg || 'N/A'} kg
 ` : '';
 
       const promptText = `Eres un asesor de nutrición muy práctico y amable para la app MN-NutriApp. Tu trabajo es leer el PDF y organizar la información para el paciente de forma clara.
 
+LO QUE YA SABEMOS DEL PACIENTE:
+- Metas: ${perfil.metas_y_objetivos?.objetivos_generales?.join(', ') || 'Ninguna'}
+- Alergias: ${perfil.diagnostico_clinico?.alergias?.join(', ') || 'Ninguna'}
+- Problemas de salud: ${perfil.diagnostico_clinico?.comorbilidades?.join(', ') || 'Ninguna'}
+- Pastillas/Suplementos: ${Array.isArray(perfil.diagnostico_clinico?.suplementacion) ? perfil.diagnostico_clinico.suplementacion.join(', ') : perfil.diagnostico_clinico?.suplementacion || 'Ninguno'}
+- Notas: ${perfil.diagnostico_clinico?.observaciones_medicas?.join(', ') || 'Ninguna'}
+
+RESPONDE ÚNICAMENTE CON UN JSON PURO CON ESTE FORMATO:
+{
+  "perfilAuto": {
+    "perfil_biometrico": {
+      "paciente": "Nombre Completo",
+      "doctor": "Nombre del Doctor",
+      "edad": "...",
+      "estatura_cm": "...",
+      "genero": "..."
+    },
+    "diagnostico_clinico": {
+      "diagnostico_nutricional": "...",
+      "comorbilidades": [],
+      "observaciones_medicas": [],
+      "medicamentos_actuales": [],
+      "suplementacion": [],
+      "alergias": [],
+      "sangre": "..."
+    },
+    "metas_y_objetivos": {
+      "peso_ideal_meta": "...",
+      "control_peso_inmediato": "...",
+      "control_grasa_kg": "...",
+      "control_musculo_kg": "...",
+      "pbf_objetivo_porcentaje": "...",
+      "vet_kcal_diarias": 0,
+      "agua_objetivo_ml": 0,
+      "objetivos_generales": []
+    },
+    "analisis_inbody_actual": {
+      "fecha_test": "...",
+      "peso_actual_kg": "...",
+      "smm_masa_musculo_esqueletica_kg": "...",
+      "pbf_porcentaje_grasa_corporal": "...",
+      "grasa_visceral_nivel": "...",
+      "inbody_score": "...",
+      "tasa_metabolica_basal_kcal": "..."
+    },
+    "prescripcion_ejercicio": {
+      "fcm_latidos_min": "...",
+      "fc_promedio_entrenamiento": "...",
+      "fuerza_dias_semana": "...",
+      "fuerza_minutos_sesion": "...",
+      "aerobico_dias_semana": "...",
+      "aerobico_minutos_sesion": "..."
+    }
+  },
   "semana": { "LUNES": {"DESAYUNO": "...", "MERIENDA_AM": "...", "ALMUERZO": "...", "MERIENDA_PM": "...", "CENA": "..." } },
-  "ejercicios": { "LUNES": [ {"n": "Nombre Ejercicio", "i": "3 series de 12", "link": ""} ] },
-  "compras": [ ["Producto", "Cantidad", 1, "Categoria", "Pasillo"] ],
-  "metas": { "calorias": 2000, "agua": 2800 },
+  "ejercicios": { "LUNES": [ {"n": "Nombre", "i": "3x12"} ] },
+  "compras": [ ["Producto", "Cantidad Literal (ej: 12 unidades, 1 Cartón, 500g)", 1, "Categoria", "Pasillo"] ],
   "horarios": { "DESAYUNO": "08:30 AM", "ALMUERZO": "01:30 PM", "CENA": "07:30 PM" }
 }
 
-IMPORTANTE: Incluye siempre las 5 comidas (DESAYUNO, MERIENDA_AM, ALMUERZO, MERIENDA_PM, CENA) para cada día. Si no hay merienda, repite un snack saludable.`;
+IMPORTANTE: Extrae datos técnicos de InBody (SMM, PBF, Grasa Visceral) si están disponibles.`;
 
       const parts: any[] = [{ text: promptText }];
       if (pdfPlanBase64) parts.push({ inlineData: { mimeType: "application/pdf", data: pdfPlanBase64.replace(/^data:application\/pdf;base64,/, "") } });
@@ -159,7 +213,7 @@ export const analyzeImageWithGemini = async (base64Image: string, perfil?: any, 
       const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
       const prompt = `Dime qué hay en esta foto de comida de forma muy clara y sencilla.
-Para el paciente: ${perfil?.paciente || 'Usuario'}.
+Para el paciente: ${perfil?.perfil_biometrico?.nombre_completo || 'Usuario'}.
 
 Tu tarea:
 1. ¿Qué plato es? Sé descriptivo.
@@ -204,35 +258,35 @@ export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: 
       console.log("AI Recipe: Usando motor 2.5 Flash para Alta Cocina");
       const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-      const prompt = `Actúa como un Chef Michelin y Nutricionista Clínico experto.
-Transforma esta descripción de plato en una receta profesional y ACCURATE.
+      const prompt = `Eres un asistente de cocina que prepara las recetas EXACTAS del plan nutricional del paciente.
 
 PLATO DEL MENÚ: "${mealDesc}"
-PACIENTE: ${perfil?.paciente || 'Usuario'}
-OBJETIVO: ${perfil?.objetivo || 'Salud General'}
+PACIENTE: ${perfil?.perfil_biometrico?.nombre_completo || 'Usuario'}
 
-REGLAS DE ORO:
-1. PRECISIÓN: Sigue estrictamente los ingredientes sugeridos en el nombre del plato. No inventes ingredientes fuera de lugar.
-2. ALTA COCINA: Describe pasos técnicos pero entendibles (ej. "Sellar la proteína", "Emulsionar la salsa").
-3. BIO-HACK: El consejo debe ser técnico pero útil para la salud (limitar picos de glucosa, absorción de nutrientes).
-4. IMAGEN: Genera un query en inglés para una foto de comida de alta gama.
+═══ REGLAS ESTRICTAS ═══
 
-RESPONDE ÚNICAMENTE CON UN JSON PURO:
+1. FIDELIDAD TOTAL: Usa ÚNICAMENTE los ingredientes que aparecen en la descripción del plato. NO inventes, NO agregues, NO sustituyas ingredientes.
+2. NOMBRE REAL: El título debe ser el nombre original del plato tal como está escrito en el plan. NO lo renombres con nombres de alta cocina.
+3. CANTIDADES EXACTAS: Respeta las cantidades indicadas (120g, 2 unidades, 1 cdita, etc.). Si dice "vegetales libres", puedes sugerir opciones pero aclarando que son a elección.
+4. PREPARACIÓN PRÁCTICA: Pasos simples y reales de cocina casera. Nada de "sous-vide", "coulis", "emulsiones", ni técnicas de restaurante.
+5. Si dice "vegetales libres" o similar, listados como "Vegetales a elección (lechuga, tomate, pepino, etc.)" — NO los pongas como ingredientes fijos con cantidades.
+
+RESPONDE CON JSON PURO:
 {
-  "titulo": "Nombre sofisticado del plato",
-  "foto_prompt": "English query for professional food photography, minimalist, 8k",
-  "tiempo": "25 min",
-  "dificultad": "Media",
-  "kcal": 650,
-  "nutrientes": { "proteina": "45g", "grasas": "18g", "carbos": "32g" },
-  "ingredientes_lista": ["Ingrediente principal (ej. 200g Salmón)", "Acompañamiento 1", "Salsa/Aderezo"],
+  "titulo": "Nombre original del plato tal cual",
+  "foto_prompt": "simple home cooked [main ingredient] plate, clean background, natural light",
+  "tiempo": "20 min",
+  "dificultad": "Baja",
+  "kcal": 350,
+  "nutrientes": { "proteina": "30g", "grasas": "8g", "carbos": "40g" },
+  "ingredientes_lista": ["Ingrediente exacto con cantidad del plan"],
   "pasos_preparacion": [
-    { "titulo": "Técnica de Cocción", "descripcion": "Sellar a fuego alto para caramelizar..." }
+    { "titulo": "Paso simple", "descripcion": "Instrucción práctica de cocina casera..." }
   ],
   "bio_hack": {
-    "titulo": "OPTIMIZACIÓN METABÓLICA",
-    "explicacion": "Un consejo experto sobre este plato.",
-    "pasos": ["1. Fibra", "2. Proteína", "3. Carbohidrato"]
+    "titulo": "CONSEJO NUTRICIONAL",
+    "explicacion": "Un consejo práctico sobre cómo aprovechar este plato.",
+    "pasos": ["1. Come primero los vegetales", "2. Luego la proteína", "3. Al final los carbohidratos"]
   }
 }
 `;
@@ -276,54 +330,139 @@ RESPONDE ÚNICAMENTE CON UN JSON PURO:
               carbos: parsed.nutrientes?.carbos || ""
             }
           };
+        } catch (innerParseError) {
+          console.error("JSON Parse Exception:", innerParseError, text);
         }
-    } catch (e) {
-        console.error("Gemini Error Crítico:", e);
       }
+    } catch (e) {
+      console.error("Gemini Error Crítico:", e);
     }
+  }
 
   return {
-      titulo: mealDesc,
-      kcal: 0,
-      ingredientes: ["Ingredientes del plato"],
-      preparacion: [{ titulo: "Paso 1", descripcion: "Preparación base del plato." }],
-      bioHack: {
-        titulo: "CONSEJO PRÁCTICO",
-        pasos: ["Come despacio", "Disfruta tu comida"],
-        explicacion: "Mantén una alimentación equilibrada para mejores resultados."
-      },
-      nutrientes: { proteina: "", grasas: "", carbos: "" },
-      imageUrl: `https://placehold.co/600x400?text=${encodeURIComponent(mealDesc)}`
-    };
+    titulo: mealDesc,
+    kcal: 0,
+    ingredientes: ["Ingredientes del plato"],
+    preparacion: [{ titulo: "Paso 1", descripcion: "Preparación base del plato." }],
+    bioHack: {
+      titulo: "CONSEJO PRÁCTICO",
+      pasos: ["Come despacio", "Disfruta tu comida"],
+      explicacion: "Mantén una alimentación equilibrada para mejores resultados."
+    },
+    nutrientes: { proteina: "", grasas: "", carbos: "" },
+    imageUrl: `https://placehold.co/600x400?text=${encodeURIComponent(mealDesc)}`
   };
+};
 
-  export async function getFitnessAdvice(profile: Profile, apiKey: string): Promise<string> {
-    try {
-      const genAI = new GoogleGenerativeAI(apiKey);
-      console.log("AI Fitness: Usando motor estable 2.5");
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+export async function getFitnessAdvice(profile: Profile, apiKey: string): Promise<string> {
+  try {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    console.log("AI Fitness: Usando motor estable 2.5");
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-      const prompt = `Dime 3 consejos cortos y fáciles para que esta persona entrene mejor.
+    const prompt = `Dime 3 consejos cortos y fáciles para que esta persona entrene mejor.
 Usa un lenguaje motivador y súper sencillo.
 
 PERFIL:
-- Metas: ${profile.objetivos.join(', ')}
-- Salud: ${profile.comorbilidades.join(', ')}
-- Edad: ${profile.edad}, Peso: ${profile.peso}
-- Peso meta: ${profile.pesoObjetivo || 'No definido'}
+- Metas: ${profile.metas_y_objetivos?.objetivos_generales?.join(', ') || 'General'}
+- Salud: ${profile.diagnostico_clinico?.comorbilidades?.join(', ') || 'Normal'}
+- Edad: ${profile.perfil_biometrico?.edad}, Genero: ${profile.perfil_biometrico?.genero}
+- Peso InBody: ${profile.analisis_inbody_actual?.peso_actual_kg || 'N/A'} kg
+- Meta Peso: ${profile.metas_y_objetivos?.peso_ideal_meta || 'No definida'}
 
 REGLAS:
-1. Si tiene presión alta: Dile que no aguante la respiración y que vaya suave.
+1. Si tiene comorbilidades (presión alta, etc): Dile que vaya suave y respire.
 2. Si quiere músculo: Dile que descanse bien entre series.
 3. Si quiere bajar de peso: Dile que mueva peso y haga algo de cardio.
 4. No uses palabras raras.
 
 FORMATO: Pon solo 3 puntos cortos con un dibujo (emoji), nada más.`;
 
-      const result = await model.generateContent(prompt);
-      return result.response.text();
-    } catch (error) {
-      console.error("Fitness Advice AI Error:", error);
-      return "• Prioriza el descanso activo.\n• Mantén una hidratación constante.\n• Escucha a tu cuerpo durante el esfuerzo.";
-    }
+    const result = await model.generateContent(prompt);
+    return result.response.text();
+  } catch (error) {
+    console.error("Fitness Advice AI Error:", error);
+    return "• Prioriza el descanso activo.\n• Mantén una hidratación constante.\n• Escucha a tu cuerpo durante el esfuerzo.";
   }
+}
+
+export async function generateFullRoutine(profile: Profile, apiKey: string): Promise<Record<string, any[]>> {
+  try {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+    const pe = profile.prescripcion_ejercicio;
+    const dc = profile.diagnostico_clinico;
+    const mo = profile.metas_y_objetivos;
+    const ib = profile.analisis_inbody_actual;
+    const pb = profile.perfil_biometrico;
+
+    const prompt = `Eres un Entrenador Personal Certificado y Terapeuta Físico.
+Genera una RUTINA SEMANAL COMPLETA (LUNES a DOMINGO) personalizada para este paciente.
+
+═══ PERFIL DEL PACIENTE ═══
+- Nombre: ${pb?.nombre_completo || 'Paciente'}
+- Edad: ${pb?.edad || 'N/A'}
+- Género: ${pb?.genero || 'N/A'}
+- Peso actual: ${ib?.peso_actual_kg || 'N/A'} kg
+- % Grasa corporal: ${ib?.pbf_porcentaje_grasa_corporal || 'N/A'}%
+- Masa muscular esquelética: ${ib?.smm_masa_musculo_esqueletica_kg || 'N/A'} kg
+- Tasa metabólica basal: ${ib?.tasa_metabolica_basal_kcal || 'N/A'} kcal
+
+═══ PRESCRIPCIÓN MÉDICA DE EJERCICIO ═══
+- FCM: ${pe?.fcm_latidos_min || 'N/A'} lat/min
+- FC promedio entrenamiento: ${pe?.fc_promedio_entrenamiento || 'N/A'} lat/min
+- Fuerza: ${pe?.fuerza_dias_semana || '3'} días/semana, ${pe?.fuerza_minutos_sesion || '45'} min/sesión
+- Aeróbico: ${pe?.aerobico_dias_semana || '2'} días/semana, ${pe?.aerobico_minutos_sesion || '30'} min/sesión
+
+═══ CONDICIÓN CLÍNICA ═══
+- Comorbilidades: ${dc?.comorbilidades?.join(', ') || 'Ninguna'}
+- Medicamentos: ${dc?.medicamentos_actuales?.join(', ') || 'Ninguno'}
+- Alergias: ${dc?.alergias?.join(', ') || 'Ninguna'}
+- Observaciones: ${dc?.observaciones_medicas?.join(', ') || 'Ninguna'}
+
+═══ OBJETIVOS ═══
+- Peso ideal meta: ${mo?.peso_ideal_meta || 'N/A'} kg
+- Objetivo grasa: ${mo?.control_grasa_kg || 'N/A'} kg
+- Objetivo músculo: ${mo?.control_musculo_kg || 'N/A'} kg
+- Objetivos generales: ${mo?.objetivos_generales?.join(', ') || 'Salud general'}
+
+═══ REGLAS ═══
+1. SEGURIDAD PRIMERO: Si hay hipertensión, evitar maniobra de Valsalva y cargas extremas. Si hay obesidad, evitar alto impacto en rodillas.
+2. DISTRIBUCIÓN: Respetar los días de fuerza y aeróbico prescritos. Los días restantes son DESCANSO ACTIVO (stretching, caminata suave).
+3. VARIEDAD: Alternar grupos musculares. No repetir la misma rutina dos días seguidos.
+4. PROGRESIÓN: Usar series y repeticiones apropiadas para el nivel del paciente.
+5. Cada día de entrenamiento debe tener 5-7 ejercicios.
+6. Los días de descanso deben tener 3-4 ejercicios suaves (movilidad, stretching, respiración).
+
+RESPONDE ÚNICAMENTE CON JSON PURO:
+{
+  "LUNES": [{"n": "Nombre Ejercicio", "i": "3x12", "link": "https://www.youtube.com/results?search_query=nombre+ejercicio+tutorial"}],
+  "MARTES": [...],
+  "MIERCOLES": [...],
+  "JUEVES": [...],
+  "VIERNES": [...],
+  "SABADO": [...],
+  "DOMINGO": [...]
+}`;
+
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      // Validate structure
+      const days = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'];
+      const routine: Record<string, any[]> = {};
+      for (const day of days) {
+        const key = Object.keys(parsed).find(k => k.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") === day) || day;
+        routine[day] = Array.isArray(parsed[key]) ? parsed[key] : [];
+      }
+      return routine;
+    }
+    return {};
+  } catch (error) {
+    console.error("Generate Routine Error:", error);
+    return {};
+  }
+}

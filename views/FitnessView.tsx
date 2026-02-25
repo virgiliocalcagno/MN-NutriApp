@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useStore } from '@/src/context/StoreContext';
-import { analyzeImageWithGemini, getFitnessAdvice } from '@/src/utils/ai';
+import { firebaseConfig } from '@/src/firebase';
+import { analyzeImageWithGemini, getFitnessAdvice, generateFullRoutine } from '@/src/utils/ai';
 
 const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
   const { store, saveStore } = useStore();
@@ -10,9 +11,10 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
   const longPressTimer = useRef<number | null>(null);
   const [aiAdvice, setAiAdvice] = useState<string | null>(null);
   const [isGeneratingAdvice, setIsGeneratingAdvice] = useState(false);
+  const [isGeneratingRoutine, setIsGeneratingRoutine] = useState(false);
 
   // --- Fit Logic (from CP002) ---
-  const meta = store.profile?.metaAgua || 2800;
+  const meta = store.profile?.metas_y_objetivos?.agua_objetivo_ml || 2800;
   const currentWater = store.water || 0;
   const hydration = currentWater / 1000;
   const metaLiters = meta / 1000;
@@ -114,12 +116,28 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
     if (!store.profile) return;
     setIsGeneratingAdvice(true);
     try {
-      const advice = await getFitnessAdvice(store.profile, store.firebaseConfig?.geminiApiKey || '');
+      const advice = await getFitnessAdvice(store.profile, (firebaseConfig as any).geminiApiKey || '');
       setAiAdvice(advice);
     } catch (error) {
       console.error(error);
     } finally {
       setIsGeneratingAdvice(false);
+    }
+  };
+
+  const handleGenerateRoutine = async () => {
+    if (!store.profile) return;
+    setIsGeneratingRoutine(true);
+    try {
+      const apiKey = (firebaseConfig as any).geminiApiKey || '';
+      const routine = await generateFullRoutine(store.profile, apiKey);
+      if (routine && Object.keys(routine).length > 0) {
+        saveStore({ ...store, exercises: routine, doneEx: {} });
+      }
+    } catch (error) {
+      console.error('Error generating routine:', error);
+    } finally {
+      setIsGeneratingRoutine(false);
     }
   };
 
@@ -352,7 +370,19 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
           {/* Daily Plan Headers */}
           <div className="flex items-center justify-between px-1">
             <h3 className="text-lg font-bold text-slate-900">Entrenamiento</h3>
-            <span className="text-xs font-bold text-primary bg-primary/5 px-3 py-1 rounded-full uppercase">{displayDay}</span>
+            <div className="flex items-center gap-2">
+              {exercisesList.length > 0 && (
+                <button
+                  onClick={handleGenerateRoutine}
+                  disabled={isGeneratingRoutine}
+                  className="size-8 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center hover:bg-primary/10 hover:text-primary transition-all active:scale-95 disabled:opacity-50"
+                  title="Regenerar rutina"
+                >
+                  <span className={`material-symbols-outlined text-sm ${isGeneratingRoutine ? 'animate-spin' : ''}`}>sync</span>
+                </button>
+              )}
+              <span className="text-xs font-bold text-primary bg-primary/5 px-3 py-1 rounded-full uppercase">{displayDay}</span>
+            </div>
           </div>
 
           {/* AI Recommendations Section */}
@@ -403,7 +433,7 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
                       <p className="text-xs text-blue-200 font-medium leading-relaxed">{line}</p>
                     </div>
                   ))}
-                  {store.profile?.comorbilidades.includes('Hipertensión') && (
+                  {store.profile?.diagnostico_clinico?.comorbilidades?.includes('Hipertensión') && (
                     <div className="flex items-center gap-2 bg-red-500/10 p-3 rounded-2xl border border-red-500/20 mt-2">
                       <span className="material-symbols-outlined text-red-500 text-sm">warning</span>
                       <p className="text-[9px] text-red-400 font-black uppercase tracking-widest">Alerta HTA: Evitar Valsalva</p>
@@ -453,9 +483,26 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
                 </div>
               )
             }) : (
-              <div className="p-10 text-center bg-white rounded-3xl border border-dashed border-slate-200">
-                <span className="material-symbols-outlined text-4xl text-slate-200 mb-2">hotel</span>
-                <p className="text-sm font-bold text-slate-400 italic">Día de recuperación.</p>
+              <div className="p-10 text-center bg-white rounded-3xl border border-dashed border-slate-200 space-y-4">
+                {isGeneratingRoutine ? (
+                  <>
+                    <span className="material-symbols-outlined text-4xl text-primary animate-spin">progress_activity</span>
+                    <p className="text-sm font-bold text-slate-600">Generando rutina personalizada...</p>
+                    <p className="text-xs text-slate-400">Analizando perfil clínico, objetivos y prescripción</p>
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-4xl text-slate-200 mb-2">fitness_center</span>
+                    <p className="text-sm font-bold text-slate-500">Sin rutina asignada</p>
+                    <p className="text-xs text-slate-400 max-w-xs mx-auto">Genera una rutina semanal personalizada basada en tu ficha médica, objetivos y prescripción de ejercicio.</p>
+                    <button
+                      onClick={handleGenerateRoutine}
+                      className="mt-2 bg-primary text-white px-8 py-4 rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:shadow-2xl hover:scale-[1.02] transition-all active:scale-95"
+                    >
+                      Generar Mi Rutina Semanal
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>
