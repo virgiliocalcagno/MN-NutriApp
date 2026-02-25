@@ -1,0 +1,2 @@
+﻿views/FitnessView.tsx(15,31): error TS2339: Property 'metaAgua' does not exist on type 'Profile'.
+views/FitnessView.tsx(406,35): error TS2339: Property 'comorbilidades' does not exist on type 'Profile'.
