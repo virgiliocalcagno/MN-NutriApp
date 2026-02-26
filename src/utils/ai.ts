@@ -440,7 +440,7 @@ FORMATO: Pon solo 3 puntos cortos con un dibujo (emoji), nada más.`;
   }
 }
 
-export async function generateFullRoutine(profile: Profile, apiKey: string): Promise<Record<string, any[]>> {
+export async function generateFullRoutine(profile: Profile, apiKey: string): Promise<{ routine: any[], consejo: string }> {
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
@@ -451,72 +451,49 @@ export async function generateFullRoutine(profile: Profile, apiKey: string): Pro
     const ib = profile.analisis_inbody_actual;
     const pb = profile.perfil_biometrico;
 
-    const prompt = `Eres un Entrenador Personal Certificado y Terapeuta Físico.
-Genera una RUTINA SEMANAL COMPLETA (LUNES a DOMINGO) personalizada para este paciente.
+    const prompt = `ROL: Médico Deportólogo y Fisiólogo Clínico.
 
-═══ PERFIL DEL PACIENTE ═══
-- Nombre: ${pb?.nombre_completo || 'Paciente'}
-- Edad: ${pb?.edad || 'N/A'}
-- Género: ${pb?.genero || 'N/A'}
-- Peso actual: ${ib?.peso_actual_kg || 'N/A'} kg
-- % Grasa corporal: ${ib?.pbf_porcentaje_grasa_corporal || 'N/A'}%
-- Masa muscular esquelética: ${ib?.smm_masa_musculo_esqueletica_kg || 'N/A'} kg
-- Tasa metabólica basal: ${ib?.tasa_metabolica_basal_kcal || 'N/A'} kcal
+MISIÓN EXCLUSIVA: Generar la rutina semanal en la pantalla Zona Fit utilizando los datos de ProfileView.
 
-═══ PRESCRIPCIÓN MÉDICA DE EJERCICIO ═══
-- FCM: ${pe?.fcm_latidos_min || 'N/A'} lat/min
-- FC promedio entrenamiento: ${pe?.fc_promedio_entrenamiento || 'N/A'} lat/min
-- Fuerza: ${pe?.fuerza_dias_semana || '3'} días/semana, ${pe?.fuerza_minutos_sesion || '45'} min/sesión
-- Aeróbico: ${pe?.aerobico_dias_semana || '2'} días/semana, ${pe?.aerobico_minutos_sesion || '30'} min/sesión
-
-═══ CONDICIÓN CLÍNICA ═══
+═══ PERFIL DEL PACIENTE PARA CONSULTA ═══
+- Edad: ${pb?.edad || 'N/A'}, Género: ${pb?.genero || 'N/A'}
+- IMC Aprox: ${ib?.peso_actual_kg ? (Number(ib.peso_actual_kg) / ((Number(pb?.estatura_cm) || 160) / 100) ** 2).toFixed(1) : 'N/A'}
 - Comorbilidades: ${dc?.comorbilidades?.join(', ') || 'Ninguna'}
 - Medicamentos: ${dc?.medicamentos_actuales?.join(', ') || 'Ninguno'}
-- Alergias: ${dc?.alergias?.join(', ') || 'Ninguna'}
-- Observaciones: ${dc?.observaciones_medicas?.join(', ') || 'Ninguna'}
+- Meta (Hidratación): ${mo?.agua_objetivo_ml || 2800} ml
 
-═══ OBJETIVOS ═══
-- Peso ideal meta: ${mo?.peso_ideal_meta || 'N/A'} kg
-- Objetivo grasa: ${mo?.control_grasa_kg || 'N/A'} kg
-- Objetivo músculo: ${mo?.control_musculo_kg || 'N/A'} kg
-- Objetivos generales: ${mo?.objetivos_generales?.join(', ') || 'Salud general'}
+REGLAS DE SEGURIDAD (PROTECCIÓN DEL PROYECTO):
+SOLO LECTURA: Accede a diagnósticos, medicamentos y escaneos solo para consulta. PROHIBIDO modificar o borrar datos fuera de la estructura de Zona Fit.
+AJUSTE CLÍNICO: Si detectas HTA o medicamentos cardíacos en el perfil, limita la intensidad a la zona de 117-134 LPM. Si el IMC es alto (>29), prohíbe saltos o ejercicios de alto impacto.
 
-═══ REGLAS ═══
-1. SEGURIDAD PRIMERO: Si hay hipertensión, evitar maniobra de Valsalva y cargas extremas. Si hay obesidad, evitar alto impacto en rodillas.
-2. DISTRIBUCIÓN: Respetar los días de fuerza y aeróbico prescritos. Los días restantes son DESCANSO ACTIVO (stretching, caminata suave).
-3. VARIEDAD: Alternar grupos musculares. No repetir la misma rutina dos días seguidos.
-4. PROGRESIÓN: Usar series y repeticiones apropiadas para el nivel del paciente.
-5. Cada día de entrenamiento debe tener 5-7 ejercicios.
-6. Los días de descanso deben tener 3-4 ejercicios suaves (movilidad, stretching, respiración).
-
-RESPONDE ÚNICAMENTE CON JSON PURO:
+ESTRUCTURA DE SALIDA (JSON PURO PARA ZONA FIT):
 {
-  "LUNES": [{"n": "Nombre Ejercicio", "i": "3x12", "link": "https://www.youtube.com/results?search_query=nombre+ejercicio+tutorial"}],
-  "MARTES": [...],
-  "MIERCOLES": [...],
-  "JUEVES": [...],
-  "VIERNES": [...],
-  "SABADO": [...],
-  "DOMINGO": [...]
-}`;
+  "rutina_semanal": [
+    {
+      "n": "Nombre del Ejercicio",
+      "i": "3x12",
+      "link": "https://www.youtube.com/results?search_query=Nombre+del+Ejercicio+ejecucion+correcta",
+      "checklist_logic": false
+    }
+  ],
+  "consejo_seguridad": "Breve nota sobre hidratación (basada en la meta de ml del perfil) y control de fatiga."
+}
+
+ESTILO: Minimalista, funcional y moderno. NO uses markdown fuera del JSON. Devuelve SÓLO el objeto JSON.`;
 
     const result = await model.generateContent(prompt);
     const text = result.response.text();
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
-      // Validate structure
-      const days = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'];
-      const routine: Record<string, any[]> = {};
-      for (const day of days) {
-        const key = Object.keys(parsed).find(k => k.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") === day) || day;
-        routine[day] = Array.isArray(parsed[key]) ? parsed[key] : [];
-      }
-      return routine;
+      return {
+        routine: Array.isArray(parsed.rutina_semanal) ? parsed.rutina_semanal : [],
+        consejo: parsed.consejo_seguridad || "Mantén la hidratación y respeta tus límites."
+      };
     }
-    return {};
+    return { routine: [], consejo: "" };
   } catch (error) {
     console.error("Generate Routine Error:", error);
-    return {};
+    return { routine: [], consejo: "" };
   }
 }

@@ -9,7 +9,7 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
   const [showHistory, setShowHistory] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const longPressTimer = useRef<number | null>(null);
-  const [aiAdvice, setAiAdvice] = useState<string | null>(null);
+  const [aiAdvice, setAiAdvice] = useState<string | null>(store.fitnessAdvice || null);
   const [isGeneratingAdvice, setIsGeneratingAdvice] = useState(false);
   const [isGeneratingRoutine, setIsGeneratingRoutine] = useState(false);
 
@@ -101,7 +101,9 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
   const normalizedDisplayDay = normalizeDay(displayDay);
   const exKey = Object.keys(store.exercises || {}).find(k => normalizeDay(k) === normalizedDisplayDay) || displayDay;
 
-  const exercisesList = store.exercises?.[exKey] || [];
+  // Si existe una rutina global bajo "SEMANAL", la usamos todos los días (nuevo estándar de IA Deportólogo), 
+  // sino seguimos buscando el mapeo diario (compatibilidad retroactiva).
+  const exercisesList = store.exercises?.["SEMANAL"] || store.exercises?.[exKey] || [];
   const completedList = store.doneEx?.[displayDay] || [];
 
   const toggleExercise = (idx: number) => {
@@ -130,9 +132,10 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
     setIsGeneratingRoutine(true);
     try {
       const apiKey = (firebaseConfig as any).geminiApiKey || '';
-      const routine = await generateFullRoutine(store.profile, apiKey);
-      if (routine && Object.keys(routine).length > 0) {
-        saveStore({ ...store, exercises: routine, doneEx: {} });
+      const result = await generateFullRoutine(store.profile, apiKey);
+      if (result && result.routine && result.routine.length > 0) {
+        saveStore({ ...store, exercises: { SEMANAL: result.routine }, doneEx: {}, fitnessAdvice: result.consejo });
+        setAiAdvice(result.consejo);
       }
     } catch (error) {
       console.error('Error generating routine:', error);
