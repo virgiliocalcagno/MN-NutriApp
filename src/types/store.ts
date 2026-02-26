@@ -118,6 +118,14 @@ export interface InventoryItem {
     isCustom?: boolean;
 }
 
+export interface DocumentRecord {
+    id: string;
+    name: string;
+    type: 'FICHA_MEDICA' | 'PLAN_NUTRICIONAL' | 'INBODY' | 'AUTO';
+    date: string;
+    data: any; // AIResponse result
+}
+
 export interface Store {
     water: number;
     waterHistory: WaterEntry[];
@@ -152,7 +160,7 @@ export interface Store {
             hydration: boolean;
         }
     };
-    processedDocs: string[]; // List of processed PDF filenames/hashes
+    processedDocs: DocumentRecord[]; // Library of historical AI results
 }
 
 export const initialStore: Store = {

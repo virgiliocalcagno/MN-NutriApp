@@ -16,31 +16,20 @@ const getIconForMeal = (name: string) => {
 export const sortMeals = (menu: Record<string, string>) => {
     if (!menu) return [];
     return Object.entries(menu).sort((a, b) => {
-        const keyA = a[0].toUpperCase().replace(/\s+/g, '_');
-        const keyB = b[0].toUpperCase().replace(/\s+/g, '_');
+        const keyA = a[0].toUpperCase().replace(/\s+/g, '_').normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const keyB = b[0].toUpperCase().replace(/\s+/g, '_').normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-        let idxA = ORDEN_COMIDAS.indexOf(keyA);
-        let idxB = ORDEN_COMIDAS.indexOf(keyB);
+        const getWeight = (k: string) => {
+            if (k.includes('DESAYUNO')) return 0;
+            if (k.includes('MERIENDA_AM') || (k.includes('MERIENDA') && (k.includes('MANANA') || k.includes('AM')))) return 1;
+            if (k.includes('ALMUERZO')) return 2;
+            if (k.includes('MERIENDA_PM') || (k.includes('MERIENDA') && (k.includes('TARDE') || k.includes('PM')))) return 3;
+            if (k.includes('CENA')) return 4;
+            if (k.includes('MERIENDA')) return 3; // Default snack to PM if ambiguous
+            return 99;
+        };
 
-        // Fallback mínimo solo si no se encuentra la clave exacta
-        if (idxA === -1) {
-            if (keyA.includes('DESAYUNO')) idxA = 0;
-            else if (keyA.includes('ALMUERZO')) idxA = 2;
-            else if (keyA.includes('CENA')) idxA = 4;
-            else if (keyA.includes('MERIENDA_AM')) idxA = 1;
-            else if (keyA.includes('MERIENDA')) idxA = 3;
-        }
-        if (idxB === -1) {
-            if (keyB.includes('DESAYUNO')) idxB = 0;
-            else if (keyB.includes('ALMUERZO')) idxB = 2;
-            else if (keyB.includes('CENA')) idxB = 4;
-            else if (keyB.includes('MERIENDA_AM')) idxB = 1;
-            else if (keyB.includes('MERIENDA')) idxB = 3;
-        }
-
-        const valA = idxA === -1 ? 99 : idxA;
-        const valB = idxB === -1 ? 99 : idxB;
-        return valA - valB;
+        return getWeight(keyA) - getWeight(keyB);
     }).map(([name, description]) => ({
         id: name,
         name: normalizeMealName(name),

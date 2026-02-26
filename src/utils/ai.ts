@@ -93,12 +93,13 @@ export const processPdfWithGemini = async (
   perfil: Partial<Profile>,
   pdfPlanBase64?: string,
   pdfEvalBase64?: string,
-  apiKey?: string
+  apiKey?: string,
+  docTypeHint?: 'FICHA_MEDICA' | 'PLAN_NUTRICIONAL' | 'INBODY'
 ): Promise<AIResponse> => {
   if (apiKey && apiKey.length > 20) {
     try {
       const genAI = new GoogleGenerativeAI(apiKey);
-      console.log("AI Process: Usando motor estable para PDF (2.5)");
+      console.log(`AI Process: Usando motor estable para PDF (2.5) - Contexto: ${docTypeHint || 'AUTO'}`);
       const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash", generationConfig: { temperature: 0 } });
 
       const currentProfileContext = perfil ? `
@@ -113,12 +114,19 @@ LO QUE YA SABEMOS DEL PACIENTE:
 
       const promptText = `Eres un asesor de nutrición muy práctico y amable para la app MN-NutriApp. Tu trabajo es leer el PDF y organizar la información para el paciente de forma clara.
 
+CONTEXTO DE CARGA: ${docTypeHint || 'ANÁLISIS GENERAL'}
+
 LO QUE YA SABEMOS DEL PACIENTE:
 - Metas: ${perfil.metas_y_objetivos?.objetivos_generales?.join(', ') || 'Ninguna'}
 - Alergias: ${perfil.diagnostico_clinico?.alergias?.join(', ') || 'Ninguna'}
 - Problemas de salud: ${perfil.diagnostico_clinico?.comorbilidades?.join(', ') || 'Ninguna'}
 - Pastillas/Suplementos: ${Array.isArray(perfil.diagnostico_clinico?.suplementacion) ? perfil.diagnostico_clinico.suplementacion.join(', ') : perfil.diagnostico_clinico?.suplementacion || 'Ninguno'}
 - Notas: ${perfil.diagnostico_clinico?.observaciones_medicas?.join(', ') || 'Ninguna'}
+
+Tu tarea es extraer la información relevante según el contexto:
+1. Si el contexto es PLAN_NUTRICIONAL (O "ANÁLISIS GENERAL"): Extrae todas las comidas (semana), compras y horarios.
+2. Si el contexto es INBODY: Extrae Score, Peso, SMM (Músculo), PBF (Grasa), Grasa Visceral, Tasa Metabólica y metas de control de peso/grasa/músculo.
+3. Si el contexto es FICHA_MEDICA: Extrae datos clínicos, comorbilidades, medicamentos y notas médicas.
 
 RESPONDE ÚNICAMENTE CON UN JSON PURO CON ESTE FORMATO:
 {
@@ -167,13 +175,31 @@ RESPONDE ÚNICAMENTE CON UN JSON PURO CON ESTE FORMATO:
       "aerobico_minutos_sesion": "..."
     }
   },
-  "semana": { "LUNES": {"DESAYUNO": "...", "MERIENDA_AM": "...", "ALMUERZO": "...", "MERIENDA_PM": "...", "CENA": "..." } },
+  "semana": { 
+    "LUNES": { 
+        "DESAYUNO": "...",
+        "MERIENDA_AM": "...",
+        "ALMUERZO": "...",
+        "MERIENDA_PM": "...",
+        "CENA": "..."
+    } 
+  },
   "ejercicios": { "LUNES": [ {"n": "Nombre", "i": "3x12"} ] },
   "compras": [ ["Producto", "Cantidad Literal (ej: 12 unidades, 1 Cartón, 500g)", 1, "Categoria", "Pasillo"] ],
-  "horarios": { "DESAYUNO": "08:30 AM", "ALMUERZO": "01:30 PM", "CENA": "07:30 PM" }
+  "horarios": { 
+      "DESAYUNO": "08:30 AM",
+      "MERIENDA_AM": "11:00 AM",
+      "ALMUERZO": "01:30 PM",
+      "MERIENDA_PM": "04:30 PM",
+      "CENA": "07:30 PM" 
+  },
+  "tipo_documento": "${docTypeHint || 'AUTO'}"
 }
 
-IMPORTANTE: Extrae datos técnicos de InBody (SMM, PBF, Grasa Visceral) si están disponibles.`;
+IMPORTANTE: 
+1. Si el contexto es INBODY, prioriza los datos de composición corporal y metas de control.
+2. Si el contexto es PLAN_NUTRICIONAL, prioriza las comidas del menú y la lista de compras.
+3. Extrae datos técnicos de InBody (SMM, PBF, Grasa Visceral) si están disponibles.`;
 
       const parts: any[] = [{ text: promptText }];
       if (pdfPlanBase64) parts.push({ inlineData: { mimeType: "application/pdf", data: pdfPlanBase64.replace(/^data:application\/pdf;base64,/, "") } });

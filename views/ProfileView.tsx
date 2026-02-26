@@ -1,7 +1,7 @@
 ﻿import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useStore } from '@/src/context/StoreContext';
 import { processPdfWithGemini } from '@/src/utils/ai';
-import { MealItem, InventoryItem, initialStore, Profile } from '@/src/types/store';
+import { MealItem, InventoryItem, initialStore, Profile, DocumentRecord } from '@/src/types/store';
 import { firebaseConfig } from '@/src/firebase';
 import { useLongPress } from '@/src/hooks/useLongPress';
 
@@ -13,6 +13,7 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
   const [editData, setEditData] = useState<Profile>({ ...store.profile });
   const [isLocked, setIsLocked] = useState(true);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'reading' | 'analyzing' | 'syncing' | 'success' | 'error'>('idle');
+  const [uploadContext, setUploadContext] = useState<'FICHA_MEDICA' | 'PLAN_NUTRICIONAL' | 'INBODY'>('PLAN_NUTRICIONAL');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [lastUploadData, setLastUploadData] = useState<any>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -58,11 +59,44 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
 
   const longPressProps = useLongPress(onLongPress, undefined, { delay: 800 });
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const patchValue = (existing: any, incoming: any) => {
+    if (incoming === null || incoming === undefined || incoming === '') return existing;
+    return incoming;
+  };
+
+  const mergeLists = (old: any[] = [], next: any[] = []) => {
+    const combined = [...(Array.isArray(old) ? old : []), ...(Array.isArray(next) ? next : [])]
+      .map(s => String(s || '').trim().toLowerCase())
+      .filter(Boolean);
+    const unique = Array.from(new Set(combined));
+    return unique.map(s => s.charAt(0).toUpperCase() + s.slice(1));
+  };
+
+  const resetActiveProfile = () => {
+    if (!window.confirm("⚠️ ¿ESTÁS SEGURO?\n\nEsto borrará el Plan Nutricional, Inventario y Datos Biométricos del perfil ACTIVO.\n\nTu Biblioteca de Documentos se mantendrá intacta.")) return;
+
+    saveStore({
+      ...store,
+      profile: {
+        ...initialStore.profile,
+        perfil_biometrico: { nombre_completo: profile.perfil_biometrico?.nombre_completo } // Keep name
+      },
+      menu: {},
+      inventory: [],
+      planIngredients: [],
+      doneEx: {},
+      doneMeals: {},
+      caloriesTarget: 2000,
+      water: 0
+    });
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, context: 'FICHA_MEDICA' | 'PLAN_NUTRICIONAL' | 'INBODY') => {
     if (isLocked) {
       alert("El perfil está bloqueado. Mantén presionado el nombre para desbloquear.");
       return;
     }
+    setUploadContext(context);
     if (e.target.files) {
       const files = Array.from(e.target.files).filter(f => f.type === 'application/pdf');
       if (files.length === 0) {
@@ -73,18 +107,96 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
     }
   };
 
+  const applyDocumentData = (data: any, activateNow: boolean = true) => {
+    const currentProfile = store.profile;
+    const hasNewPlan = data.semana && Object.keys(data.semana).length > 0;
+
+    // 1. Prepare Merged Profile
+    const mergedProfile = {
+      ...currentProfile,
+      perfil_biometrico: {
+        nombre_completo: patchValue(currentProfile.perfil_biometrico?.nombre_completo, data.perfilAuto?.perfil_biometrico?.nombre_completo),
+        edad: patchValue(currentProfile.perfil_biometrico?.edad, data.perfilAuto?.perfil_biometrico?.edad),
+        estatura_cm: patchValue(currentProfile.perfil_biometrico?.estatura_cm, data.perfilAuto?.perfil_biometrico?.estatura_cm),
+        genero: patchValue(currentProfile.perfil_biometrico?.genero, data.perfilAuto?.perfil_biometrico?.genero),
+        doctor: patchValue(currentProfile.perfil_biometrico?.doctor, data.perfilAuto?.perfil_biometrico?.doctor)
+      },
+      diagnostico_clinico: {
+        diagnostico_nutricional: patchValue(currentProfile.diagnostico_clinico?.diagnostico_nutricional, data.perfilAuto?.diagnostico_clinico?.diagnostico_nutricional),
+        alergias: mergeLists(currentProfile.diagnostico_clinico?.alergias || [], data.perfilAuto?.diagnostico_clinico?.alergias || []),
+        sangre: patchValue(currentProfile.diagnostico_clinico?.sangre, data.perfilAuto?.diagnostico_clinico?.sangre),
+        comorbilidades: mergeLists(currentProfile.diagnostico_clinico?.comorbilidades || [], data.perfilAuto?.diagnostico_clinico?.comorbilidades || []),
+        medicamentos_actuales: mergeLists(currentProfile.diagnostico_clinico?.medicamentos_actuales || [], data.perfilAuto?.diagnostico_clinico?.medicamentos_actuales || []),
+        suplementacion: mergeLists(Array.isArray(currentProfile.diagnostico_clinico?.suplementacion) ? currentProfile.diagnostico_clinico.suplementacion : [], Array.isArray(data.perfilAuto?.diagnostico_clinico?.suplementacion) ? data.perfilAuto.diagnostico_clinico.suplementacion : []),
+        observaciones_medicas: mergeLists(currentProfile.diagnostico_clinico?.observaciones_medicas || [], data.perfilAuto?.diagnostico_clinico?.observaciones_medicas || [])
+      },
+      metas_y_objetivos: {
+        peso_ideal_meta: patchValue(currentProfile.metas_y_objetivos?.peso_ideal_meta, data.perfilAuto?.metas_y_objetivos?.peso_ideal_meta),
+        control_peso_inmediato: patchValue(currentProfile.metas_y_objetivos?.control_peso_inmediato, data.perfilAuto?.metas_y_objetivos?.control_peso_inmediato),
+        control_grasa_kg: patchValue(currentProfile.metas_y_objetivos?.control_grasa_kg, data.perfilAuto?.metas_y_objetivos?.control_grasa_kg),
+        control_musculo_kg: patchValue(currentProfile.metas_y_objetivos?.control_musculo_kg, data.perfilAuto?.metas_y_objetivos?.control_musculo_kg),
+        pbf_objetivo_porcentaje: patchValue(currentProfile.metas_y_objetivos?.pbf_objetivo_porcentaje, data.perfilAuto?.metas_y_objetivos?.pbf_objetivo_porcentaje),
+        vet_kcal_diarias: patchValue(currentProfile.metas_y_objetivos?.vet_kcal_diarias, data.perfilAuto?.metas_y_objetivos?.vet_kcal_diarias),
+        agua_objetivo_ml: patchValue(currentProfile.metas_y_objetivos?.agua_objetivo_ml, data.perfilAuto?.metas_y_objetivos?.agua_objetivo_ml),
+        objetivos_generales: mergeLists(currentProfile.metas_y_objetivos?.objetivos_generales || [], data.perfilAuto?.metas_y_objetivos?.objetivos_generales || [])
+      },
+      analisis_inbody_actual: {
+        fecha_test: patchValue(currentProfile.analisis_inbody_actual?.fecha_test, data.perfilAuto?.analisis_inbody_actual?.fecha_test),
+        peso_actual_kg: patchValue(currentProfile.analisis_inbody_actual?.peso_actual_kg, data.perfilAuto?.analisis_inbody_actual?.peso_actual_kg),
+        smm_masa_musculo_esqueletica_kg: patchValue(currentProfile.analisis_inbody_actual?.smm_masa_musculo_esqueletica_kg, data.perfilAuto?.analisis_inbody_actual?.smm_masa_musculo_esqueletica_kg),
+        pbf_porcentaje_grasa_corporal: patchValue(currentProfile.analisis_inbody_actual?.pbf_porcentaje_grasa_corporal, data.perfilAuto?.analisis_inbody_actual?.pbf_porcentaje_grasa_corporal),
+        grasa_visceral_nivel: patchValue(currentProfile.analisis_inbody_actual?.grasa_visceral_nivel, data.perfilAuto?.analisis_inbody_actual?.grasa_visceral_nivel),
+        inbody_score: patchValue(currentProfile.analisis_inbody_actual?.inbody_score, data.perfilAuto?.analisis_inbody_actual?.inbody_score),
+        tasa_metabolica_basal_kcal: patchValue(currentProfile.analisis_inbody_actual?.tasa_metabolica_basal_kcal, data.perfilAuto?.analisis_inbody_actual?.tasa_metabolica_basal_kcal)
+      },
+      prescripcion_ejercicio: {
+        fcm_latidos_min: patchValue(currentProfile.prescripcion_ejercicio?.fcm_latidos_min, data.perfilAuto?.prescripcion_ejercicio?.fcm_latidos_min),
+        fc_promedio_entrenamiento: patchValue(currentProfile.prescripcion_ejercicio?.fc_promedio_entrenamiento, data.perfilAuto?.prescripcion_ejercicio?.fc_promedio_entrenamiento),
+        fuerza_dias_semana: patchValue(currentProfile.prescripcion_ejercicio?.fuerza_dias_semana, data.perfilAuto?.prescripcion_ejercicio?.fuerza_dias_semana),
+        fuerza_minutos_sesion: patchValue(currentProfile.prescripcion_ejercicio?.fuerza_minutos_sesion, data.perfilAuto?.prescripcion_ejercicio?.fuerza_minutos_sesion),
+        aerobico_dias_semana: patchValue(currentProfile.prescripcion_ejercicio?.aerobico_dias_semana, data.perfilAuto?.prescripcion_ejercicio?.aerobico_dias_semana),
+        aerobico_minutos_sesion: patchValue(currentProfile.prescripcion_ejercicio?.aerobico_minutos_sesion, data.perfilAuto?.prescripcion_ejercicio?.aerobico_minutos_sesion)
+      }
+    };
+
+    if (!activateNow) return mergedProfile;
+
+    // 2. Prepare Inventory & Menu
+    const newInventory: any[] = hasNewPlan ? (data.compras || []).map((c: any, idx: number) => ({
+      id: Date.now() + '-' + idx,
+      name: c[0],
+      qty: c[1],
+      level: 1,
+      category: c[3] || 'Gral',
+      aisle: c[4] || 'Gral',
+      isCustom: false
+    })) : [];
+
+    // Reset if it's a new main plan
+    const finalInventory = hasNewPlan ? newInventory : store.inventory;
+    const finalMenu = hasNewPlan ? data.semana : store.menu;
+    const finalIngredients = hasNewPlan ? (data.compras || []).map((c: any) => ({ n: c[0], q: c[1] })) : store.planIngredients;
+
+    saveStore({
+      ...store,
+      profile: mergedProfile as Profile,
+      inventory: finalInventory,
+      menu: finalMenu,
+      planIngredients: finalIngredients,
+      doneMeals: hasNewPlan ? {} : store.doneMeals,
+      caloriesTarget: data.perfilAuto?.metas_y_objetivos?.vet_kcal_diarias || store.caloriesTarget,
+      waterGoal: data.perfilAuto?.metas_y_objetivos?.agua_objetivo_ml || store.waterGoal,
+      lastUpdateDate: new Date().toISOString().split('T')[0]
+    });
+  };
+
   const processBatch = async () => {
     if (selectedFiles.length === 0) return;
     setIsProcessing(true);
     setUploadStatus('reading');
     try {
-      // ── Accumulated data across all files ──
-      let accumulatedProfile: any = null;
-      let accumulatedMenu: any = {};
-      let accumulatedCompras: any[] = [];
-      let accumulatedEjercicios: any = {};
-      let accumulatedHorarios: any = {};
-      let processedNames: string[] = [];
+      const newDocs: DocumentRecord[] = [];
+      let lastResult: any = null;
 
       for (const file of selectedFiles) {
         setUploadStatus('analyzing');
@@ -95,286 +207,47 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
         });
 
         const activeKey = (firebaseConfig as any).geminiApiKey;
-        const data = await processPdfWithGemini(accumulatedProfile?.perfilAuto ? { ...profile, ...accumulatedProfile.perfilAuto } : profile, base64, undefined, activeKey);
+        const data = await processPdfWithGemini(store.profile, base64, undefined, activeKey, uploadContext);
 
         if (data) {
-          console.log(`📄 PDF "${file.name}":`, {
-            tipo: data.tipo_documento || 'N/A',
-            perfil_keys: Object.keys(data.perfilAuto || {}),
-            semana_days: Object.keys(data.semana || {}),
-            compras: (data.compras || []).length,
-            ejercicios: Object.keys(data.ejercicios || {})
-          });
-          // Clinical profile ALWAYS accumulates from any document type
-          if (data.perfilAuto) {
-            accumulatedProfile = accumulatedProfile || {};
-            accumulatedProfile.perfilAuto = accumulatedProfile.perfilAuto || {};
-            // Deep merge perfilAuto sections
-            for (const section of ['perfil_biometrico', 'diagnostico_clinico', 'metas_y_objetivos', 'analisis_inbody_actual', 'prescripcion_ejercicio'] as const) {
-              if (data.perfilAuto[section]) {
-                accumulatedProfile.perfilAuto[section] = {
-                  ...(accumulatedProfile.perfilAuto[section] || {}),
-                  ...data.perfilAuto[section]
-                };
-              }
-            }
-            // Merge array fields (don't overwrite, combine)
-            const dc = accumulatedProfile.perfilAuto.diagnostico_clinico;
-            const newDc = data.perfilAuto.diagnostico_clinico;
-            if (dc && newDc) {
-              for (const key of ['comorbilidades', 'alergias', 'medicamentos_actuales', 'suplementacion', 'observaciones_medicas']) {
-                if (Array.isArray(newDc[key]) && newDc[key].length > 0) {
-                  const combined = [...(dc[key] || []), ...newDc[key]];
-                  dc[key] = [...new Set(combined.map((s: string) => String(s).trim().toLowerCase()).filter(Boolean))].map(s => s.charAt(0).toUpperCase() + s.slice(1));
-                }
-              }
-            }
-            const mo = accumulatedProfile.perfilAuto.metas_y_objetivos;
-            const newMo = data.perfilAuto.metas_y_objetivos;
-            if (mo && newMo && Array.isArray(newMo.objetivos_generales) && newMo.objetivos_generales.length > 0) {
-              const combined = [...(mo.objetivos_generales || []), ...newMo.objetivos_generales];
-              mo.objetivos_generales = [...new Set(combined.map((s: string) => String(s).trim().toLowerCase()).filter(Boolean))].map(s => s.charAt(0).toUpperCase() + s.slice(1));
-            }
-          }
-
-          // Menu, compras, ejercicios ONLY from documents that have them
-          const docType = data.tipo_documento || '';
-          const isPlan = docType === 'PLAN_NUTRICIONAL' || (data.semana && Object.keys(data.semana).length > 0);
-
-          if (isPlan) {
-            // Merge menu
-            for (const day in (data.semana || {})) {
-              accumulatedMenu[day] = { ...(accumulatedMenu[day] || {}), ...data.semana[day] };
-            }
-            // Append compras (only from real meal plans)
-            if (Array.isArray(data.compras) && data.compras.length > 0) {
-              accumulatedCompras = [...accumulatedCompras, ...data.compras];
-            }
-            // Merge horarios
-            accumulatedHorarios = { ...accumulatedHorarios, ...(data.horarios || {}) };
-          }
-
-          // Ejercicios: from any doc that has actual routines
-          if (data.ejercicios && Object.keys(data.ejercicios).length > 0) {
-            for (const day in data.ejercicios) {
-              if (accumulatedEjercicios[day] && Array.isArray(accumulatedEjercicios[day])) {
-                const combined = [...accumulatedEjercicios[day]];
-                (data.ejercicios[day] || []).forEach((newEx: any) => {
-                  if (!combined.some((e: any) => e.n?.toLowerCase() === newEx.n?.toLowerCase())) {
-                    combined.push(newEx);
-                  }
-                });
-                accumulatedEjercicios[day] = combined;
-              } else {
-                accumulatedEjercicios[day] = data.ejercicios[day];
-              }
-            }
-          }
-
-          processedNames.push(file.name);
+          const doc: DocumentRecord = {
+            id: Date.now() + Math.random().toString(36).substr(2, 9),
+            name: file.name,
+            type: (data.tipo_documento || uploadContext || 'AUTO') as any,
+            date: new Date().toISOString(),
+            data: data
+          };
+          newDocs.push(doc);
+          lastResult = data;
         }
       }
 
-      // Build the final merged data object
-      const currentMergedData = accumulatedProfile ? {
-        ...accumulatedProfile,
-        semana: accumulatedMenu,
-        compras: accumulatedCompras,
-        ejercicios: accumulatedEjercicios,
-        horarios: accumulatedHorarios
-      } : null;
-
-      if (currentMergedData) {
+      if (newDocs.length > 0) {
         setUploadStatus('syncing');
-        const data = currentMergedData;
 
-        const newPatientName = (data.perfilAuto?.perfil_biometrico?.nombre_completo || 'Usuario').trim();
-        const currentPatientName = (store.profile?.perfil_biometrico?.nombre_completo || '').trim();
+        // Ask for Activation
+        const shouldActivate = window.confirm(`✅ ${newDocs.length} documentos procesados.\n\n¿Deseas ACTIVAR el contenido ahora? (Esto actualizará tu plan/expediente actual)`);
 
-        let updatedProfiles = { ...store.profiles };
-        const isMismatch = currentPatientName && currentPatientName !== newPatientName;
-
-        if (isMismatch) {
-          const choice = window.confirm(
-            `⚠️ DIFERENCIA DE IDENTIDAD DETECTADA\n\n` +
-            `Documento: ${newPatientName}\n` +
-            `Perfil Actual: ${currentPatientName}\n\n` +
-            `¿Deseas cambiar al perfil de ${newPatientName}?`
-          );
-          if (choice) {
-            const { profiles: _, ...rest } = store;
-            updatedProfiles[currentPatientName] = rest;
+        if (shouldActivate) {
+          // Merge logic: if multiple files, we apply them one by one (accumulative for this batch)
+          // or just use the helper for the last one if it's a single one. 
+          // For simplicity and correctness with the requirement:
+          for (const doc of newDocs) {
+            applyDocumentData(doc.data, true);
           }
         }
 
-        const currentProfile = store.profile;
-        const evolution = [...(currentProfile.historico_antropometrico || [])];
-
-        evolution.push({
-          fecha: new Date().toISOString().split('T')[0],
-          peso_lbs: String(data.perfilAuto?.analisis_inbody_actual?.peso_actual_kg ? parseFloat(data.perfilAuto.analisis_inbody_actual.peso_actual_kg) * 2.20462 : ''),
-          cintura_cm: '',
-          cuello_cm: '',
-          brazo_der_cm: '',
-          brazo_izq_cm: ''
-        });
-
-        const hasNewPlan = data.semana && Object.keys(data.semana).length > 0;
-
-        const newInventory: InventoryItem[] = hasNewPlan ? (data.compras || []).map((c: any, idx: number) => ({
-          id: Date.now() + '-' + idx,
-          name: c[0],
-          qty: c[1],
-          level: 1,
-          category: c[3] || 'Gral',
-          aisle: c[4] || 'Gral',
-          isCustom: false
-        })) : [];
-
-        const combinedInventory = [...(store.inventory || []), ...newInventory];
-        const inventoryMap = new Map<string, InventoryItem>();
-
-        combinedInventory.forEach(item => {
-          inventoryMap.set(item.name.toLowerCase(), item);
-        });
-
-        const finalInventory = Array.from(inventoryMap.values());
-
-        const caloriesTarget = data.perfilAuto?.metas_y_objetivos?.vet_kcal_diarias || store.caloriesTarget || 0;
-        const waterGoal = data.perfilAuto?.metas_y_objetivos?.agua_objetivo_ml || store.waterGoal || 0;
-
-        const mergeLists = (old: any[] = [], next: any[] = []) => {
-          const combined = [...(Array.isArray(old) ? old : []), ...(Array.isArray(next) ? next : [])]
-            .map(s => String(s || '').trim().toLowerCase())
-            .filter(Boolean);
-          const unique = Array.from(new Set(combined));
-          return unique.map(s => s.charAt(0).toUpperCase() + s.slice(1));
-        };
-
-        const patchValue = (existing: any, incoming: any) => {
-          if (incoming === null || incoming === undefined || incoming === '') return existing;
-          return incoming;
-        };
-
-        const mergedProfile = {
-          ...currentProfile,
-          expediente_control: {
-            ...(currentProfile.expediente_control || {}),
-            ...(data.perfilAuto?.expediente_control || {}),
-            ultima_actualizacion: new Date().toISOString().split('T')[0]
-          },
-          perfil_biometrico: {
-            nombre_completo: patchValue(currentProfile.perfil_biometrico?.nombre_completo, data.perfilAuto?.perfil_biometrico?.nombre_completo),
-            edad: patchValue(currentProfile.perfil_biometrico?.edad, data.perfilAuto?.perfil_biometrico?.edad),
-            estatura_cm: patchValue(currentProfile.perfil_biometrico?.estatura_cm, data.perfilAuto?.perfil_biometrico?.estatura_cm),
-            genero: patchValue(currentProfile.perfil_biometrico?.genero, data.perfilAuto?.perfil_biometrico?.genero),
-            doctor: patchValue(currentProfile.perfil_biometrico?.doctor, data.perfilAuto?.perfil_biometrico?.doctor)
-          },
-          diagnostico_clinico: {
-            diagnostico_nutricional: patchValue(currentProfile.diagnostico_clinico?.diagnostico_nutricional, data.perfilAuto?.diagnostico_clinico?.diagnostico_nutricional),
-            alergias: mergeLists(currentProfile.diagnostico_clinico?.alergias || [], data.perfilAuto?.diagnostico_clinico?.alergias || []),
-            sangre: patchValue(currentProfile.diagnostico_clinico?.sangre, data.perfilAuto?.diagnostico_clinico?.sangre),
-            comorbilidades: mergeLists(currentProfile.diagnostico_clinico?.comorbilidades || [], data.perfilAuto?.diagnostico_clinico?.comorbilidades || []),
-            medicamentos_actuales: mergeLists(currentProfile.diagnostico_clinico?.medicamentos_actuales || [], data.perfilAuto?.diagnostico_clinico?.medicamentos_actuales || []),
-            suplementacion: mergeLists(Array.isArray(currentProfile.diagnostico_clinico?.suplementacion) ? currentProfile.diagnostico_clinico.suplementacion : [], Array.isArray(data.perfilAuto?.diagnostico_clinico?.suplementacion) ? data.perfilAuto.diagnostico_clinico.suplementacion : []),
-            observaciones_medicas: mergeLists(currentProfile.diagnostico_clinico?.observaciones_medicas || [], data.perfilAuto?.diagnostico_clinico?.observaciones_medicas || [])
-          },
-          metas_y_objetivos: {
-            peso_ideal_meta: patchValue(currentProfile.metas_y_objetivos?.peso_ideal_meta, data.perfilAuto?.metas_y_objetivos?.peso_ideal_meta),
-            control_peso_inmediato: patchValue(currentProfile.metas_y_objetivos?.control_peso_inmediato, data.perfilAuto?.metas_y_objetivos?.control_peso_inmediato),
-            control_grasa_kg: patchValue(currentProfile.metas_y_objetivos?.control_grasa_kg, data.perfilAuto?.metas_y_objetivos?.control_grasa_kg),
-            control_musculo_kg: patchValue(currentProfile.metas_y_objetivos?.control_musculo_kg, data.perfilAuto?.metas_y_objetivos?.control_musculo_kg),
-            pbf_objetivo_porcentaje: patchValue(currentProfile.metas_y_objetivos?.pbf_objetivo_porcentaje, data.perfilAuto?.metas_y_objetivos?.pbf_objetivo_porcentaje),
-            vet_kcal_diarias: patchValue(currentProfile.metas_y_objetivos?.vet_kcal_diarias, data.perfilAuto?.metas_y_objetivos?.vet_kcal_diarias),
-            agua_objetivo_ml: patchValue(currentProfile.metas_y_objetivos?.agua_objetivo_ml, data.perfilAuto?.metas_y_objetivos?.agua_objetivo_ml),
-            objetivos_generales: mergeLists(currentProfile.metas_y_objetivos?.objetivos_generales || [], data.perfilAuto?.metas_y_objetivos?.objetivos_generales || [])
-          },
-          analisis_inbody_actual: {
-            fecha_test: patchValue(currentProfile.analisis_inbody_actual?.fecha_test, data.perfilAuto?.analisis_inbody_actual?.fecha_test),
-            peso_actual_kg: patchValue(currentProfile.analisis_inbody_actual?.peso_actual_kg, data.perfilAuto?.analisis_inbody_actual?.peso_actual_kg),
-            smm_masa_musculo_esqueletica_kg: patchValue(currentProfile.analisis_inbody_actual?.smm_masa_musculo_esqueletica_kg, data.perfilAuto?.analisis_inbody_actual?.smm_masa_musculo_esqueletica_kg),
-            pbf_porcentaje_grasa_corporal: patchValue(currentProfile.analisis_inbody_actual?.pbf_porcentaje_grasa_corporal, data.perfilAuto?.analisis_inbody_actual?.pbf_porcentaje_grasa_corporal),
-            grasa_visceral_nivel: patchValue(currentProfile.analisis_inbody_actual?.grasa_visceral_nivel, data.perfilAuto?.analisis_inbody_actual?.grasa_visceral_nivel),
-            inbody_score: patchValue(currentProfile.analisis_inbody_actual?.inbody_score, data.perfilAuto?.analisis_inbody_actual?.inbody_score),
-            tasa_metabolica_basal_kcal: patchValue(currentProfile.analisis_inbody_actual?.tasa_metabolica_basal_kcal, data.perfilAuto?.analisis_inbody_actual?.tasa_metabolica_basal_kcal)
-          },
-          prescripcion_ejercicio: {
-            fcm_latidos_min: patchValue(currentProfile.prescripcion_ejercicio?.fcm_latidos_min, data.perfilAuto?.prescripcion_ejercicio?.fcm_latidos_min),
-            fc_promedio_entrenamiento: patchValue(currentProfile.prescripcion_ejercicio?.fc_promedio_entrenamiento, data.perfilAuto?.prescripcion_ejercicio?.fc_promedio_entrenamiento),
-            fuerza_dias_semana: patchValue(currentProfile.prescripcion_ejercicio?.fuerza_dias_semana, data.perfilAuto?.prescripcion_ejercicio?.fuerza_dias_semana),
-            fuerza_minutos_sesion: patchValue(currentProfile.prescripcion_ejercicio?.fuerza_minutos_sesion, data.perfilAuto?.prescripcion_ejercicio?.fuerza_minutos_sesion),
-            aerobico_dias_semana: patchValue(currentProfile.prescripcion_ejercicio?.aerobico_dias_semana, data.perfilAuto?.prescripcion_ejercicio?.aerobico_dias_semana),
-            aerobico_minutos_sesion: patchValue(currentProfile.prescripcion_ejercicio?.aerobico_minutos_sesion, data.perfilAuto?.prescripcion_ejercicio?.aerobico_minutos_sesion)
-          },
-          historico_antropometrico: evolution.length > 0 ? evolution : currentProfile.historico_antropometrico || []
-        };
-
-        const deepMergeMenu = (old: any, next: any) => {
-          const result = { ...(old || {}) };
-          for (const day in next) {
-            if (result[day] && typeof result[day] === 'object') {
-              result[day] = { ...result[day], ...next[day] };
-            } else {
-              result[day] = next[day];
-            }
-          }
-          return result;
-        };
-
-        const deepMergeExercises = (old: any, next: any) => {
-          const result = { ...(old || {}) };
-          for (const day in next) {
-            if (result[day] && Array.isArray(result[day]) && Array.isArray(next[day])) {
-              const combined = [...result[day]];
-              next[day].forEach((newEx: any) => {
-                if (!combined.some((e: any) => e.n.toLowerCase() === newEx.n.toLowerCase())) {
-                  combined.push(newEx);
-                }
-              });
-              result[day] = combined;
-            } else {
-              result[day] = next[day];
-            }
-          }
-          return result;
-        };
-
-        // ── Diagnostic logging ──
-        console.log('📋 PDF Merge Debug:', {
-          tipo_documento: data.tipo_documento || 'N/A',
-          perfilAuto_keys: Object.keys(data.perfilAuto || {}),
-          semana_days: Object.keys(data.semana || {}),
-          compras_count: (data.compras || []).length,
-          ejercicios_days: Object.keys(data.ejercicios || {}),
-          hasNewPlan
-        });
-
-        // Guard: preserve existing menu/exercises if PDF batch had none
-        const finalMenu = hasNewPlan ? deepMergeMenu(store.menu, data.semana) : store.menu;
-        const finalExercises = (data.ejercicios && Object.keys(data.ejercicios).length > 0)
-          ? deepMergeExercises(store.exercises, data.ejercicios) : store.exercises;
-
         saveStore({
           ...store,
-          profile: mergedProfile as Profile,
-          inventory: finalInventory,
-          planIngredients: hasNewPlan ? [...(store.planIngredients || []), ...(data.compras || []).map((c: any) => ({ n: c[0], q: c[1] }))] : (store.planIngredients || []),
-          menu: finalMenu,
-          exercises: finalExercises,
-          doneMeals: hasNewPlan ? {} : store.doneMeals,
-          doneEx: (data.ejercicios && Object.keys(data.ejercicios).length > 0) ? {} : store.doneEx,
-          caloriesTarget,
-          waterGoal,
-          profiles: updatedProfiles,
-          processedDocs: [...(store.processedDocs || []), ...processedNames],
-          lastUpdateDate: new Date().toISOString().split('T')[0]
+          processedDocs: [...(store.processedDocs || []), ...newDocs]
         });
 
         setLastUploadData({
-          name: newPatientName,
-          items: newInventory.length,
-          cita: data.perfilAuto?.expediente_control?.ultima_actualizacion
+          name: newDocs[0].name,
+          items: 0,
+          cita: new Date().toLocaleDateString()
         });
+
         setUploadStatus('success');
         setTimeout(() => {
           setShowSuccessModal(true);
@@ -472,43 +345,91 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
         </div>
       </div>
 
-      {/* ═══ ACTION BAR ═══ */}
-      <div className="px-5 -mt-5 flex gap-2 relative z-10">
-        <button onClick={() => isEditing ? handleSaveManual() : setIsEditing(true)} className={`flex-1 py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-lg ${isEditing ? 'bg-emerald-500 text-white' : 'bg-white text-gray-700'}`}>
-          <span className="material-symbols-outlined text-base font-fill">{isEditing ? 'save' : 'edit'}</span>{isEditing ? 'Guardar' : 'Editar'}
-        </button>
-        <button onClick={() => setShowClinical(!showClinical)} className={`px-4 py-3 rounded-xl font-bold text-xs flex items-center justify-center active:scale-95 transition-all shadow-lg ${showClinical ? 'bg-blue-600 text-white' : 'bg-white text-blue-600'}`}>
-          <span className="material-symbols-outlined text-base font-fill">clinical_notes</span>
-        </button>
-        {!isLocked && (
-          <>
-            <button onClick={() => fileInputRef.current?.click()} disabled={isProcessing} className="px-4 py-3 rounded-xl bg-gray-900 text-white flex items-center justify-center active:scale-95 transition-all shadow-lg disabled:opacity-50">
-              <span className="material-symbols-outlined text-base font-fill">upload_file</span>
-            </button>
-            <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept="application/pdf" className="hidden" title="PDF" />
-          </>
-        )}
-      </div>
+      {/* ═══ PANEL DE CONFIGURACIÓN (REVELADO POR LONG PRESS) ═══ */}
+      {!isLocked && (
+        <div className="px-5 -mt-5 space-y-3 relative z-10 animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="bg-white rounded-3xl p-5 shadow-2xl border border-gray-100">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Panel de Configuración</p>
+              <span className="text-[9px] bg-red-50 text-red-500 px-2.5 py-1 rounded-full font-black uppercase tracking-tighter shadow-sm border border-red-100">Modo Admin Desbloqueado</span>
+            </div>
 
-      {/* PDF queue */}
-      {selectedFiles.length > 0 && (
-        <div className="px-5 mt-3">
-          <div className="bg-white p-4 rounded-2xl shadow-sm space-y-3">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-bold text-gray-700">{selectedFiles.length} archivo{selectedFiles.length > 1 ? 's' : ''} en cola</p>
-              <button onClick={() => setSelectedFiles([])} className="text-xs text-red-400 font-bold">Limpiar</button>
+            <div className="flex gap-2 mb-5">
+              <button
+                onClick={() => isEditing ? handleSaveManual() : setIsEditing(true)}
+                className={`flex-1 py-4 rounded-2xl font-black text-[10px] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg ${isEditing ? 'bg-emerald-500 text-white shadow-emerald-200/50' : 'bg-white text-gray-800 border-2 border-gray-100'}`}
+              >
+                <span className="material-symbols-outlined text-lg font-fill">{isEditing ? 'save' : 'edit_square'}</span>
+                {isEditing ? 'GUARDAR CAMBIOS' : 'EDITAR PERFIL MANUAL'}
+              </button>
+              <button
+                onClick={resetActiveProfile}
+                className="px-5 py-4 rounded-2xl font-black text-xs flex items-center justify-center active:scale-95 transition-all shadow-lg bg-red-50 text-red-600 border-2 border-red-100"
+              >
+                <span className="material-symbols-outlined text-xl font-fill">restart_alt</span>
+              </button>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {selectedFiles.map((file, idx) => (
-                <span key={idx} className="bg-blue-50 text-blue-700 text-[11px] font-medium px-3 py-1 rounded-lg flex items-center gap-1.5">
-                  {file.name.slice(0, 20)}{file.name.length > 20 ? '...' : ''}
-                  <button onClick={() => setSelectedFiles(prev => prev.filter((_, i) => i !== idx))} className="text-blue-400 hover:text-red-500 ml-0.5">×</button>
-                </span>
+
+            <p className="text-[9px] font-black text-gray-300 uppercase tracking-[0.2em] mb-3 text-center">Carga Modular de Documentos (PDF)</p>
+            <div className="grid grid-cols-3 gap-2.5">
+              {[
+                { id: 'FICHA_MEDICA', label: 'MÉDICA', icon: 'medical_services', color: 'bg-amber-500' },
+                { id: 'PLAN_NUTRICIONAL', label: 'PLAN NUTRI', icon: 'restaurant_menu', color: 'bg-blue-600' },
+                { id: 'INBODY', label: 'INBODY', icon: 'leaderboard', color: 'bg-gray-900' }
+              ].map(btn => (
+                <button
+                  key={btn.id}
+                  onClick={() => {
+                    setUploadContext(btn.id as any);
+                    fileInputRef.current?.click();
+                  }}
+                  disabled={isProcessing}
+                  className={`${btn.color} text-white p-3.5 rounded-2xl flex flex-col items-center justify-center gap-1.5 shadow-xl active:scale-90 transition-all disabled:opacity-50 group border border-white/10`}
+                >
+                  <span className="material-symbols-outlined text-xl font-fill group-hover:scale-110 transition-transform">{btn.icon}</span>
+                  <span className="text-[8px] font-black tracking-widest">{btn.label}</span>
+                </button>
               ))}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={(e) => handleFileSelect(e, uploadContext)}
+                accept="application/pdf"
+                className="hidden"
+                title="Upload PDF"
+              />
             </div>
-            <button onClick={processBatch} disabled={isProcessing} className="w-full bg-blue-600 text-white py-2.5 rounded-xl text-xs font-bold active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-1.5">
-              <span className="material-symbols-outlined text-sm">play_arrow</span>{uploadStatus === 'analyzing' ? 'Analizando...' : 'Analizar documentos'}
-            </button>
+
+            {/* Cola de archivos integrada */}
+            {selectedFiles.length > 0 && (
+              <div className="mt-6 pt-6 border-t border-gray-50 animate-in fade-in slide-in-from-bottom-2">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{selectedFiles.length} Archivos en Cola</p>
+                  <button onClick={() => setSelectedFiles([])} className="text-[10px] text-red-500 font-bold hover:underline">Limpiar todo</button>
+                </div>
+                <div className="grid grid-cols-1 gap-1.5 mb-4">
+                  {selectedFiles.map((file, idx) => (
+                    <div key={idx} className="bg-gray-50 text-gray-600 text-[10px] font-bold px-3 py-2 rounded-xl flex items-center justify-between border border-gray-100">
+                      <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-sm text-blue-400">picture_as_pdf</span>
+                        <span className="truncate max-w-[180px]">{file.name}</span>
+                      </div>
+                      <button onClick={() => setSelectedFiles(prev => prev.filter((_, i) => i !== idx))} className="text-gray-400 hover:text-red-500">
+                        <span className="material-symbols-outlined text-sm">close</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={processBatch}
+                  disabled={isProcessing}
+                  className="w-full bg-emerald-600 text-white py-4 rounded-2xl text-[11px] font-black uppercase active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-emerald-100 shadow-2xl"
+                >
+                  <span className="material-symbols-outlined text-lg">bolt</span>
+                  {uploadStatus === 'analyzing' ? 'ANALIZANDO GENIUS IA...' : 'INICIAR PROCESAMIENTO'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -554,68 +475,130 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
               </div>
             ))}
           </div>
+
+          {/* Objetivos Generales Restaurados */}
+          {(isEditing ? (editData.metas_y_objetivos?.objetivos_generales || []) : (profile.metas_y_objetivos?.objetivos_generales || [])).length > 0 && (
+            <div className="mt-6 pt-5 border-t border-gray-50">
+              <p className="text-[10px] text-gray-400 mb-3 uppercase tracking-wider font-bold">Objetivos Generales</p>
+              <div className="flex flex-wrap gap-2">
+                {(isEditing ? (editData.metas_y_objetivos?.objetivos_generales || []) : (profile.metas_y_objetivos?.objetivos_generales || [])).map((obj, i) => (
+                  <span key={i} className="bg-blue-50 text-blue-600 text-[10px] font-black px-3 py-1.5 rounded-xl border border-blue-100/50 uppercase tracking-tight">
+                    {obj}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Historial Clínico */}
-        {showClinical && (
-          <div className="bg-white rounded-2xl p-5 shadow-sm space-y-4">
-            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Historial Clínico</p>
-            <div>
-              <p className="text-[10px] text-gray-400 mb-1">Diagnóstico Nutricional</p>
-              <textarea value={isEditing ? (editData.diagnostico_clinico?.diagnostico_nutricional || '') : (profile.diagnostico_clinico?.diagnostico_nutricional || 'Sin diagnóstico.')} onChange={e => isEditing && setEditData({ ...editData, diagnostico_clinico: { ...editData.diagnostico_clinico, diagnostico_nutricional: e.target.value } })} readOnly={!isEditing} title="Diagnóstico" className="w-full bg-gray-50 border-none rounded-xl text-sm p-3 text-gray-700 h-16 resize-none focus:ring-1 focus:ring-blue-200" />
+        {/* Historial Clínico y Comorbilidades - Siempre visibles si existen */}
+        {((profile.diagnostico_clinico?.comorbilidades || []).length > 0 || showClinical) && (
+          <div className="bg-white rounded-2xl p-5 shadow-sm space-y-4 border-l-4 border-amber-400">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Expediente Clínico Digital</p>
+              <span className="material-symbols-outlined text-amber-500 text-lg font-fill">verified_user</span>
             </div>
             <div>
-              <p className="text-[10px] text-gray-400 mb-2">Comorbilidades</p>
+              <p className="text-[10px] text-gray-400 mb-1 font-bold">Diagnóstico Nutricional</p>
+              <textarea value={isEditing ? (editData.diagnostico_clinico?.diagnostico_nutricional || '') : (profile.diagnostico_clinico?.diagnostico_nutricional || 'Sin diagnóstico registrado.')} onChange={e => isEditing && setEditData({ ...editData, diagnostico_clinico: { ...editData.diagnostico_clinico, diagnostico_nutricional: e.target.value } })} readOnly={!isEditing} title="Diagnóstico" className="w-full bg-gray-50 border-none rounded-xl text-sm p-3 text-gray-700 h-16 resize-none focus:ring-1 focus:ring-blue-200 font-medium italic" />
+            </div>
+            <div>
+              <p className="text-[10px] text-gray-400 mb-2 font-bold uppercase tracking-tighter">Comorbilidades Críticas</p>
               <div className="flex flex-wrap gap-1.5">
                 {(isEditing ? (editData.diagnostico_clinico?.comorbilidades || []) : (profile.diagnostico_clinico?.comorbilidades || [])).map((c, i) => (
-                  <span key={i} className="bg-red-50 text-red-500 text-[11px] font-medium px-2.5 py-1 rounded-lg">{c}</span>
+                  <span key={i} className="bg-red-50 text-red-500 text-[10px] font-black px-3 py-1.5 rounded-xl border border-red-100/50 uppercase tracking-tighter shadow-sm">{c}</span>
                 ))}
-                {(isEditing ? (editData.diagnostico_clinico?.comorbilidades || []) : (profile.diagnostico_clinico?.comorbilidades || [])).length === 0 && <span className="text-[11px] text-gray-300">Ninguna</span>}
+                {(isEditing ? (editData.diagnostico_clinico?.comorbilidades || []) : (profile.diagnostico_clinico?.comorbilidades || [])).length === 0 && <span className="text-[11px] text-gray-300">Ninguna detectada</span>}
               </div>
             </div>
             <div>
-              <p className="text-[10px] text-gray-400 mb-1">Alergias</p>
-              <p className="text-sm text-gray-600">{(profile.diagnostico_clinico?.alergias || []).join(', ') || 'Ninguna'}</p>
+              <p className="text-[10px] text-gray-400 mb-1 font-bold">Alergias Alimentarias</p>
+              <p className="text-sm text-gray-700 font-bold">{(profile.diagnostico_clinico?.alergias || []).join(', ') || 'Ninguna'}</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="bg-amber-50/60 p-3 rounded-xl">
-                <p className="text-[10px] font-bold text-amber-600 mb-1">💊 Medicamentos</p>
-                <p className="text-[11px] text-gray-600">{profile.diagnostico_clinico?.medicamentos_actuales?.join(', ') || 'Ninguno'}</p>
+              <div className="bg-amber-50/60 p-3 rounded-xl border border-amber-100/50">
+                <p className="text-[9px] font-black text-amber-600 mb-1 uppercase tracking-widest">Medicamentos</p>
+                <p className="text-[11px] text-gray-600 font-bold">{profile.diagnostico_clinico?.medicamentos_actuales?.join(', ') || 'Sin medicación'}</p>
               </div>
-              <div className="bg-emerald-50/60 p-3 rounded-xl">
-                <p className="text-[10px] font-bold text-emerald-600 mb-1">🥤 Suplementos</p>
-                <p className="text-[11px] text-gray-600">{Array.isArray(profile.diagnostico_clinico?.suplementacion) ? profile.diagnostico_clinico.suplementacion.join(', ') : (profile.diagnostico_clinico?.suplementacion || 'Ninguno')}</p>
+              <div className="bg-emerald-50/60 p-3 rounded-xl border border-emerald-100/50">
+                <p className="text-[9px] font-black text-emerald-600 mb-1 uppercase tracking-widest">Suplementos</p>
+                <p className="text-[11px] text-gray-600 font-bold">{Array.isArray(profile.diagnostico_clinico?.suplementacion) ? profile.diagnostico_clinico.suplementacion.join(', ') : (profile.diagnostico_clinico?.suplementacion || 'Sin suplementación')}</p>
               </div>
             </div>
           </div>
         )}
 
-        {/* Composición Corporal */}
-        <div className="bg-gray-900 rounded-2xl p-5 text-white shadow-lg">
-          <p className="text-[11px] font-bold text-white/40 mb-4 uppercase tracking-wider">Composición Corporal</p>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-5">
-            {[
-              { l: 'Peso Actual', v: profile.analisis_inbody_actual?.peso_actual_kg, u: 'kg', k: 'peso_actual_kg' },
-              { l: 'Músculo', v: profile.analisis_inbody_actual?.smm_masa_musculo_esqueletica_kg, u: 'kg', k: 'smm_masa_musculo_esqueletica_kg' },
-              { l: 'Grasa', v: profile.analisis_inbody_actual?.pbf_porcentaje_grasa_corporal, u: '%', k: 'pbf_porcentaje_grasa_corporal' },
-              { l: 'Score', v: profile.analisis_inbody_actual?.inbody_score, u: 'pts', k: 'inbody_score' },
-            ].map(f => (
-              <div key={f.k}>
-                <p className="text-[10px] text-white/30 mb-0.5">{f.l}</p>
-                {isEditing ? (
-                  <input value={(editData.analisis_inbody_actual as any)?.[f.k] || ''} onChange={e => setEditData({ ...editData, analisis_inbody_actual: { ...editData.analisis_inbody_actual, [f.k]: e.target.value } })} title={f.l} className="bg-white/10 border-none rounded-lg text-lg font-bold text-white w-full p-1 focus:ring-1 focus:ring-white/20" />
-                ) : <p className="text-xl font-bold">{f.v || '—'} <span className="text-xs text-white/20">{f.u}</span></p>}
-              </div>
-            ))}
-          </div>
-          <div className="flex justify-between mt-5 pt-4 border-t border-white/10">
-            <div>
-              <p className="text-[10px] text-white/30">Grasa Visceral</p>
-              <p className="text-base font-bold text-amber-400">Nivel {profile.analisis_inbody_actual?.grasa_visceral_nivel || '—'}</p>
+        {/* InBody Section - High Contrast Professional Design */}
+        <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+          {/* Header estilo InBody Real */}
+          <div className="bg-red-700 px-6 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-white text-xl">analytics</span>
+              <p className="text-sm font-black text-white uppercase tracking-widest">InBody Report</p>
             </div>
-            <div className="text-right">
-              <p className="text-[10px] text-white/30">Metabolismo Basal</p>
-              <p className="text-base font-bold text-emerald-400">{profile.analisis_inbody_actual?.tasa_metabolica_basal_kcal || '—'} kcal</p>
+            <div className="bg-white/20 px-3 py-1 rounded-lg">
+              <p className="text-[10px] text-white/80 font-bold uppercase tracking-tighter">Último Test: {profile.analisis_inbody_actual?.fecha_test || 'Pendiente'}</p>
+            </div>
+          </div>
+
+          <div className="p-6">
+            <div className="flex items-center justify-between mb-8 pb-6 border-b border-gray-50">
+              <div className="space-y-1">
+                <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.1em]">Composición General</p>
+                <h3 className="text-2xl font-black text-gray-900">Análisis Corporal</h3>
+              </div>
+              <div className="size-16 rounded-2xl bg-red-50 border-2 border-red-100 flex flex-col items-center justify-center shadow-sm">
+                <p className="text-[9px] text-red-600 font-black uppercase leading-none">Score</p>
+                <p className="text-2xl font-black text-red-700 leading-none mt-1">{profile.analisis_inbody_actual?.inbody_score || '0'}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-x-10 gap-y-8">
+              {[
+                { l: 'Peso Actual', v: profile.analisis_inbody_actual?.peso_actual_kg, u: 'kg', k: 'peso_actual_kg', color: 'text-gray-900', bg: 'bg-gray-50' },
+                { l: 'Masa Músculo', v: profile.analisis_inbody_actual?.smm_masa_musculo_esqueletica_kg, u: 'kg', k: 'smm_masa_musculo_esqueletica_kg', color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                { l: 'Grasa Corporal', v: profile.analisis_inbody_actual?.pbf_porcentaje_grasa_corporal, u: '%', k: 'pbf_porcentaje_grasa_corporal', color: 'text-amber-600', bg: 'bg-amber-50' },
+                { l: 'Tasa Metabólica', v: profile.analisis_inbody_actual?.tasa_metabolica_basal_kcal, u: 'kcal', k: 'tasa_metabolica_basal_kcal', color: 'text-blue-600', bg: 'bg-blue-50' },
+              ].map(f => (
+                <div key={f.k} className="relative">
+                  <p className="text-[10px] text-gray-400 mb-1 font-black uppercase tracking-wider">{f.l}</p>
+                  {isEditing ? (
+                    <input value={(editData.analisis_inbody_actual as any)?.[f.k] || ''} onChange={e => setEditData({ ...editData, analisis_inbody_actual: { ...editData.analisis_inbody_actual, [f.k]: e.target.value } })} title={f.l} className="bg-gray-50 border-2 border-transparent focus:border-red-500 rounded-xl text-lg font-black text-gray-900 w-full p-2 outline-none transition-all" />
+                  ) : (
+                    <div className="flex items-baseline gap-1">
+                      <span className={`text-2xl font-black ${f.color}`}>{f.v || '--'}</span>
+                      <span className="text-[10px] font-bold text-gray-300 uppercase tracking-tighter">{f.u}</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-10 pt-8 border-t border-gray-50 space-y-6">
+              <div>
+                <div className="flex justify-between items-end mb-2">
+                  <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Nivel de Grasa Visceral</p>
+                  <span className="text-sm font-black text-red-600">Nivel {profile.analisis_inbody_actual?.grasa_visceral_nivel || '0'}</span>
+                </div>
+                <div className="h-3 w-full bg-gray-100 rounded-full overflow-hidden flex p-0.5 border border-gray-200 shadow-inner">
+                  <div className="h-full bg-gradient-to-r from-emerald-500 via-amber-400 to-red-600 rounded-full transition-all duration-700" style={{ width: `${Math.min((parseInt(profile.analisis_inbody_actual?.grasa_visceral_nivel || '0') / 20) * 100, 100)}%` }} />
+                </div>
+                <div className="flex justify-between mt-1 px-1">
+                  <span className="text-[8px] text-gray-300 font-bold uppercase">Bajo</span>
+                  <span className="text-[8px] text-gray-300 font-bold uppercase">Óptimo</span>
+                  <span className="text-[8px] text-red-300 font-bold uppercase">Crítico</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 bg-gray-900 rounded-2xl p-4 shadow-lg border-l-4 border-red-500">
+                <div className="size-10 rounded-xl bg-white/10 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-white text-xl">flag</span>
+                </div>
+                <div>
+                  <p className="text-[9px] text-white/40 font-black uppercase mb-0.5">Control de Peso Sugerido</p>
+                  <p className="text-lg font-black text-white">{profile.metas_y_objetivos?.control_peso_inmediato || '0.0 kg'}</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -665,36 +648,70 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
           </div>
         )}
 
-        {/* Documentos */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Documentos</p>
-            {(store.processedDocs || []).length > 0 && (
-              <button onClick={() => { if (window.confirm("⚠️ Esto borrará TODO. ¿Continuar?")) saveStore(JSON.parse(JSON.stringify(initialStore))); }} className="text-[10px] font-bold text-red-400">Reiniciar</button>
+        {/* Biblioteca de Expedientes - PROTEGIDO TRAS DESBLOQUEO */}
+        {!isLocked && (
+          <div className="bg-white rounded-2xl p-6 shadow-sm animate-in fade-in duration-700">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Biblioteca de Expedientes</p>
+              {(store.processedDocs || []).length > 0 && (
+                <button
+                  onClick={() => { if (window.confirm("⚠️ ¿Estás seguro de reiniciar el historial de documentos?")) saveStore({ ...store, processedDocs: [] }); }}
+                  className="text-[10px] font-bold text-red-400"
+                >
+                  Vaciar Biblioteca
+                </button>
+              )}
+            </div>
+
+            {(store.processedDocs || []).length > 0 ? (
+              <div className="space-y-3">
+                {store.processedDocs.slice().reverse().map((doc) => (
+                  <div key={doc.id} className="bg-gray-50 p-4 rounded-2xl border border-gray-100/50 group hover:border-blue-200 transition-all">
+                    <div className="flex items-start justify-between">
+                      <div className="flex gap-3">
+                        <div className={`size-10 rounded-xl flex items-center justify-center ${doc.type === 'PLAN_NUTRICIONAL' ? 'bg-blue-100 text-blue-600' :
+                          doc.type === 'INBODY' ? 'bg-gray-800 text-white' : 'bg-amber-100 text-amber-600'
+                          }`}>
+                          <span className="material-symbols-outlined text-xl">
+                            {doc.type === 'PLAN_NUTRICIONAL' ? 'restaurant_menu' : doc.type === 'INBODY' ? 'leaderboard' : 'medical_services'}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-black text-gray-800 truncate max-w-[150px]">{doc.name}</p>
+                          <p className="text-[9px] text-gray-400 font-bold uppercase mt-0.5">{new Date(doc.date).toLocaleDateString()} · {doc.type}</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => { if (window.confirm(`¿Deseas ACUMULAR este ${doc.type} a tu perfil actual?`)) applyDocumentData(doc.data, true); }}
+                          title="Activar"
+                          className="size-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
+                        >
+                          <span className="material-symbols-outlined text-lg">play_arrow</span>
+                        </button>
+                        <button
+                          onClick={() => { if (window.confirm(`¿Eliminar ${doc.name} del historial?`)) saveStore({ ...store, processedDocs: store.processedDocs.filter(d => d.id !== doc.id) }); }}
+                          title="Eliminar"
+                          className="size-8 rounded-lg bg-red-50 text-red-400 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                        >
+                          <span className="material-symbols-outlined text-lg">close</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div onClick={() => { setUploadContext('PLAN_NUTRICIONAL'); fileInputRef.current?.click(); }} className="p-10 border-2 border-dashed border-gray-100 rounded-3xl flex flex-col items-center gap-2 cursor-pointer hover:bg-gray-50 transition-all group">
+                <div className="size-14 rounded-full bg-gray-50 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <span className="material-symbols-outlined text-3xl text-gray-200">cloud_upload</span>
+                </div>
+                <p className="text-[11px] text-gray-400 font-black uppercase tracking-[0.2em]">Biblioteca Vacía</p>
+                <p className="text-[9px] text-gray-300 font-bold uppercase tracking-tighter">Sube un PDF para comenzar tu historial</p>
+              </div>
             )}
           </div>
-          {(store.processedDocs || []).length > 0 ? (
-            <div className="space-y-1.5">
-              {store.processedDocs.map((doc, idx) => (
-                <div key={idx} className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-xl">
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-sm text-blue-400">description</span>
-                    <span className="text-xs font-medium text-gray-600 truncate max-w-[200px]">{doc}</span>
-                  </div>
-                  <button onClick={() => { if (window.confirm(`¿Eliminar ${doc}?`)) saveStore({ ...store, processedDocs: store.processedDocs.filter((_, i) => i !== idx) }); }} className="text-gray-300 hover:text-red-500">
-                    <span className="material-symbols-outlined text-sm">close</span>
-                  </button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div onClick={() => fileInputRef.current?.click()} className="p-5 border border-dashed border-gray-200 rounded-xl flex flex-col items-center gap-1 cursor-pointer hover:bg-gray-50 transition-all">
-              <span className="material-symbols-outlined text-xl text-gray-300">cloud_upload</span>
-              <p className="text-xs text-gray-400">Subir PDFs (máx. 3)</p>
-            </div>
-          )}
-          <input ref={fileInputRef} type="file" accept=".pdf" multiple onChange={handleFileSelect} className="hidden" />
-        </div>
+        )}
 
         {/* Emergencia */}
         <div className="bg-red-50 rounded-2xl p-4 flex items-center justify-between">
