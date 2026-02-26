@@ -59,6 +59,14 @@ const INGREDIENT_TO_PRODUCT: Record<string, string> = {
   'ralladura de limon': 'Limones',
 };
 
+const getEffectiveApiKey = (apiKey?: string): string => {
+  const key = apiKey || 
+              (import.meta as any).env?.VITE_GEMINI_API_KEY || 
+              (process as any).env?.GEMINI_API_KEY || 
+              '';
+  return key.trim();
+};
+
 const normalizeCompras = (data: AIResponse): AIResponse => {
   if (!data.compras || !Array.isArray(data.compras)) return data;
 
@@ -104,12 +112,12 @@ export const processPdfWithGemini = async (
   apiKey?: string,
   docTypeHint?: 'FICHA_MEDICA' | 'PLAN_NUTRICIONAL' | 'INBODY'
 ): Promise<AIResponse> => {
-      const effectiveApiKey = apiKey || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
-      if (effectiveApiKey && effectiveApiKey.length > 20) {
-        try {
-          const genAI = new GoogleGenerativeAI(effectiveApiKey);
-          console.log(`[BUILD_V191] AI Process: Usando motor estable Gemini (2.5 Flash) - Contexto: ${docTypeHint || 'AUTO'}`);
-          const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash", generationConfig: { temperature: 0 } });
+  const effectiveApiKey = getEffectiveApiKey(apiKey);
+  if (effectiveApiKey.length > 20) {
+    try {
+      const genAI = new GoogleGenerativeAI(effectiveApiKey);
+      console.log(`[BUILD_V191] AI Process: Usando motor estable Gemini (2.5 Flash) - Contexto: ${docTypeHint || 'AUTO'}`);
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash", generationConfig: { temperature: 0 } });
 
       const currentProfileContext = perfil ? `
 LO QUE YA SABEMOS DEL PACIENTE:
@@ -258,8 +266,8 @@ IMPORTANTE:
 export const analyzeImageWithGemini = async (base64Image: string, perfil?: any, apiKey?: string) => {
   try {
     const cleanBase64 = base64Image.replace(/^data:image\/\w+;base64,/, "");
-    const effectiveApiKey = apiKey || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
-    if (effectiveApiKey && effectiveApiKey.length > 20) {
+    const effectiveApiKey = getEffectiveApiKey(apiKey);
+    if (effectiveApiKey.length > 20) {
       const genAI = new GoogleGenerativeAI(effectiveApiKey);
       console.log("[BUILD_V191] AI Scan: Usando 2.5 Flash para imagen");
       const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
@@ -303,8 +311,8 @@ RESPONDE SOLO CON ESTE JSON:
 };
 
 export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: string, isVariant: boolean = false, originalRecipeTitle?: string): Promise<RecipeDetails> => {
-  const effectiveApiKey = apiKey || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
-  if (effectiveApiKey && effectiveApiKey.length > 20) {
+  const effectiveApiKey = getEffectiveApiKey(apiKey);
+  if (effectiveApiKey.length > 20) {
     try {
       const genAI = new GoogleGenerativeAI(effectiveApiKey);
       console.log("[BUILD_V191] AI Recipe: Usando motor 2.5 Flash para Alta Cocina");
@@ -412,7 +420,7 @@ MUY IMPORTANTE: Ya has generado una receta para esto llamada "${originalRecipeTi
 
 export async function getFitnessAdvice(profile: Profile, apiKey: string): Promise<string> {
   try {
-    const effectiveApiKey = apiKey || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
+    const effectiveApiKey = getEffectiveApiKey(apiKey);
     const genAI = new GoogleGenerativeAI(effectiveApiKey);
     console.log("[BUILD_V191] AI Fitness: Usando motor estable 2.5 Flash");
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
@@ -445,7 +453,7 @@ FORMATO: Pon solo 3 puntos cortos con un dibujo (emoji), nada más.`;
 
 export async function generateFullRoutine(profile: Profile, apiKey: string, selectedGoals?: string[], difficulty: string = "Media"): Promise<{ routine: any, consejo: string }> {
   try {
-    const effectiveApiKey = apiKey || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
+    const effectiveApiKey = getEffectiveApiKey(apiKey);
     const genAI = new GoogleGenerativeAI(effectiveApiKey);
     console.log("[BUILD_V191] AI Routine: Generando plan semanal con 2.5 Flash");
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
@@ -538,7 +546,7 @@ ESTILO: Minimalista, clínico y moderno. NO uses markdown fuera del JSON. Devuel
       if (parsed.zona_fit_response) {
         const payload = parsed.zona_fit_response;
         const weeklyRaw = payload.plan_semanal || {};
-        
+
         // Mapear cada día de la semana
         const days = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
         const mappedWeekly: any = {};

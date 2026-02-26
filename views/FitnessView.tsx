@@ -171,9 +171,7 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
     setIsGeneratingAdvice(true);
     const apiKey = (firebaseConfig as any).geminiApiKey || '';
     if (!apiKey) {
-      console.error("❌ Error: VITE_GEMINI_API_KEY no detectada. Verifica tus variables de entorno.");
-      setIsGeneratingAdvice(false);
-      return;
+      console.warn("⚠️ Advertencia: VITE_GEMINI_API_KEY no detectada en firebaseConfig. Intentando fallbacks...");
     }
     try {
       const advice = await getFitnessAdvice(store.profile, apiKey);
@@ -190,9 +188,7 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
     setIsGeneratingRoutine(true);
     const apiKey = (firebaseConfig as any).geminiApiKey || '';
     if (!apiKey) {
-      console.error("❌ Error: VITE_GEMINI_API_KEY no detectada en producción. La IA no podrá responder (403).");
-      setIsGeneratingRoutine(false);
-      return;
+      console.warn("⚠️ Advertencia: VITE_GEMINI_API_KEY no detectada en firebaseConfig (403 probable). Intentando fallbacks...");
     }
     try {
       const g = (selectedGoals.length > 0) ? selectedGoals : (store.profile?.metas_y_objetivos?.objetivos_generales || []);
