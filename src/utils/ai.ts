@@ -108,8 +108,8 @@ export const processPdfWithGemini = async (
       if (effectiveApiKey && effectiveApiKey.length > 20) {
         try {
           const genAI = new GoogleGenerativeAI(effectiveApiKey);
-          console.log(`AI Process: Usando motor estable Gemini (2.0 Flash) - Contexto: ${docTypeHint || 'AUTO'}`);
-          const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash", generationConfig: { temperature: 0 } });
+          console.log(`[BUILD_V191] AI Process: Usando motor estable Gemini (2.5 Flash) - Contexto: ${docTypeHint || 'AUTO'}`);
+          const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash", generationConfig: { temperature: 0 } });
 
       const currentProfileContext = perfil ? `
 LO QUE YA SABEMOS DEL PACIENTE:
@@ -261,8 +261,8 @@ export const analyzeImageWithGemini = async (base64Image: string, perfil?: any, 
     const effectiveApiKey = apiKey || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
     if (effectiveApiKey && effectiveApiKey.length > 20) {
       const genAI = new GoogleGenerativeAI(effectiveApiKey);
-      console.log("AI Scan: Usando 2.0 Flash para imagen");
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+      console.log("[BUILD_V191] AI Scan: Usando 2.5 Flash para imagen");
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
       const prompt = `Dime qué hay en esta foto de comida de forma muy clara y sencilla.
 Para el paciente: ${perfil?.perfil_biometrico?.nombre_completo || 'Usuario'}.
@@ -307,8 +307,8 @@ export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: 
   if (effectiveApiKey && effectiveApiKey.length > 20) {
     try {
       const genAI = new GoogleGenerativeAI(effectiveApiKey);
-      console.log("AI Recipe: Usando motor 2.0 Flash para Alta Cocina");
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+      console.log("[BUILD_V191] AI Recipe: Usando motor 2.5 Flash para Alta Cocina");
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
       const prompt = `Eres un asistente de cocina que prepara las recetas EXACTAS del plan nutricional del paciente.
 
@@ -414,8 +414,8 @@ export async function getFitnessAdvice(profile: Profile, apiKey: string): Promis
   try {
     const effectiveApiKey = apiKey || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
     const genAI = new GoogleGenerativeAI(effectiveApiKey);
-    console.log("AI Fitness: Usando motor estable 2.0 Flash");
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    console.log("[BUILD_V191] AI Fitness: Usando motor estable 2.5 Flash");
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `Dime 3 consejos cortos y fáciles para que esta persona entrene mejor.
 Usa un lenguaje motivador y súper sencillo.
@@ -447,8 +447,8 @@ export async function generateFullRoutine(profile: Profile, apiKey: string, sele
   try {
     const effectiveApiKey = apiKey || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
     const genAI = new GoogleGenerativeAI(effectiveApiKey);
-    console.log("AI Routine: Generando plan semanal con 2.0 Flash");
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    console.log("[BUILD_V191] AI Routine: Generando plan semanal con 2.5 Flash");
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const pe = profile.prescripcion_ejercicio;
     const dc = profile.diagnostico_clinico;
