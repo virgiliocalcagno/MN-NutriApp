@@ -12,6 +12,9 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
   const [aiAdvice, setAiAdvice] = useState<string | null>(store.fitnessAdvice || null);
   const [isGeneratingAdvice, setIsGeneratingAdvice] = useState(false);
   const [isGeneratingRoutine, setIsGeneratingRoutine] = useState(false);
+  const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
+
+  const FITNESS_GOALS = ["Pérdida de Grasa", "Ganancia Muscular", "Salud Cardiovascular", "Movilidad y Flexibilidad", "Acondicionamiento"];
 
   // --- Fit Logic (from CP002) ---
   const meta = store.profile?.metas_y_objetivos?.agua_objetivo_ml || 2800;
@@ -114,6 +117,12 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
     saveStore({ ...store, doneEx: { ...store.doneEx, [displayDay]: newDone } });
   };
 
+  const toggleGoal = (goal: string) => {
+    setSelectedGoals(prev =>
+      prev.includes(goal) ? prev.filter(g => g !== goal) : [...prev, goal]
+    );
+  };
+
   const handleGenerateAdvice = async () => {
     if (!store.profile) return;
     setIsGeneratingAdvice(true);
@@ -132,10 +141,11 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
     setIsGeneratingRoutine(true);
     try {
       const apiKey = (firebaseConfig as any).geminiApiKey || '';
-      const result = await generateFullRoutine(store.profile, apiKey);
+      const result = await generateFullRoutine(store.profile, apiKey, selectedGoals.length > 0 ? selectedGoals : undefined);
       if (result && result.routine && result.routine.length > 0) {
         saveStore({ ...store, exercises: { SEMANAL: result.routine }, doneEx: {}, fitnessAdvice: result.consejo });
         setAiAdvice(result.consejo);
+        // Clear selection after generation to keep UI clean, or keep it. We'll keep it so user sees what they picked.
       }
     } catch (error) {
       console.error('Error generating routine:', error);
@@ -369,6 +379,35 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
               ))}
             </div>
           </section>
+
+          {/* Goal Selector for AI */}
+          <div className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-100 mb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="material-symbols-outlined text-primary text-xl">target</span>
+              <div>
+                <h3 className="font-black text-slate-800 tracking-tight text-sm">Foco del Entrenamiento</h3>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-tight">Configura la Inteligencia Artificial (Múltiple)</p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {FITNESS_GOALS.map(goal => {
+                const isActive = selectedGoals.includes(goal);
+                return (
+                  <button
+                    key={goal}
+                    onClick={() => toggleGoal(goal)}
+                    className={`px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border ${isActive
+                        ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20 scale-105'
+                        : 'bg-slate-50 text-slate-400 border-slate-100 hover:border-primary/30 hover:bg-white'
+                      }`}
+                  >
+                    {goal}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
           {/* Daily Plan Headers */}
           <div className="flex items-center justify-between px-1">

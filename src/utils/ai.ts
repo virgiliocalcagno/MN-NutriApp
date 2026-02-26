@@ -440,7 +440,7 @@ FORMATO: Pon solo 3 puntos cortos con un dibujo (emoji), nada más.`;
   }
 }
 
-export async function generateFullRoutine(profile: Profile, apiKey: string): Promise<{ routine: any[], consejo: string }> {
+export async function generateFullRoutine(profile: Profile, apiKey: string, selectedGoals?: string[]): Promise<{ routine: any[], consejo: string }> {
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
@@ -470,7 +470,7 @@ MISIÓN EXCLUSIVA: Generar una rutina en la pantalla Zona Fit basada en el Profi
 - Aeróbico: ${pe?.aerobico_dias_semana || '2'} días
 
 ═══ OBJETIVOS SELECCIONADOS ═══
-- Metas: ${mo?.objetivos_generales?.join(', ') || 'Salud General'}
+- Metas: ${selectedGoals && selectedGoals.length > 0 ? selectedGoals.join(', ') : (mo?.objetivos_generales?.join(', ') || 'Salud General')}
 
 LÓGICA DE FUSIÓN (MÚLTIPLES OBJETIVOS):
 1. Prioridad 1: Seguridad Clínica: Independientemente de los objetivos, respeta siempre las alertas de HTA, Litiasis Renal y límites de FCM.
