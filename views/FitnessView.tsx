@@ -13,8 +13,17 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
   const [isGeneratingAdvice, setIsGeneratingAdvice] = useState(false);
   const [isGeneratingRoutine, setIsGeneratingRoutine] = useState(false);
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
+  const [selectedDay, setSelectedDay] = useState<string>(displayDay);
 
-  const FITNESS_GOALS = ["Pérdida de Grasa", "Ganancia Muscular", "Salud Cardiovascular", "Movilidad y Flexibilidad", "Acondicionamiento"];
+  const WEEK_DAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+
+  const FITNESS_GOALS = [
+    { id: "Pérdida de Grasa", label: "Grasa", icon: "local_fire_department", color: "text-orange-500" },
+    { id: "Ganancia Muscular", label: "Músculo", icon: "fitness_center", color: "text-slate-700" },
+    { id: "Salud Cardiovascular", label: "Cardio", icon: "cardiology", color: "text-red-500" },
+    { id: "Movilidad y Flexibilidad", label: "Movilidad", icon: "self_improvement", color: "text-blue-500" },
+    { id: "Acondicionamiento", label: "Energía", icon: "bolt", color: "text-amber-500" }
+  ];
 
   // --- Fit Logic (from CP002) ---
   const meta = store.profile?.metas_y_objetivos?.agua_objetivo_ml || 2800;
@@ -100,26 +109,22 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
   const todayName = dias[new Date().getDay()];
   const displayDay = store.selectedDay || todayName;
 
-  // Normalización para búsqueda de rutina
-  const normalizedDisplayDay = normalizeDay(displayDay);
-  const exKey = Object.keys(store.exercises || {}).find(k => normalizeDay(k) === normalizedDisplayDay) || displayDay;
-
-  // Si existe una rutina global bajo "SEMANAL", la usamos todos los días (nuevo estándar de IA Deportólogo), 
-  // sino seguimos buscando el mapeo diario (compatibilidad retroactiva).
-  const exercisesList = store.exercises?.["SEMANAL"] || store.exercises?.[exKey] || [];
-  const completedList = store.doneEx?.[displayDay] || [];
+  // --- Data Binding for Weekly Plan ---
+  const exercisesMap = store.exercises || {};
+  const exercisesList = exercisesMap[selectedDay] || [];
+  const completedList = store.doneEx?.[selectedDay] || [];
 
   const toggleExercise = (idx: number) => {
     const newDone = [...completedList];
     const pos = newDone.indexOf(idx);
     if (pos === -1) newDone.push(idx);
     else newDone.splice(pos, 1);
-    saveStore({ ...store, doneEx: { ...store.doneEx, [displayDay]: newDone } });
+    saveStore({ ...store, doneEx: { ...store.doneEx, [selectedDay]: newDone } });
   };
 
-  const toggleGoal = (goal: string) => {
+  const toggleGoal = (goalId: string) => {
     setSelectedGoals(prev =>
-      prev.includes(goal) ? prev.filter(g => g !== goal) : [...prev, goal]
+      prev.includes(goalId) ? prev.filter(g => g !== goalId) : [...prev, goalId]
     );
   };
 
@@ -140,12 +145,16 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
     if (!store.profile) return;
     setIsGeneratingRoutine(true);
     try {
-      const apiKey = (firebaseConfig as any).geminiApiKey || '';
-      const result = await generateFullRoutine(store.profile, apiKey, selectedGoals.length > 0 ? selectedGoals : undefined);
-      if (result && result.routine && result.routine.length > 0) {
-        saveStore({ ...store, exercises: { SEMANAL: result.routine }, doneEx: {}, fitnessAdvice: result.consejo });
+      const g = (selectedGoals.length > 0) ? selectedGoals : (store.profile?.metas_y_objetivos?.objetivos_generales || []);
+      const result = await generateFullRoutine(store.profile, g);
+      if (result && result.routine) {
+        saveStore({ 
+          ...store, 
+          exercises: result.routine, // Objeto { Lunes: [], Martes: [], ... }
+          doneEx: {}, // Limpiar progreso anterior al generar nuevo plan
+          fitnessAdvice: result.consejo 
+        });
         setAiAdvice(result.consejo);
-        // Clear selection after generation to keep UI clean, or keep it. We'll keep it so user sees what they picked.
       }
     } catch (error) {
       console.error('Error generating routine:', error);
@@ -390,41 +399,55 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-5 gap-3">
               {FITNESS_GOALS.map(goal => {
-                const isActive = selectedGoals.includes(goal);
+                const isActive = selectedGoals.includes(goal.id);
                 return (
                   <button
-                    key={goal}
-                    onClick={() => toggleGoal(goal)}
-                    className={`px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border ${isActive
-                        ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20 scale-105'
-                        : 'bg-slate-50 text-slate-400 border-slate-100 hover:border-primary/30 hover:bg-white'
+                    key={goal.id}
+                    onClick={() => toggleGoal(goal.id)}
+                    className={`flex flex-col items-center gap-2 p-4 rounded-3xl transition-all border ${isActive
+                      ? 'bg-blue-50/50 border-primary shadow-lg shadow-blue-100/50 scale-105'
+                      : 'bg-slate-50/50 border-transparent hover:border-slate-100 hover:bg-white'
                       }`}
                   >
-                    {goal}
+                    <span className={`material-symbols-outlined text-2xl ${isActive ? 'text-primary' : goal.color}`}>
+                      {goal.icon}
+                    </span>
+                    <div className="text-center">
+                      <p className={`text-[9px] font-black leading-tight transition-colors ${isActive ? 'text-primary' : 'text-slate-800'}`}>
+                        {goal.label}
+                      </p>
+                    </div>
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* Daily Plan Headers */}
-          <div className="flex items-center justify-between px-1">
-            <h3 className="text-lg font-bold text-slate-900">Entrenamiento</h3>
-            <div className="flex items-center gap-2">
-              {exercisesList.length > 0 && (
+          {/* Day Selector */}
+          <div className="flex bg-white p-2 rounded-3xl shadow-sm border border-slate-100 mb-6 gap-1 overflow-x-auto no-scrollbar">
+            {WEEK_DAYS.map(day => {
+              const isActive = selectedDay === day;
+              const hasExercises = exercisesMap[day] && exercisesMap[day].length > 0;
+              return (
                 <button
-                  onClick={handleGenerateRoutine}
-                  disabled={isGeneratingRoutine}
-                  className="size-8 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center hover:bg-primary/10 hover:text-primary transition-all active:scale-95 disabled:opacity-50"
-                  title="Regenerar rutina"
+                  key={day}
+                  onClick={() => setSelectedDay(day)}
+                  className={`flex-1 min-w-[50px] py-3 rounded-2xl flex flex-col items-center gap-1 transition-all ${
+                    isActive 
+                    ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-105 z-10' 
+                    : 'text-slate-400 hover:bg-slate-50'
+                  }`}
                 >
-                  <span className={`material-symbols-outlined text-sm ${isGeneratingRoutine ? 'animate-spin' : ''}`}>sync</span>
+                  <span className={`text-[8px] font-black uppercase tracking-tighter ${isActive ? 'text-white/60' : 'text-slate-300'}`}>
+                    {day.substring(0, 3)}
+                  </span>
+                  <span className="text-xs font-black leading-none">{day.substring(0, 1)}</span>
+                  {hasExercises && !isActive && <div className="size-1 bg-primary/30 rounded-full mt-0.5"></div>}
                 </button>
-              )}
-              <span className="text-xs font-bold text-primary bg-primary/5 px-3 py-1 rounded-full uppercase">{displayDay}</span>
-            </div>
+              );
+            })}
           </div>
 
           {/* AI Recommendations Section */}
@@ -487,16 +510,55 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
           </div>
 
           {/* Exercises */}
-          <div className="space-y-3">
+          <div className="space-y-3 mt-4">
+            <div className="flex items-center justify-between px-1 mb-2">
+              <h3 className="text-lg font-black text-slate-800 tracking-tight">Rutina: <span className="text-primary">{selectedDay}</span></h3>
+              {exercisesList.length > 0 && (
+                <button
+                  onClick={handleGenerateRoutine}
+                  disabled={isGeneratingRoutine}
+                  className="size-10 rounded-2xl bg-primary text-white flex items-center justify-center hover:bg-primary/90 transition-all active:scale-95 disabled:opacity-50 shadow-lg shadow-primary/20"
+                  title="Generar Nuevo Plan Semanal"
+                >
+                  <span className={`material-symbols-outlined text-lg ${isGeneratingRoutine ? 'animate-spin' : ''}`}>auto_awesome</span>
+                </button>
+              )}
+            </div>
+
             {exercisesList.length > 0 ? exercisesList.map((ex: any, idx: number) => {
               const isCompleted = completedList.includes(idx);
+              
+              // Mapeo dinámico de categorías a iconos
+              const catMap: Record<string, { icon: string, color: string }> = {
+                "Grasa": { icon: "local_fire_department", color: "text-orange-500" },
+                "Músculo": { icon: "fitness_center", color: "text-slate-700" },
+                "Cardio": { icon: "cardiology", color: "text-red-500" },
+                "Movilidad": { icon: "self_improvement", color: "text-blue-500" },
+                "Energía": { icon: "bolt", color: "text-amber-500" }
+              };
+
+              // Inferencia para rutinas existentes sin el campo 'cat'
+              const inferCategory = (name: string): string => {
+                const n = (name || "").toLowerCase();
+                if (n.includes('caminata') || n.includes('cardio') || n.includes('elíptica') || n.includes('marcha') || n.includes('trote')) return "Cardio";
+                if (n.includes('sentadilla') || n.includes('flexión') || n.includes('fuerza') || n.includes('pesas') || n.includes('bíceps') || n.includes('remo')) return "Músculo";
+                if (n.includes('movilidad') || n.includes('estiramiento') || n.includes('yoga') || n.includes('pilates') || n.includes('articular')) return "Movilidad";
+                if (n.includes('grasa') || n.includes('metabólico') || n.includes('quemar')) return "Grasa";
+                return "Energía"; // Fallback Energía
+              };
+
+              const category = ex.cat || inferCategory(ex.n);
+              const catInfo = catMap[category] || { icon: "bolt", color: "text-amber-500" };
+
               return (
                 <div key={idx} className={`p-4 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 transition-all ${isCompleted ? 'opacity-60 bg-slate-50/50' : ''}`}>
                   <div
                     onClick={() => toggleExercise(idx)}
-                    className={`size-12 rounded-xl flex items-center justify-center transition-all cursor-pointer ${isCompleted ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                    className={`size-12 rounded-xl flex items-center justify-center transition-all cursor-pointer ${isCompleted ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100'}`}
                   >
-                    <span className="material-symbols-outlined">{isCompleted ? 'check_circle' : 'fitness_center'}</span>
+                    <span className={`material-symbols-outlined ${isCompleted ? '' : catInfo.color}`}>
+                      {isCompleted ? 'check_circle' : catInfo.icon}
+                    </span>
                   </div>
                   <div className="flex-1" onClick={() => toggleExercise(idx)}>
                     <h4 className={`font-bold text-slate-900 ${isCompleted ? 'line-through text-slate-400' : ''}`}>{ex.n}</h4>
@@ -525,23 +587,27 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
                 </div>
               )
             }) : (
-              <div className="p-10 text-center bg-white rounded-3xl border border-dashed border-slate-200 space-y-4">
+              <div className="p-10 text-center bg-white rounded-[40px] border border-dashed border-slate-200 space-y-4">
                 {isGeneratingRoutine ? (
                   <>
                     <span className="material-symbols-outlined text-4xl text-primary animate-spin">progress_activity</span>
-                    <p className="text-sm font-bold text-slate-600">Generando rutina personalizada...</p>
-                    <p className="text-xs text-slate-400">Analizando perfil clínico, objetivos y prescripción</p>
+                    <p className="text-sm font-black text-slate-600 uppercase tracking-tighter">Generando Plan Semanal...</p>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-tight">Analizando 7 días de entrenamiento para ti</p>
                   </>
                 ) : (
                   <>
-                    <span className="material-symbols-outlined text-4xl text-slate-200 mb-2">fitness_center</span>
-                    <p className="text-sm font-bold text-slate-500">Sin rutina asignada</p>
-                    <p className="text-xs text-slate-400 max-w-xs mx-auto">Genera una rutina semanal personalizada basada en tu ficha médica, objetivos y prescripción de ejercicio.</p>
+                    <div className="size-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-2">
+                       <span className="material-symbols-outlined text-4xl text-slate-200">bedtime</span>
+                    </div>
+                    <p className="text-sm font-black text-slate-500 uppercase tracking-tighter">Descanso Activo</p>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest max-w-[200px] mx-auto leading-normal">
+                      Hoy es día de recuperación. Mantén tu hidratación y movilidad ligera.
+                    </p>
                     <button
                       onClick={handleGenerateRoutine}
-                      className="mt-2 bg-primary text-white px-8 py-4 rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:shadow-2xl hover:scale-[1.02] transition-all active:scale-95"
+                      className="mt-2 bg-primary text-white px-8 py-4 rounded-3xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:shadow-2xl hover:scale-[1.05] transition-all active:scale-95"
                     >
-                      Generar Mi Rutina Semanal
+                      Generar Nuevo Plan Semanal
                     </button>
                   </>
                 )}

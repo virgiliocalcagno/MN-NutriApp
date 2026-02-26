@@ -484,6 +484,7 @@ AJUSTE CLÍNICO CRÍTICO:
 - Si detectas HTA (Hipertensión), medicamentos cardíacos (Olmesartan, Corenter) o si la Edad es > 50 años: ESTÁ ESTRICTAMENTE PROHIBIDO asignar Planchas Isométricas, Flexiones de pecho en suelo, Levantamiento de pesas pesadas por encima de la cabeza, saltos o ejercicios que induzcan la Maniobra de Valsalva. 
 - La rutina para este perfil DEBE ser de INTENSIDAD LIGERA A MODERADA. Asígnale Caminata rápida, Estiramientos Dinámicos, Movilidad articular, Ejercicios con Banda Elástica ligera, Yoga suave, o Flexiones modificadas en pared. NUNCA sobrepasar su límite cardíaco promedio de entrenamiento.
 - Justifica clínicamente tus decisiones en el JSON basándote en esta edad y condiciones.
+- VOLUMEN DENTRO DE LÍMITES SEGUROS: Si la Edad es > 50 años o tiene HTA, la rutina NO DEBE exceder los 4-5 ejercicios por sesión para evitar sobrecarga y fatiga excesiva. Prioriza calidad y seguridad sobre cantidad.
 
 ESTRUCTURA DE SALIDA OBLIGATORIA (JSON EXACTO PARA ZONA FIT):
 {
@@ -494,26 +495,22 @@ ESTRUCTURA DE SALIDA OBLIGATORIA (JSON EXACTO PARA ZONA FIT):
       "profile_status": "Lectura_Exitosa"
     },
     "entrenamiento_semanal": {
-      "frecuencia_fuerza_dias": 0,
-      "frecuencia_aerobico_dias": 0,
-      "duracion_sesion_min": 30,
+      "justificacion_clinica": "Justificación global del plan de 7 días según edad y HTA",
       "intensidad_segura": "Moderada o Ligera (LPM)",
-      "justificacion_clinica": "Breve justificación de por qué elegiste estos ejercicios según la edad y clínica"
+      "objetivos_logrados": ["Grasa", "Cardio"]
     },
-    "lista_ejercicios": [
-      {
-        "id": "ex_001",
-        "nombre": "Nombre Simple y Seguro (Ej. Caminata / Elíptica)",
-        "series": 1,
-        "repeticiones": "30 Minutos",
-        "objetivo": "Oxidación",
-        "video_url": "https://www.youtube.com/results?search_query=low+impact+cardio+at+home",
-        "completado": false
-      }
-    ],
+    "plan_semanal": {
+      "Lunes": { "tipo": "Fuerza / Cardio / Descanso", "ejercicios": [{ "id": "ex_001", "nombre": "Ejemplo", "categoria": "Músculo", "series": 3, "repeticiones": 12, "objetivo": "Fuerza", "video_url": "..." }] },
+      "Martes": { "tipo": "...", "ejercicios": [] },
+      "Miércoles": { "tipo": "...", "ejercicios": [] },
+      "Jueves": { "tipo": "...", "ejercicios": [] },
+      "Viernes": { "tipo": "...", "ejercicios": [] },
+      "Sábado": { "tipo": "...", "ejercicios": [] },
+      "Domingo": { "tipo": "...", "ejercicios": [] }
+    },
     "alertas_seguridad": {
       "hidratacion_requerida_ml": 2800,
-      "restriccion_impacto": "Nota sobre el impacto en articulaciones según IMC/Edad",
+      "restriccion_impacto": "Nota sobre el impacto",
       "nota_medicamento": "Aviso sobre medicamentos"
     }
   }
@@ -528,18 +525,27 @@ ESTILO: Minimalista, clínico y moderno. NO uses markdown fuera del JSON. Devuel
       const parsed = JSON.parse(jsonMatch[0]);
       if (parsed.zona_fit_response) {
         const payload = parsed.zona_fit_response;
-        // Mapear "lista_ejercicios" al formato que espera FitnessView ("n", "i", "link")
-        const mappedRoutine = (payload.lista_ejercicios || []).map((ex: any) => ({
-          n: ex.nombre,
-          i: `${ex.series}x${ex.repeticiones} - ${ex.objetivo}`,
-          link: ex.video_url,
-          checklist_logic: ex.completado || false
-        }));
+        const weeklyRaw = payload.plan_semanal || {};
+        
+        // Mapear cada día de la semana
+        const days = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+        const mappedWeekly: any = {};
+
+        days.forEach(day => {
+          const dayData = weeklyRaw[day] || { ejercicios: [] };
+          mappedWeekly[day] = (dayData.ejercicios || []).map((ex: any) => ({
+            n: ex.nombre,
+            i: `${ex.series}x${ex.repeticiones} - ${ex.objetivo}`,
+            link: ex.video_url,
+            checklist_logic: ex.completado || false,
+            cat: ex.categoria || "Acondicionamiento"
+          }));
+        });
 
         const consejoCompacto = `ALERTA CLÍNICA: ${payload.entrenamiento_semanal?.justificacion_clinica || ''}\n${payload.alertas_seguridad?.restriccion_impacto || ''}\nHidratación: ${payload.alertas_seguridad?.hidratacion_requerida_ml || 2800} ml. ${payload.alertas_seguridad?.nota_medicamento || ''}`;
 
         return {
-          routine: mappedRoutine,
+          routine: mappedWeekly, // Ahora es un objeto indexado por días
           consejo: consejoCompacto
         };
       }
