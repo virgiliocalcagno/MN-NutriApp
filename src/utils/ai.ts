@@ -300,7 +300,7 @@ RESPONDE SOLO CON ESTE JSON:
   }
 };
 
-export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: string): Promise<RecipeDetails> => {
+export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: string, isVariant: boolean = false, originalRecipeTitle?: string): Promise<RecipeDetails> => {
   const effectiveApiKey = apiKey || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
   if (effectiveApiKey && effectiveApiKey.length > 20) {
     try {
@@ -339,9 +339,10 @@ RESPONDE CON JSON PURO:
     "pasos": ["1. Come primero los vegetales", "2. Luego la proteína", "3. Al final los carbohidratos"]
   }
 }
-
+${isVariant ? `
 SEMILLA DE VARIACIÓN Y CREATIVIDAD (IGNORAR PARA INGREDIENTES): ${Date.now()}-${Math.random()}
-Genera una variante única y creativa de la preparación de este plato, usando enfoques de cocción o presentación distintos a los que típicamente darías, pero MANTENIENDO LOS INGREDIENTES EXACTOS.
+MUY IMPORTANTE: Ya has generado una receta para esto llamada "${originalRecipeTitle}". Para esta petición, GENERA UNA VARIANTE ÚNICA Y CREATIVA de la preparación (diferentes métodos de cocción, emplatado o bio-hacks al original), MANTENIENDO SIEMPRE LOS INGREDIENTES Y MACROS EXACTOS.
+` : ''}
 `;
 
       const result = await model.generateContent(prompt);

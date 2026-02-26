@@ -200,15 +200,19 @@ const RecipeModal: React.FC<{
   const [loading, setLoading] = React.useState(true);
   const [details, setDetails] = React.useState<RecipeDetails | null>(null);
 
+  // Variant System State
+  const [isVariant, setIsVariant] = React.useState(false);
+  const [originalRecipe, setOriginalRecipe] = React.useState<RecipeDetails | null>(null);
+
   React.useEffect(() => {
     setLoading(true);
     setDetails(null);
     let isMounted = true;
 
     const fetchDetails = async () => {
-      // 1. Check if it exists in cache using the precise description string
+      // 1. Check direct cache ONLY if NOT requesting a variant
       const cacheKey = btoa(unescape(encodeURIComponent(meal.description))).substring(0, 32);
-      if (cacheData[cacheKey]) {
+      if (!isVariant && cacheData[cacheKey]) {
         if (isMounted) {
           setDetails(cacheData[cacheKey]);
           setLoading(false);
@@ -217,14 +221,16 @@ const RecipeModal: React.FC<{
         return;
       }
 
-      // 2. Otherwise generate via AI and save
+      // 2. Obtain from AI (with variant arguments if toggled)
       try {
-        const data = await getRecipeDetails(meal.description, perfil, firebaseConfig.geminiApiKey);
+        const data = await getRecipeDetails(meal.description, perfil, firebaseConfig.geminiApiKey, isVariant, originalRecipe?.titulo);
         if (isMounted) {
           setDetails(data);
           setLoading(false);
-          // Save to cache globally
-          onCacheSave({ ...cacheData, [cacheKey]: data });
+          // Only save to global persistence cache if it's the stable original recipe
+          if (!isVariant) {
+            onCacheSave({ ...cacheData, [cacheKey]: data });
+          }
         }
       } catch (e) {
         console.error("Recipe Error:", e);
@@ -233,7 +239,7 @@ const RecipeModal: React.FC<{
     };
     fetchDetails();
     return () => { isMounted = false; };
-  }, [meal.id]);
+  }, [meal.id, isVariant]);
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center">
@@ -250,24 +256,35 @@ const RecipeModal: React.FC<{
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
 
-          <div className="absolute top-4 right-4 flex gap-2 z-[120]">
+          <div className="absolute top-4 right-4 flex gap-2 z-[120] items-center">
             {!loading && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const cacheKey = btoa(unescape(encodeURIComponent(meal.description))).substring(0, 32);
-                  const newCache = { ...cacheData };
-                  delete newCache[cacheKey];
-                  onCacheSave(newCache);
-                  // Force a re-render/re-fetch by clearing details
-                  setDetails(null);
-                  setLoading(true);
-                }}
-                className="size-10 bg-black/20 backdrop-blur-xl border border-white/20 rounded-full flex items-center justify-center text-white active:scale-90 transition-all hover:bg-black/40"
-                title="Generar nueva variante con IA"
-              >
-                <span className="material-symbols-outlined text-lg">refresh</span>
-              </button>
+              <>
+                {isVariant ? (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsVariant(false);
+                      setDetails(originalRecipe); // Instantly restore
+                    }}
+                    className="h-10 px-4 bg-slate-900/60 backdrop-blur-xl border border-white/20 rounded-full flex items-center justify-center text-white active:scale-90 transition-all hover:bg-black/60 shadow-lg"
+                  >
+                    <span className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5"><span className="material-symbols-outlined text-[14px]">undo</span> ORIGINAL</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOriginalRecipe(details); // Save the base context
+                      setDetails(null);
+                      setLoading(true);
+                      setIsVariant(true); // Trigger re-render which triggers re-fetch with variant mode
+                    }}
+                    className="h-10 px-4 bg-purple-600/80 backdrop-blur-xl border border-purple-400/30 rounded-full flex items-center justify-center text-white active:scale-90 transition-all hover:bg-purple-600 shadow-lg shadow-purple-900/50"
+                  >
+                    <span className="text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5"><span className="material-symbols-outlined text-[14px]">auto_awesome</span> GENERAR VARIANTE</span>
+                  </button>
+                )}
+              </>
             )}
             <button
               onClick={onClose}
@@ -279,8 +296,19 @@ const RecipeModal: React.FC<{
 
           <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-20">
             <div className="flex gap-2 mb-3">
-              <span className="bg-blue-600 text-white text-[8px] font-black tracking-widest uppercase px-2.5 py-1 rounded-full shadow-lg shadow-blue-900/20">ALTA COCINA AI</span>
-              {details?.dificultad && <span className="bg-white/10 backdrop-blur-md text-white text-[8px] font-black tracking-widest uppercase px-2.5 py-1 rounded-full border border-white/10">{details.dificultad}</span>}
+              {isVariant ? (
+                <span className="bg-purple-600 text-white text-[8px] font-black tracking-widest uppercase px-2.5 py-1 rounded-full shadow-lg shadow-purple-900/20">VARIANTE CREATIVA 🔮</span>
+              ) : (
+                <span className="bg-blue-600 text-white text-[8px] font-black tracking-widest uppercase px-2.5 py-1 rounded-full shadow-lg shadow-blue-900/20">ALTA COCINA AI 🧑‍🍳</span>
+              )}
+              {details?.dificultad && (
+                <span className={`backdrop-blur-md text-white text-[8px] font-black tracking-widest uppercase px-2.5 py-1 rounded-full border border-white/20 shadow-lg
+                  ${details.dificultad.toUpperCase() === 'BAJA' ? 'bg-emerald-500/80 shadow-emerald-500/20' :
+                    details.dificultad.toUpperCase() === 'MEDIA' ? 'bg-amber-500/80 shadow-amber-500/20' :
+                      'bg-rose-500/80 shadow-rose-500/20'}`}>
+                  {details.dificultad.toUpperCase() === 'BAJA' ? '🟢' : details.dificultad.toUpperCase() === 'MEDIA' ? '🟡' : '🔴'} {details.dificultad}
+                </span>
+              )}
             </div>
             <h2 className="text-white text-xl sm:text-2xl font-black leading-tight drop-shadow-lg max-w-[90%] break-words">
               {details?.titulo || meal.description}
@@ -325,7 +353,7 @@ const RecipeModal: React.FC<{
               <section className="px-6 py-8">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="size-8 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
-                    <span className="material-symbols-outlined text-xl fill-1">pantry</span>
+                    <span>🛒</span>
                   </div>
                   <h3 className="text-lg font-black text-slate-800">Cesta de Ingredientes</h3>
                 </div>
@@ -343,7 +371,7 @@ const RecipeModal: React.FC<{
               <section className="px-6 py-8 bg-slate-50/30">
                 <div className="flex items-center gap-3 mb-8">
                   <div className="size-8 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600">
-                    <span className="material-symbols-outlined text-xl fill-1">restaurant_menu</span>
+                    <span>👨‍🍳</span>
                   </div>
                   <h3 className="text-lg font-black text-slate-800">Preparación de Autor</h3>
                 </div>
@@ -370,7 +398,7 @@ const RecipeModal: React.FC<{
                 <section className="m-6 p-8 bg-[#1e60f1] rounded-[40px] text-white shadow-xl shadow-blue-200 relative overflow-hidden group">
                   <div className="absolute -right-10 -top-10 size-40 bg-white/10 rounded-full blur-3xl" />
                   <div className="flex items-center gap-3 mb-4">
-                    <span className="material-symbols-outlined text-3xl">psychology</span>
+                    <span className="text-3xl">🧬</span>
                     <h4 className="text-[11px] font-black tracking-[0.2em] uppercase">Mente & Metabolismo</h4>
                   </div>
                   <h3 className="text-2xl font-black mb-3 leading-tight">{details.bioHack.titulo}</h3>
