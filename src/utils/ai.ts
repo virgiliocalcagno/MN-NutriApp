@@ -466,40 +466,74 @@ MISIÓN EXCLUSIVA: Generar la rutina semanal en la pantalla Zona Fit utilizando 
 ═══ PRESCRIPCIÓN MÉDICA DE EJERCICIO ═══
 - FCM (Latidos por min): ${pe?.fcm_latidos_min || 'N/A'}
 - FC promedio entreno: ${pe?.fc_promedio_entrenamiento || 'N/A'}
-- Fuerza: ${pe?.fuerza_dias_semana || '3'} días (${pe?.fuerza_minutos_sesion || '45'} min)
-- Aeróbico: ${pe?.aerobico_dias_semana || '2'} días (${pe?.aerobico_minutos_sesion || '30'} min)
+- Fuerza: ${pe?.fuerza_dias_semana || '3'} días
+- Aeróbico: ${pe?.aerobico_dias_semana || '2'} días
 
 REGLAS DE SEGURIDAD Y PRESCRIPCIÓN CLÍNICA ESTRICTA (PROTECCIÓN VITAL):
-SOLO LECTURA: Accede a diagnósticos, medicamentos y escaneos solo para consulta. PROHIBIDO modificar o borrar datos fuera de la estructura de Zona Fit.
+SOLO LECTURA: Accede a diagnósticos, medicamentos y escaneos solo para consulta. PROHIBIDO modificar o borrar datos.
 AJUSTE CLÍNICO CRÍTICO: 
-- Si detectas HTA (Hipertensión), medicamentos cardíacos (Olmesartan, Corenter) o si la Edad es > 50 años: ESTÁ ESTRICTAMENTE PROHIBIDO asignar Planchas Isométricas, Flexiones de pecho en suelo, Levantamiento de pesas pesadas por encima de la cabeza o ejercicios que induzcan la Maniobra de Valsalva. 
-- La rutina para este perfil DEBE ser de INTENSIDAD LIGERA A MODERADA (117-134 LPM máximo). Asígnale Caminata rápida, Estiramientos Dinámicos, Movilidad articular, Ejercicios con Banda Elástica ligera o Yoga suave para Principiantes. NUNCA sobrepasar su límite cardíaco.
-- Si el IMC es alto (>29): Prohibidos saltos o ejercicios de alto impacto en rodillas (zancadas profundas).
+- Si detectas HTA (Hipertensión), medicamentos cardíacos (Olmesartan, Corenter) o si la Edad es > 50 años: ESTÁ ESTRICTAMENTE PROHIBIDO asignar Planchas Isométricas, Flexiones de pecho en suelo, Levantamiento de pesas pesadas por encima de la cabeza, saltos o ejercicios que induzcan la Maniobra de Valsalva. 
+- La rutina para este perfil DEBE ser de INTENSIDAD LIGERA A MODERADA. Asígnale Caminata rápida, Estiramientos Dinámicos, Movilidad articular, Ejercicios con Banda Elástica ligera, Yoga suave, o Flexiones modificadas en pared. NUNCA sobrepasar su límite cardíaco promedio de entrenamiento.
+- Justifica clínicamente tus decisiones en el JSON basándote en esta edad y condiciones.
 
-ESTRUCTURA DE SALIDA (JSON PURO PARA ZONA FIT):
+ESTRUCTURA DE SALIDA OBLIGATORIA (JSON EXACTO PARA ZONA FIT):
 {
-  "rutina_semanal": [
-    {
-      "n": "Nombre del Ejercicio",
-      "i": "3x12",
-      "link": "https://www.youtube.com/results?search_query=Nombre+del+Ejercicio+ejecucion+correcta",
-      "checklist_logic": false
+  "zona_fit_response": {
+    "metadata": {
+      "user_id": "ID_DEL_USUARIO",
+      "timestamp": "YYYY-MM-DD",
+      "profile_status": "Lectura_Exitosa"
+    },
+    "entrenamiento_semanal": {
+      "frecuencia_fuerza_dias": 0,
+      "frecuencia_aerobico_dias": 0,
+      "duracion_sesion_min": 30,
+      "intensidad_segura": "Moderada o Ligera (LPM)",
+      "justificacion_clinica": "Breve justificación de por qué elegiste estos ejercicios según la edad y clínica"
+    },
+    "lista_ejercicios": [
+      {
+        "id": "ex_001",
+        "nombre": "Nombre Simple y Seguro (Ej. Caminata / Elíptica)",
+        "series": 1,
+        "repeticiones": "30 Minutos",
+        "objetivo": "Oxidación",
+        "video_url": "https://www.youtube.com/results?search_query=low+impact+cardio+at+home",
+        "completado": false
+      }
+    ],
+    "alertas_seguridad": {
+      "hidratacion_requerida_ml": 2800,
+      "restriccion_impacto": "Nota sobre el impacto en articulaciones según IMC/Edad",
+      "nota_medicamento": "Aviso sobre medicamentos"
     }
-  ],
-  "consejo_seguridad": "Breve nota sobre hidratación (basada en la meta de ml del perfil) y control de fatiga."
+  }
 }
 
-ESTILO: Minimalista, funcional y moderno. NO uses markdown fuera del JSON. Devuelve SÓLO el objeto JSON.`;
+ESTILO: Minimalista, clínico y moderno. NO uses markdown fuera del JSON. Devuelve SÓLO el objeto JSON.`;
 
     const result = await model.generateContent(prompt);
     const text = result.response.text();
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
-      return {
-        routine: Array.isArray(parsed.rutina_semanal) ? parsed.rutina_semanal : [],
-        consejo: parsed.consejo_seguridad || "Mantén la hidratación y respeta tus límites."
-      };
+      if (parsed.zona_fit_response) {
+        const payload = parsed.zona_fit_response;
+        // Mapear "lista_ejercicios" al formato que espera FitnessView ("n", "i", "link")
+        const mappedRoutine = (payload.lista_ejercicios || []).map((ex: any) => ({
+          n: ex.nombre,
+          i: `${ex.series}x${ex.repeticiones} - ${ex.objetivo}`,
+          link: ex.video_url,
+          checklist_logic: ex.completado || false
+        }));
+
+        const consejoCompacto = `ALERTA CLÍNICA: ${payload.entrenamiento_semanal?.justificacion_clinica || ''}\n${payload.alertas_seguridad?.restriccion_impacto || ''}\nHidratación: ${payload.alertas_seguridad?.hidratacion_requerida_ml || 2800} ml. ${payload.alertas_seguridad?.nota_medicamento || ''}`;
+
+        return {
+          routine: mappedRoutine,
+          consejo: consejoCompacto
+        };
+      }
     }
     return { routine: [], consejo: "" };
   } catch (error) {
