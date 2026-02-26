@@ -30,7 +30,8 @@ Este archivo es tu **"Botón de Pánico"**. Aquí guardo los momentos en los que
 | `CP021` | 20/02/2026 | `b2c4e5f` | **MN-NutriApp v33.1**: Functional Meal Tracking & UI Cleanup. | ✅ Estable |
 | `CP022` | 20/02/2026 | `a1b2c3d` | **MN-NutriApp v34.0**: Inventory & Shopping System (Stitch Design). | ✅ Estable |
 | `CP023` | 20/02/2026 | `1a49dc2` | **MN-NutriApp v34.1**: Standardized Imports & Legacy Cleanup. | ✅ Estable |
-| `CP024` | 23/02/2026 | `9e01951` | **NutriScan "Turbo" v35**: HEIC fix, 12MP support & client-side optimization. | 🚀 Activo |
+| `CP024` | 23/02/2026 | `9e01951` | **NutriScan "Turbo" v35**: HEIC fix, 12MP support & client-side optimization. | ✅ Estable |
+| `CP025` | 25/02/2026 | `06540fa` | **Biblioteca de Expedientes v35.1**: Carga modular de PDF (InBody/Plan/Médica) y gestión de DocumentRecord. | 🚀 Activo |
 
 ---
 > [!IMPORTANT]

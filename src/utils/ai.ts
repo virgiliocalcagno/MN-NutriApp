@@ -63,28 +63,36 @@ const normalizeCompras = (data: AIResponse): AIResponse => {
   if (!data.compras || !Array.isArray(data.compras)) return data;
 
   const normalized = data.compras.map(item => {
-    if (!Array.isArray(item) || item.length < 1) return item;
-    const name = item[0];
-    if (!name || typeof name !== 'string') return item;
+    let name = '';
+    let obj: any = {};
+    if (Array.isArray(item)) {
+      name = item[0] || '';
+      obj = { item: item[0], cantidad: item[1] || '', nivel: item[2] || 1, categoria: item[3] || '', pasillo: item[4] || '' };
+    } else {
+      name = (item as any).item || '';
+      obj = item;
+    }
+
+    if (!name || typeof name !== 'string') return obj;
     const nameLower = name.toLowerCase().trim();
     const mapped = INGREDIENT_TO_PRODUCT[nameLower];
     if (mapped) {
-      return [mapped, ...item.slice(1)] as typeof item;
+      return { ...obj, item: mapped };
     }
-    return item;
+    return obj;
   });
 
   const seen = new Map<string, number>();
-  const deduped: typeof normalized = [];
+  const deduped: any[] = [];
   for (const item of normalized) {
-    if (!item[0] || typeof item[0] !== 'string') continue;
-    const key = item[0].toLowerCase();
+    if (!item.item || typeof item.item !== 'string') continue;
+    const key = item.item.toLowerCase();
     if (seen.has(key)) continue;
     seen.set(key, deduped.length);
     deduped.push(item);
   }
 
-  return { ...data, compras: deduped };
+  return { ...data, compras: deduped as any };
 };
 
 const CLOUD_FUNCTION_URL = 'https://us-central1-mn-nutriapp.cloudfunctions.net/procesarNutricion';
@@ -132,8 +140,8 @@ RESPONDE ÚNICAMENTE CON UN JSON PURO CON ESTE FORMATO:
 {
   "perfilAuto": {
     "perfil_biometrico": {
-      "paciente": "Nombre Completo",
-      "doctor": "Nombre del Doctor",
+      "nombre_completo": "Nombre real del paciente encontrado en el PDF",
+      "doctor": "Nombre del Doctor (si aparece)",
       "edad": "...",
       "estatura_cm": "...",
       "genero": "..."
@@ -173,19 +181,30 @@ RESPONDE ÚNICAMENTE CON UN JSON PURO CON ESTE FORMATO:
       "fuerza_minutos_sesion": "...",
       "aerobico_dias_semana": "...",
       "aerobico_minutos_sesion": "..."
-    }
+    },
+    "historico_antropometrico": [
+      {
+        "fecha": "YYYY-MM-DD",
+        "peso_lbs": "...",
+        "cintura_cm": "...",
+        "cuello_cm": "...",
+        "brazo_der_cm": "...",
+        "brazo_izq_cm": "..."
+      }
+    ]
   },
   "semana": { 
     "LUNES": { 
-        "DESAYUNO": "...",
-        "MERIENDA_AM": "...",
-        "ALMUERZO": "...",
-        "MERIENDA_PM": "...",
-        "CENA": "..."
-    } 
+        "DESAYUNO": "Descripción REAL extraída del desayuno para el Lunes",
+        "MERIENDA_AM": "Descripción REAL extraída de la merienda",
+        "ALMUERZO": "Descripción REAL extraída del almuerzo",
+        "MERIENDA_PM": "Descripción REAL extraída de la merienda",
+        "CENA": "Descripción REAL extraída de la cena"
+    }
+    // IMPORTANTE: SI EL PDF TIENE MÁS DÍAS (MARTES, MIERCOLES), AGREGALOS AQUÍ. SI SOLO ES UN SOLO MENÚ GENERAL, USA SOLO "LUNES".
   },
   "ejercicios": { "LUNES": [ {"n": "Nombre", "i": "3x12"} ] },
-  "compras": [ ["Producto", "Cantidad Literal (ej: 12 unidades, 1 Cartón, 500g)", 1, "Categoria", "Pasillo"] ],
+  "compras": [ { "item": "Producto", "cantidad": "Cantidad Literal (ej: 12 unidades, 1 Cartón, 500g)", "nivel": 1, "categoria": "Categoria", "pasillo": "Pasillo" } ],
   "horarios": { 
       "DESAYUNO": "08:30 AM",
       "MERIENDA_AM": "11:00 AM",
@@ -197,9 +216,14 @@ RESPONDE ÚNICAMENTE CON UN JSON PURO CON ESTE FORMATO:
 }
 
 IMPORTANTE: 
-1. Si el contexto es INBODY, prioriza los datos de composición corporal y metas de control.
-2. Si el contexto es PLAN_NUTRICIONAL, prioriza las comidas del menú y la lista de compras.
-3. Extrae datos técnicos de InBody (SMM, PBF, Grasa Visceral) si están disponibles.`;
+0. REEMPLAZA LOS EJEMPLOS MUESTRA (como "..." o "Descripción REAL") CON LA INFORMACIÓN EXACTA DEL PDF. Si un dato no existe, pon un string vacío "". ¡NUNCA devuelvas "..."!
+1. NOMBRE DEL PACIENTE: Haz un OCR profundo al encabezado del documento y busca textos grandes (ej: "Virgilio Augusto Calcagno Surun", "Dra. Marlin Núñez"). Coloca este nombre ESTRICTAMENTE en "perfil_biometrico.nombre_completo".
+2. PLAN_NUTRICIONAL: Extrae todo el MENÚ EXACTO en "semana". Si el PDF no tiene una Lista de Compras explícita, DEDÚCELA a partir de las recetas (ej: 1 lata de atún, 1 tortilla integral) y ponla en el array "compras".
+3. HISTORIAL CLÍNICO Y PESO: Revisa cuidadosamente TODAS las tablas de "Datos Generales", "Medidas Antropométricas", "Cronología", "Comorbilidades", "Medicamentos" o "Medidas de cuerpo" que aparezcan en CUALQUIER PDF (incluso en planes nutricionales) y mételas en sus secciones (ej: 'historico_antropometrico' para las filas de cronología de peso por fecha).
+4. INBODY / FICHA MÉDICA: Prioriza extraer las métricas exactas y diagnósticos según su archivo respectivo.
+5. METAS Y LÍQUIDOS: Busca explícitamente frases como "Cálculo de Líquidos" o "Agua" y extrae estrictamente el número en mililitros para 'agua_objetivo_ml' (ej: 2800). Captura TODAS las recomendaciones, "Notas" al final del PDF, y metas (ej: "Retomar ejercicio", "Bajo Indice Glucemico", "Aumentar masa") estrictamente dentro de 'objetivos_generales' separadas como un array de strings.
+6. TABLAS DE MEDIDAS (HISTÓRICO): ¡EXTREMADAMENTE IMPORTANTE! Cuando proceses las tablas por fecha, extrae *todas* las columnas disponibles (Cintura, Cuello, Brazo Der, Brazo Izq) por fecha y ponlas juntas con el 'peso_lbs' en los objetos de 'historico_antropometrico'. No dejes los campos de centímetros vacíos si la tabla los provee.
+7. FECHAS DE HISTORIAL: Las fechas de historial DEBEN ser en formato exacto "YYYY-MM-DD" (ejemplo: "2024-11-24"). Si el documento dice "Nov/24", infiere que es el año 2024. Si dice "Agosto/25", infiere 2025. ¡Nunca dejes meses sueltos sin el AÑO correcto!`;
 
       const parts: any[] = [{ text: promptText }];
       if (pdfPlanBase64) parts.push({ inlineData: { mimeType: "application/pdf", data: pdfPlanBase64.replace(/^data:application\/pdf;base64,/, "") } });

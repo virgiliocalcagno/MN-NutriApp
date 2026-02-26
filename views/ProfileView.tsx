@@ -1,22 +1,22 @@
 ﻿import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useStore } from '@/src/context/StoreContext';
 import { processPdfWithGemini } from '@/src/utils/ai';
-import { MealItem, InventoryItem, initialStore, Profile, DocumentRecord } from '@/src/types/store';
+import { MealItem, InventoryItem, initialStore, Profile, DocumentRecord, Store } from '@/src/types/store';
 import { firebaseConfig } from '@/src/firebase';
 import { useLongPress } from '@/src/hooks/useLongPress';
 
 const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
   const { store, user, saveStore, logout } = useStore();
-  const [showLogout, setShowLogout] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<Profile>({ ...store.profile });
-  const [isLocked, setIsLocked] = useState(true);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'reading' | 'analyzing' | 'syncing' | 'success' | 'error'>('idle');
   const [uploadContext, setUploadContext] = useState<'FICHA_MEDICA' | 'PLAN_NUTRICIONAL' | 'INBODY'>('PLAN_NUTRICIONAL');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [lastUploadData, setLastUploadData] = useState<any>(null);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<{ id: string; file: File; context: 'FICHA_MEDICA' | 'PLAN_NUTRICIONAL' | 'INBODY' }[]>([]);
+  const [selectedDocReview, setSelectedDocReview] = useState<DocumentRecord | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { profile } = store;
@@ -52,24 +52,43 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
     return '--';
   }, [profile.analisis_inbody_actual?.peso_actual_kg, profile.perfil_biometrico?.estatura_cm]);
 
-  const onLongPress = () => {
-    setIsLocked(!isLocked);
-    if (window.navigator?.vibrate) window.navigator.vibrate(50);
-  };
-
-  const longPressProps = useLongPress(onLongPress, undefined, { delay: 800 });
-
   const patchValue = (existing: any, incoming: any) => {
     if (incoming === null || incoming === undefined || incoming === '') return existing;
     return incoming;
   };
 
   const mergeLists = (old: any[] = [], next: any[] = []) => {
+    if (!next || next.length === 0) return old || [];
     const combined = [...(Array.isArray(old) ? old : []), ...(Array.isArray(next) ? next : [])]
       .map(s => String(s || '').trim().toLowerCase())
       .filter(Boolean);
     const unique = Array.from(new Set(combined));
     return unique.map(s => s.charAt(0).toUpperCase() + s.slice(1));
+  };
+
+  const mergeComorbidities = (old: any[] = [], next: any[] = []) => {
+    if (!next || next.length === 0) return old || [];
+    const normalizedOld = Array.isArray(old) ? old : [];
+    const normalizedNext = Array.isArray(next) ? next : [];
+
+    // Filter out old conditions that are being updated in the next array (e.g. 'Pre-diabetes' replaced by 'Pre-diabetes (CORREGIDA)')
+    const oldFiltered = normalizedOld.filter(o => {
+      const baseO = String(o).split('(')[0].trim().toLowerCase();
+      return !normalizedNext.some(n => String(n).toLowerCase().includes(baseO) || baseO.includes(String(n).split('(')[0].trim().toLowerCase()));
+    });
+
+    const combined = [...oldFiltered, ...normalizedNext].map(s => String(s || '').trim()).filter(Boolean);
+    return Array.from(new Set(combined));
+  };
+
+  const mergeHistorico = (old: any[] = [], next: any[] = []) => {
+    if (!next || next.length === 0) return old;
+    const combined = [...old, ...next];
+    const unique = new Map();
+    for (const item of combined) {
+      if (item.fecha) unique.set(item.fecha, item);
+    }
+    return Array.from(unique.values()).sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime());
   };
 
   const resetActiveProfile = () => {
@@ -92,10 +111,7 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, context: 'FICHA_MEDICA' | 'PLAN_NUTRICIONAL' | 'INBODY') => {
-    if (isLocked) {
-      alert("El perfil está bloqueado. Mantén presionado el nombre para desbloquear.");
-      return;
-    }
+
     setUploadContext(context);
     if (e.target.files) {
       const files = Array.from(e.target.files).filter(f => f.type === 'application/pdf');
@@ -103,15 +119,28 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
         alert('Por favor selecciona archivos PDF.');
         return;
       }
-      setSelectedFiles(prev => [...prev, ...files].slice(0, 3));
+      const newItems = files.map(f => ({
+        id: Math.random().toString(36).substr(2, 9),
+        file: f,
+        context
+      }));
+
+      setSelectedFiles(prev => {
+        const nextState = [...prev, ...newItems];
+        if (nextState.length > 3) {
+          alert('Solo puedes subir hasta 3 archivos a la vez. Se conservarán los últimos 3 seleccionados.');
+        }
+        return nextState.slice(-3);
+      });
     }
+    // Permite volver a seleccionar el mismo archivo si es necesario
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const applyDocumentData = (data: any, activateNow: boolean = true) => {
-    const currentProfile = store.profile;
+  const mergeDocumentToStore = (currentStore: Store, data: any): Store => {
+    const currentProfile = currentStore.profile;
     const hasNewPlan = data.semana && Object.keys(data.semana).length > 0;
 
-    // 1. Prepare Merged Profile
     const mergedProfile = {
       ...currentProfile,
       perfil_biometrico: {
@@ -125,7 +154,7 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
         diagnostico_nutricional: patchValue(currentProfile.diagnostico_clinico?.diagnostico_nutricional, data.perfilAuto?.diagnostico_clinico?.diagnostico_nutricional),
         alergias: mergeLists(currentProfile.diagnostico_clinico?.alergias || [], data.perfilAuto?.diagnostico_clinico?.alergias || []),
         sangre: patchValue(currentProfile.diagnostico_clinico?.sangre, data.perfilAuto?.diagnostico_clinico?.sangre),
-        comorbilidades: mergeLists(currentProfile.diagnostico_clinico?.comorbilidades || [], data.perfilAuto?.diagnostico_clinico?.comorbilidades || []),
+        comorbilidades: mergeComorbidities(currentProfile.diagnostico_clinico?.comorbilidades || [], data.perfilAuto?.diagnostico_clinico?.comorbilidades || []),
         medicamentos_actuales: mergeLists(currentProfile.diagnostico_clinico?.medicamentos_actuales || [], data.perfilAuto?.diagnostico_clinico?.medicamentos_actuales || []),
         suplementacion: mergeLists(Array.isArray(currentProfile.diagnostico_clinico?.suplementacion) ? currentProfile.diagnostico_clinico.suplementacion : [], Array.isArray(data.perfilAuto?.diagnostico_clinico?.suplementacion) ? data.perfilAuto.diagnostico_clinico.suplementacion : []),
         observaciones_medicas: mergeLists(currentProfile.diagnostico_clinico?.observaciones_medicas || [], data.perfilAuto?.diagnostico_clinico?.observaciones_medicas || [])
@@ -156,38 +185,47 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
         fuerza_minutos_sesion: patchValue(currentProfile.prescripcion_ejercicio?.fuerza_minutos_sesion, data.perfilAuto?.prescripcion_ejercicio?.fuerza_minutos_sesion),
         aerobico_dias_semana: patchValue(currentProfile.prescripcion_ejercicio?.aerobico_dias_semana, data.perfilAuto?.prescripcion_ejercicio?.aerobico_dias_semana),
         aerobico_minutos_sesion: patchValue(currentProfile.prescripcion_ejercicio?.aerobico_minutos_sesion, data.perfilAuto?.prescripcion_ejercicio?.aerobico_minutos_sesion)
-      }
+      },
+      historico_antropometrico: mergeHistorico(currentProfile.historico_antropometrico || [], data.perfilAuto?.historico_antropometrico || [])
     };
 
-    if (!activateNow) return mergedProfile;
+    const newInventory: any[] = hasNewPlan ? (data.compras || []).map((c: any, idx: number) => {
+      const isArr = Array.isArray(c);
+      return {
+        id: Date.now() + '-' + idx,
+        name: isArr ? c[0] : c.item,
+        qty: isArr ? c[1] : c.cantidad,
+        level: isArr ? (c[2] || 1) : (c.nivel || 1),
+        category: (isArr ? c[3] : c.categoria) || 'Gral',
+        aisle: (isArr ? c[4] : c.pasillo) || 'Gral',
+        isCustom: false
+      };
+    }) : [];
 
-    // 2. Prepare Inventory & Menu
-    const newInventory: any[] = hasNewPlan ? (data.compras || []).map((c: any, idx: number) => ({
-      id: Date.now() + '-' + idx,
-      name: c[0],
-      qty: c[1],
-      level: 1,
-      category: c[3] || 'Gral',
-      aisle: c[4] || 'Gral',
-      isCustom: false
-    })) : [];
+    const finalInventory = hasNewPlan ? newInventory : currentStore.inventory;
+    const finalMenu = hasNewPlan ? data.semana : currentStore.menu;
+    const finalIngredients = hasNewPlan ? (data.compras || []).map((c: any) => ({
+      n: Array.isArray(c) ? c[0] : c.item,
+      q: Array.isArray(c) ? c[1] : c.cantidad
+    })) : currentStore.planIngredients;
 
-    // Reset if it's a new main plan
-    const finalInventory = hasNewPlan ? newInventory : store.inventory;
-    const finalMenu = hasNewPlan ? data.semana : store.menu;
-    const finalIngredients = hasNewPlan ? (data.compras || []).map((c: any) => ({ n: c[0], q: c[1] })) : store.planIngredients;
-
-    saveStore({
-      ...store,
+    return {
+      ...currentStore,
       profile: mergedProfile as Profile,
       inventory: finalInventory,
       menu: finalMenu,
       planIngredients: finalIngredients,
-      doneMeals: hasNewPlan ? {} : store.doneMeals,
-      caloriesTarget: data.perfilAuto?.metas_y_objetivos?.vet_kcal_diarias || store.caloriesTarget,
-      waterGoal: data.perfilAuto?.metas_y_objetivos?.agua_objetivo_ml || store.waterGoal,
+      selectedDay: hasNewPlan ? 'LUNES' : currentStore.selectedDay,
+      doneMeals: hasNewPlan ? {} : currentStore.doneMeals,
+      caloriesTarget: data.perfilAuto?.metas_y_objetivos?.vet_kcal_diarias || currentStore.caloriesTarget,
+      waterGoal: data.perfilAuto?.metas_y_objetivos?.agua_objetivo_ml || currentStore.waterGoal,
       lastUpdateDate: new Date().toISOString().split('T')[0]
-    });
+    };
+  };
+
+  const applyDocumentData = (data: any, activateNow: boolean = true) => {
+    if (!activateNow) return mergeDocumentToStore(store, data).profile;
+    saveStore(mergeDocumentToStore(store, data));
   };
 
   const processBatch = async () => {
@@ -198,22 +236,22 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
       const newDocs: DocumentRecord[] = [];
       let lastResult: any = null;
 
-      for (const file of selectedFiles) {
+      for (const item of selectedFiles) {
         setUploadStatus('analyzing');
         const base64 = await new Promise<string>((resolve) => {
           const reader = new FileReader();
           reader.onload = () => resolve(reader.result as string);
-          reader.readAsDataURL(file);
+          reader.readAsDataURL(item.file);
         });
 
         const activeKey = (firebaseConfig as any).geminiApiKey;
-        const data = await processPdfWithGemini(store.profile, base64, undefined, activeKey, uploadContext);
+        const data = await processPdfWithGemini(store.profile, base64, undefined, activeKey, item.context);
 
         if (data) {
           const doc: DocumentRecord = {
             id: Date.now() + Math.random().toString(36).substr(2, 9),
-            name: file.name,
-            type: (data.tipo_documento || uploadContext || 'AUTO') as any,
+            name: item.file.name,
+            type: (data.tipo_documento || item.context || 'AUTO') as any,
             date: new Date().toISOString(),
             data: data
           };
@@ -228,19 +266,18 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
         // Ask for Activation
         const shouldActivate = window.confirm(`✅ ${newDocs.length} documentos procesados.\n\n¿Deseas ACTIVAR el contenido ahora? (Esto actualizará tu plan/expediente actual)`);
 
+        let updatedStore = {
+          ...store,
+          processedDocs: [...(store.processedDocs || []), ...newDocs]
+        };
+
         if (shouldActivate) {
-          // Merge logic: if multiple files, we apply them one by one (accumulative for this batch)
-          // or just use the helper for the last one if it's a single one. 
-          // For simplicity and correctness with the requirement:
           for (const doc of newDocs) {
-            applyDocumentData(doc.data, true);
+            updatedStore = mergeDocumentToStore(updatedStore, doc.data);
           }
         }
 
-        saveStore({
-          ...store,
-          processedDocs: [...(store.processedDocs || []), ...newDocs]
-        });
+        saveStore(updatedStore);
 
         setLastUploadData({
           name: newDocs[0].name,
@@ -307,16 +344,11 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
 
       {/* ═══ HEADER ═══ */}
       <div className="bg-gradient-to-br from-gray-800 via-gray-900 to-black px-6 pt-14 pb-16 relative">
-        <button onClick={() => setShowLogout(!showLogout)} className="absolute top-12 right-5 size-9 rounded-full bg-white/10 flex items-center justify-center text-white/50">
+        <button onClick={() => setShowSettingsModal(true)} className="absolute top-12 right-5 size-9 rounded-full bg-white/10 flex items-center justify-center text-white/50">
           <span className="material-symbols-outlined text-lg">settings</span>
         </button>
-        {showLogout && (
-          <div className="absolute right-5 top-[4.5rem] bg-white shadow-2xl rounded-xl p-1 w-44 z-[110]">
-            <button onClick={logout} className="w-full text-left px-3 py-2.5 text-red-500 text-sm font-medium hover:bg-red-50 rounded-lg flex items-center gap-2"><span className="material-symbols-outlined text-lg">logout</span>Cerrar Sesión</button>
-          </div>
-        )}
         <div className="flex flex-col items-center text-center mt-2">
-          <div {...longPressProps} className="mb-4">
+          <div className="mb-4">
             <div className="size-20 rounded-full bg-white/10 flex items-center justify-center border-2 border-white/20 overflow-hidden">
               {user?.photoURL ? <img src={user.photoURL} alt="" className="w-full h-full object-cover" /> : <span className="material-symbols-outlined text-3xl text-white/40">person</span>}
             </div>
@@ -345,94 +377,6 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
         </div>
       </div>
 
-      {/* ═══ PANEL DE CONFIGURACIÓN (REVELADO POR LONG PRESS) ═══ */}
-      {!isLocked && (
-        <div className="px-5 -mt-5 space-y-3 relative z-10 animate-in fade-in slide-in-from-top-4 duration-500">
-          <div className="bg-white rounded-3xl p-5 shadow-2xl border border-gray-100">
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Panel de Configuración</p>
-              <span className="text-[9px] bg-red-50 text-red-500 px-2.5 py-1 rounded-full font-black uppercase tracking-tighter shadow-sm border border-red-100">Modo Admin Desbloqueado</span>
-            </div>
-
-            <div className="flex gap-2 mb-5">
-              <button
-                onClick={() => isEditing ? handleSaveManual() : setIsEditing(true)}
-                className={`flex-1 py-4 rounded-2xl font-black text-[10px] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg ${isEditing ? 'bg-emerald-500 text-white shadow-emerald-200/50' : 'bg-white text-gray-800 border-2 border-gray-100'}`}
-              >
-                <span className="material-symbols-outlined text-lg font-fill">{isEditing ? 'save' : 'edit_square'}</span>
-                {isEditing ? 'GUARDAR CAMBIOS' : 'EDITAR PERFIL MANUAL'}
-              </button>
-              <button
-                onClick={resetActiveProfile}
-                className="px-5 py-4 rounded-2xl font-black text-xs flex items-center justify-center active:scale-95 transition-all shadow-lg bg-red-50 text-red-600 border-2 border-red-100"
-              >
-                <span className="material-symbols-outlined text-xl font-fill">restart_alt</span>
-              </button>
-            </div>
-
-            <p className="text-[9px] font-black text-gray-300 uppercase tracking-[0.2em] mb-3 text-center">Carga Modular de Documentos (PDF)</p>
-            <div className="grid grid-cols-3 gap-2.5">
-              {[
-                { id: 'FICHA_MEDICA', label: 'MÉDICA', icon: 'medical_services', color: 'bg-amber-500' },
-                { id: 'PLAN_NUTRICIONAL', label: 'PLAN NUTRI', icon: 'restaurant_menu', color: 'bg-blue-600' },
-                { id: 'INBODY', label: 'INBODY', icon: 'leaderboard', color: 'bg-gray-900' }
-              ].map(btn => (
-                <button
-                  key={btn.id}
-                  onClick={() => {
-                    setUploadContext(btn.id as any);
-                    fileInputRef.current?.click();
-                  }}
-                  disabled={isProcessing}
-                  className={`${btn.color} text-white p-3.5 rounded-2xl flex flex-col items-center justify-center gap-1.5 shadow-xl active:scale-90 transition-all disabled:opacity-50 group border border-white/10`}
-                >
-                  <span className="material-symbols-outlined text-xl font-fill group-hover:scale-110 transition-transform">{btn.icon}</span>
-                  <span className="text-[8px] font-black tracking-widest">{btn.label}</span>
-                </button>
-              ))}
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={(e) => handleFileSelect(e, uploadContext)}
-                accept="application/pdf"
-                className="hidden"
-                title="Upload PDF"
-              />
-            </div>
-
-            {/* Cola de archivos integrada */}
-            {selectedFiles.length > 0 && (
-              <div className="mt-6 pt-6 border-t border-gray-50 animate-in fade-in slide-in-from-bottom-2">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{selectedFiles.length} Archivos en Cola</p>
-                  <button onClick={() => setSelectedFiles([])} className="text-[10px] text-red-500 font-bold hover:underline">Limpiar todo</button>
-                </div>
-                <div className="grid grid-cols-1 gap-1.5 mb-4">
-                  {selectedFiles.map((file, idx) => (
-                    <div key={idx} className="bg-gray-50 text-gray-600 text-[10px] font-bold px-3 py-2 rounded-xl flex items-center justify-between border border-gray-100">
-                      <div className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-sm text-blue-400">picture_as_pdf</span>
-                        <span className="truncate max-w-[180px]">{file.name}</span>
-                      </div>
-                      <button onClick={() => setSelectedFiles(prev => prev.filter((_, i) => i !== idx))} className="text-gray-400 hover:text-red-500">
-                        <span className="material-symbols-outlined text-sm">close</span>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                <button
-                  onClick={processBatch}
-                  disabled={isProcessing}
-                  className="w-full bg-emerald-600 text-white py-4 rounded-2xl text-[11px] font-black uppercase active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-emerald-100 shadow-2xl"
-                >
-                  <span className="material-symbols-outlined text-lg">bolt</span>
-                  {uploadStatus === 'analyzing' ? 'ANALIZANDO GENIUS IA...' : 'INICIAR PROCESAMIENTO'}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* ═══ CONTENT ═══ */}
       <main className="px-5 pt-6 pb-4 space-y-4">
@@ -503,11 +447,16 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
               <textarea value={isEditing ? (editData.diagnostico_clinico?.diagnostico_nutricional || '') : (profile.diagnostico_clinico?.diagnostico_nutricional || 'Sin diagnóstico registrado.')} onChange={e => isEditing && setEditData({ ...editData, diagnostico_clinico: { ...editData.diagnostico_clinico, diagnostico_nutricional: e.target.value } })} readOnly={!isEditing} title="Diagnóstico" className="w-full bg-gray-50 border-none rounded-xl text-sm p-3 text-gray-700 h-16 resize-none focus:ring-1 focus:ring-blue-200 font-medium italic" />
             </div>
             <div>
-              <p className="text-[10px] text-gray-400 mb-2 font-bold uppercase tracking-tighter">Comorbilidades Críticas</p>
+              <p className="text-[10px] text-gray-400 mb-2 font-bold uppercase tracking-tighter">Registro de Comorbilidades</p>
               <div className="flex flex-wrap gap-1.5">
-                {(isEditing ? (editData.diagnostico_clinico?.comorbilidades || []) : (profile.diagnostico_clinico?.comorbilidades || [])).map((c, i) => (
-                  <span key={i} className="bg-red-50 text-red-500 text-[10px] font-black px-3 py-1.5 rounded-xl border border-red-100/50 uppercase tracking-tighter shadow-sm">{c}</span>
-                ))}
+                {(isEditing ? (editData.diagnostico_clinico?.comorbilidades || []) : (profile.diagnostico_clinico?.comorbilidades || [])).map((c, i) => {
+                  const isCorregida = c.toLowerCase().includes('corregid') || c.toLowerCase().includes('controlad');
+                  return (
+                    <span key={i} className={`${isCorregida ? 'bg-emerald-50 text-emerald-600 border-emerald-100/50' : 'bg-red-50 text-red-500 border-red-100/50'} text-[10px] font-black px-3 py-1.5 rounded-xl border uppercase tracking-tighter shadow-sm`}>
+                      {c}
+                    </span>
+                  );
+                })}
                 {(isEditing ? (editData.diagnostico_clinico?.comorbilidades || []) : (profile.diagnostico_clinico?.comorbilidades || [])).length === 0 && <span className="text-[11px] text-gray-300">Ninguna detectada</span>}
               </div>
             </div>
@@ -581,7 +530,7 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
                   <span className="text-sm font-black text-red-600">Nivel {profile.analisis_inbody_actual?.grasa_visceral_nivel || '0'}</span>
                 </div>
                 <div className="h-3 w-full bg-gray-100 rounded-full overflow-hidden flex p-0.5 border border-gray-200 shadow-inner">
-                  <div className="h-full bg-gradient-to-r from-emerald-500 via-amber-400 to-red-600 rounded-full transition-all duration-700" style={{ width: `${Math.min((parseInt(profile.analisis_inbody_actual?.grasa_visceral_nivel || '0') / 20) * 100, 100)}%` }} />
+                  <div className="h-full bg-gradient-to-r from-emerald-500 via-amber-400 to-red-600 rounded-full transition-all duration-700" ref={el => { if (el) el.style.width = `${Math.min((parseInt(profile.analisis_inbody_actual?.grasa_visceral_nivel || '0') / 20) * 100, 100)}%`; }} />
                 </div>
                 <div className="flex justify-between mt-1 px-1">
                   <span className="text-[8px] text-gray-300 font-bold uppercase">Bajo</span>
@@ -638,7 +587,7 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
               {profile.historico_antropometrico.slice().reverse().map((entry, idx) => (
                 <div key={idx} className="flex items-center justify-between py-2 px-1 border-b border-gray-50 last:border-0">
                   <div className="flex items-center gap-3">
-                    <span className="text-[10px] font-bold text-gray-400 w-14">{entry.fecha?.split('-').slice(1).join('/')}</span>
+                    <span className="text-[10px] font-bold text-gray-400 w-[60px]">{entry.fecha?.split('-').reverse().join('/')}</span>
                     <span className="text-sm font-bold text-gray-800">{entry.peso_lbs} lbs</span>
                   </div>
                   <span className="text-xs text-gray-400">Cintura: {entry.cintura_cm || '—'} cm</span>
@@ -648,68 +597,161 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
           </div>
         )}
 
-        {/* Biblioteca de Expedientes - PROTEGIDO TRAS DESBLOQUEO */}
-        {!isLocked && (
-          <div className="bg-white rounded-2xl p-6 shadow-sm animate-in fade-in duration-700">
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Biblioteca de Expedientes</p>
-              {(store.processedDocs || []).length > 0 && (
-                <button
-                  onClick={() => { if (window.confirm("⚠️ ¿Estás seguro de reiniciar el historial de documentos?")) saveStore({ ...store, processedDocs: [] }); }}
-                  className="text-[10px] font-bold text-red-400"
-                >
-                  Vaciar Biblioteca
-                </button>
-              )}
-            </div>
 
-            {(store.processedDocs || []).length > 0 ? (
-              <div className="space-y-3">
-                {store.processedDocs.slice().reverse().map((doc) => (
-                  <div key={doc.id} className="bg-gray-50 p-4 rounded-2xl border border-gray-100/50 group hover:border-blue-200 transition-all">
-                    <div className="flex items-start justify-between">
-                      <div className="flex gap-3">
-                        <div className={`size-10 rounded-xl flex items-center justify-center ${doc.type === 'PLAN_NUTRICIONAL' ? 'bg-blue-100 text-blue-600' :
-                          doc.type === 'INBODY' ? 'bg-gray-800 text-white' : 'bg-amber-100 text-amber-600'
-                          }`}>
-                          <span className="material-symbols-outlined text-xl">
-                            {doc.type === 'PLAN_NUTRICIONAL' ? 'restaurant_menu' : doc.type === 'INBODY' ? 'leaderboard' : 'medical_services'}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="text-[11px] font-black text-gray-800 truncate max-w-[150px]">{doc.name}</p>
-                          <p className="text-[9px] text-gray-400 font-bold uppercase mt-0.5">{new Date(doc.date).toLocaleDateString()} · {doc.type}</p>
-                        </div>
+
+        {/* ═══ MODAL DE REVISIÓN DE DOCUMENTO ═══ */}
+        {selectedDocReview && (
+          <div className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center p-0 sm:p-6 animate-in fade-in duration-300">
+            <div className="absolute inset-0 bg-gray-900/80 backdrop-blur-md" onClick={() => setSelectedDocReview(null)} />
+            <div className="relative w-full max-w-lg bg-white rounded-t-[3rem] sm:rounded-[3rem] shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in slide-in-from-bottom-10 duration-500">
+              {/* Header Modal */}
+              <div className="p-8 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
+                <div className="flex gap-4 items-center">
+                  <div className={`size-14 rounded-2xl flex items-center justify-center shadow-lg ${selectedDocReview.type === 'PLAN_NUTRICIONAL' ? 'bg-blue-600' : selectedDocReview.type === 'INBODY' ? 'bg-gray-900' : 'bg-amber-500'} text-white`}>
+                    <span className="material-symbols-outlined text-3xl font-fill">
+                      {selectedDocReview.type === 'PLAN_NUTRICIONAL' ? 'restaurant_menu' : selectedDocReview.type === 'INBODY' ? 'leaderboard' : 'medical_services'}
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-gray-900 leading-none">{selectedDocReview.type.replace('_', ' ')}</h3>
+                    <p className="text-xs text-gray-400 font-bold mt-1.5 uppercase tracking-wide">Vista Previa de Extracción IA</p>
+                  </div>
+                </div>
+                <button onClick={() => setSelectedDocReview(null)} className="size-12 rounded-2xl bg-white shadow-sm border border-gray-100 text-gray-400 flex items-center justify-center active:scale-90 transition-all">
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+
+              {/* Scroll Content */}
+              <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
+                {/* Summary Section */}
+                <div className="space-y-4">
+                  <p className="text-[11px] font-black text-blue-600 uppercase tracking-[0.2em]">Resumen del Documento</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                      <p className="text-[9px] text-gray-400 font-bold uppercase mb-1">Paciente Detectado</p>
+                      <p className="text-sm font-black text-gray-800">{selectedDocReview.data.perfilAuto?.perfil_biometrico?.nombre_completo || 'No especificado'}</p>
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                      <p className="text-[9px] text-gray-400 font-bold uppercase mb-1">Fecha de Emisión</p>
+                      <p className="text-sm font-black text-gray-800">{selectedDocReview.data.perfilAuto?.analisis_inbody_actual?.fecha_test || new Date(selectedDocReview.date).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Specific Data based on type */}
+                {selectedDocReview.type === 'INBODY' && (
+                  <div className="bg-red-50 p-6 rounded-[2.5rem] border border-red-100 divide-y divide-red-100/50">
+                    <div className="pb-4 flex justify-between items-center">
+                      <p className="text-xs font-black text-red-700 uppercase">Biometría Clave</p>
+                      <span className="text-2xl font-black text-red-800">{selectedDocReview.data.perfilAuto?.analisis_inbody_actual?.inbody_score || '--'} <span className="text-[10px] uppercase font-bold text-red-400">Score</span></span>
+                    </div>
+                    <div className="pt-4 grid grid-cols-2 gap-y-4 gap-x-8">
+                      <div>
+                        <p className="text-[10px] text-red-400 font-bold uppercase">Peso</p>
+                        <p className="text-lg font-black text-red-900">{selectedDocReview.data.perfilAuto?.analisis_inbody_actual?.peso_actual_kg || '--'} kg</p>
                       </div>
-                      <div className="flex gap-1">
-                        <button
-                          onClick={() => { if (window.confirm(`¿Deseas ACUMULAR este ${doc.type} a tu perfil actual?`)) applyDocumentData(doc.data, true); }}
-                          title="Activar"
-                          className="size-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
-                        >
-                          <span className="material-symbols-outlined text-lg">play_arrow</span>
-                        </button>
-                        <button
-                          onClick={() => { if (window.confirm(`¿Eliminar ${doc.name} del historial?`)) saveStore({ ...store, processedDocs: store.processedDocs.filter(d => d.id !== doc.id) }); }}
-                          title="Eliminar"
-                          className="size-8 rounded-lg bg-red-50 text-red-400 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm"
-                        >
-                          <span className="material-symbols-outlined text-lg">close</span>
-                        </button>
+                      <div>
+                        <p className="text-[10px] text-red-400 font-bold uppercase">Grasa %</p>
+                        <p className="text-lg font-black text-red-900">{selectedDocReview.data.perfilAuto?.analisis_inbody_actual?.pbf_porcentaje_grasa_corporal || '--'} %</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-red-400 font-bold uppercase">Músculo</p>
+                        <p className="text-lg font-black text-red-900">{selectedDocReview.data.perfilAuto?.analisis_inbody_actual?.smm_masa_musculo_esqueletica_kg || '--'} kg</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-red-400 font-bold uppercase">Basal</p>
+                        <p className="text-lg font-black text-red-900">{selectedDocReview.data.perfilAuto?.analisis_inbody_actual?.tasa_metabolica_basal_kcal || '--'} kcal</p>
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div onClick={() => { setUploadContext('PLAN_NUTRICIONAL'); fileInputRef.current?.click(); }} className="p-10 border-2 border-dashed border-gray-100 rounded-3xl flex flex-col items-center gap-2 cursor-pointer hover:bg-gray-50 transition-all group">
-                <div className="size-14 rounded-full bg-gray-50 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <span className="material-symbols-outlined text-3xl text-gray-200">cloud_upload</span>
+                )}
+
+                {selectedDocReview.type === 'PLAN_NUTRICIONAL' && (
+                  <div className="space-y-5">
+                    <div className="bg-blue-600 p-6 rounded-[2.5rem] text-white shadow-xl shadow-blue-200">
+                      <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">Prescripción Calórica</p>
+                      <h4 className="text-3xl font-black">{selectedDocReview.data.perfilAuto?.metas_y_objetivos?.vet_kcal_diarias || '--'} <span className="text-sm font-bold opacity-50">kcal / día</span></h4>
+                    </div>
+                    <div className="bg-gray-50 p-6 rounded-[2.5rem] border border-gray-100">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Comidas Principales (Lunes)</p>
+                      <div className="space-y-3">
+                        {['DESAYUNO', 'ALMUERZO', 'CENA'].map(meal => (
+                          <div key={meal} className="flex gap-3">
+                            <span className="material-symbols-outlined text-blue-600 text-sm mt-1">check_circle</span>
+                            <div>
+                              <p className="text-[10px] font-black text-gray-400 uppercase">{meal}</p>
+                              <p className="text-xs text-gray-700 font-medium line-clamp-2 italic">
+                                {selectedDocReview.data.semana?.['LUNES']?.[meal] || 'No definido'}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {selectedDocReview.type === 'FICHA_MEDICA' && (
+                  <div className="space-y-6">
+                    <div className="bg-amber-50 p-6 rounded-[2.5rem] border border-amber-100">
+                      <p className="text-xs font-black text-amber-700 uppercase mb-3">Diagnóstico Clínico</p>
+                      <p className="text-sm text-amber-900 font-medium italic leading-relaxed">
+                        {selectedDocReview.data.perfilAuto?.diagnostico_clinico?.diagnostico_nutricional || 'No se detectó un diagnóstico textual claro.'}
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3">
+                      {[
+                        { l: 'Comorbilidades', items: selectedDocReview.data.perfilAuto?.diagnostico_clinico?.comorbilidades, color: 'red' },
+                        { l: 'Alergias', items: selectedDocReview.data.perfilAuto?.diagnostico_clinico?.alergias, color: 'orange' },
+                        { l: 'Medicamentos', items: selectedDocReview.data.perfilAuto?.diagnostico_clinico?.medicamentos_actuales, color: 'blue' }
+                      ].map(sec => (
+                        <div key={sec.l} className="space-y-2">
+                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{sec.l}</p>
+                          <div className="flex flex-wrap gap-2">
+                            {(sec.items || []).length > 0 ? sec.items.map((it: string, i: number) => (
+                              <span key={i} className={`bg-white border-2 border-gray-50 text-gray-600 text-[10px] font-black px-3 py-1.5 rounded-xl uppercase`}>
+                                {it}
+                              </span>
+                            )) : <span className="text-[10px] text-gray-300 font-bold italic">Nada registrado</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Disclaimer */}
+                <div className="p-5 bg-gray-50 rounded-2xl flex gap-3 items-start border border-gray-100">
+                  <span className="material-symbols-outlined text-blue-600 text-lg">info</span>
+                  <p className="text-[9px] text-gray-400 font-medium leading-normal">
+                    Este resumen fue generado por IA. Revisa los datos cuidadosamente antes de activarlos. La activación sobreescribirá tu plan nutricional actual si el documento es un Plan Nutri.
+                  </p>
                 </div>
-                <p className="text-[11px] text-gray-400 font-black uppercase tracking-[0.2em]">Biblioteca Vacía</p>
-                <p className="text-[9px] text-gray-300 font-bold uppercase tracking-tighter">Sube un PDF para comenzar tu historial</p>
               </div>
-            )}
+
+              {/* Action Buttons */}
+              <div className="p-8 pt-4 border-t border-gray-50 bg-gray-50/10 flex gap-3">
+                <button
+                  onClick={() => setSelectedDocReview(null)}
+                  className="flex-1 py-4 rounded-2xl bg-white border-2 border-gray-100 text-gray-600 font-black text-[11px] uppercase active:scale-95 transition-all"
+                >
+                  CERRAR
+                </button>
+                <button
+                  onClick={() => {
+                    if (window.confirm(`⚠️ ACTIVACIÓN DE DATOS\n\n¿Deseas aplicar estos datos a tu perfil ahora?`)) {
+                      applyDocumentData(selectedDocReview.data, true);
+                      setSelectedDocReview(null);
+                    }
+                  }}
+                  className="flex-[1.5] py-4 rounded-2xl bg-emerald-600 text-white font-black text-[11px] uppercase shadow-emerald-200 shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-lg">check_circle</span>
+                  ACTIVAR AHORA
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -733,8 +775,200 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
           )}
         </div>
 
-        <p className="text-center text-[10px] text-gray-300 pt-2">MN-NutriApp v35</p>
       </main>
+
+      {/* ═══ MODAL DE CONFIGURACIÓN ═══ */}
+      {showSettingsModal && (
+        <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-0 sm:p-6 animate-in fade-in duration-300">
+          <div className="absolute inset-0 bg-gray-900/80 backdrop-blur-md" onClick={() => setShowSettingsModal(false)} />
+          <div className="relative w-full max-w-lg bg-white rounded-t-[3rem] sm:rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-500">
+            {/* Header Modal */}
+            <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
+              <div className="flex gap-4 items-center">
+                <div className="size-12 rounded-2xl flex items-center justify-center shadow-lg bg-gray-900 text-white">
+                  <span className="material-symbols-outlined text-2xl font-fill">settings</span>
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-gray-900 leading-none">Configuración</h3>
+                  <p className="text-[10px] text-gray-400 font-bold mt-1 uppercase tracking-wide">Panel de Administración</p>
+                </div>
+              </div>
+              <button onClick={() => setShowSettingsModal(false)} className="size-10 rounded-xl bg-white shadow-sm border border-gray-100 text-gray-400 flex items-center justify-center active:scale-90 transition-all">
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            {/* Scroll Content */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+              {/* Acciones de Perfil */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { isEditing ? handleSaveManual() : setIsEditing(true); setShowSettingsModal(false); }}
+                  className={`flex-1 py-4 rounded-2xl font-black text-[10px] flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg ${isEditing ? 'bg-emerald-500 text-white shadow-emerald-200/50' : 'bg-white text-gray-800 border-2 border-gray-100'}`}
+                >
+                  <span className="material-symbols-outlined text-lg font-fill">{isEditing ? 'save' : 'edit_square'}</span>
+                  {isEditing ? 'GUARDAR CAMBIOS' : 'EDITAR PERFIL MANUAL'}
+                </button>
+                <button
+                  onClick={() => { resetActiveProfile(); setShowSettingsModal(false); }}
+                  className="px-5 py-4 rounded-2xl font-black text-xs flex items-center justify-center active:scale-95 transition-all shadow-lg bg-red-50 text-red-600 border-2 border-red-100"
+                  title="Reiniciar Perfil Activo"
+                >
+                  <span className="material-symbols-outlined text-xl font-fill">restart_alt</span>
+                </button>
+              </div>
+
+              {/* Carga Modular */}
+              <div className="bg-gray-50 rounded-3xl p-5 border border-gray-100">
+                <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-4 text-center">Carga Modular de Expedientes (PDF)</p>
+                <div className="grid grid-cols-3 gap-2.5">
+                  {[
+                    { id: 'FICHA_MEDICA', label: 'MÉDICA', icon: 'medical_services', color: 'bg-amber-500' },
+                    { id: 'PLAN_NUTRICIONAL', label: 'PLAN NUTRI', icon: 'restaurant_menu', color: 'bg-blue-600' },
+                    { id: 'INBODY', label: 'INBODY', icon: 'leaderboard', color: 'bg-gray-900' }
+                  ].map(btn => (
+                    <button
+                      key={btn.id}
+                      onClick={() => {
+                        setUploadContext(btn.id as any);
+                        fileInputRef.current?.click();
+                      }}
+                      disabled={isProcessing}
+                      className={`${btn.color} text-white p-3.5 rounded-2xl flex flex-col items-center justify-center gap-1.5 shadow-xl active:scale-90 transition-all disabled:opacity-50 group border border-white/10`}
+                    >
+                      <span className="material-symbols-outlined text-xl font-fill group-hover:scale-110 transition-transform">{btn.icon}</span>
+                      <span className="text-[8px] font-black tracking-widest">{btn.label}</span>
+                    </button>
+                  ))}
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={(e) => handleFileSelect(e, uploadContext)}
+                    accept="application/pdf"
+                    className="hidden"
+                    title="Upload PDF"
+                  />
+                </div>
+
+                {/* Cola de archivos integrada */}
+                {selectedFiles.length > 0 && (
+                  <div className="mt-5 pt-5 border-t border-gray-200/50 animate-in fade-in slide-in-from-bottom-2">
+                    <div className="flex items-center justify-between mb-3 relative z-10">
+                      <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{selectedFiles.length} Archivos en Cola</p>
+                      <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedFiles([]); }} className="text-[10px] text-red-500 font-bold hover:underline p-2 -mr-2">Limpiar todo</button>
+                    </div>
+                    <div className="grid grid-cols-1 gap-1.5 mb-4">
+                      {selectedFiles.map((item) => (
+                        <div key={item.id} className="bg-white text-gray-600 px-3 py-2 rounded-xl flex items-center justify-between border border-gray-100 shadow-sm">
+                          <div className="flex items-center gap-3">
+                            <span className={`material-symbols-outlined text-lg ${item.context === 'PLAN_NUTRICIONAL' ? 'text-blue-500' : item.context === 'INBODY' ? 'text-gray-900' : 'text-amber-500'}`}>
+                              {item.context === 'PLAN_NUTRICIONAL' ? 'restaurant_menu' : item.context === 'INBODY' ? 'leaderboard' : 'medical_services'}
+                            </span>
+                            <div className="flex flex-col">
+                              <span className="text-[10px] font-bold truncate max-w-[200px]">{item.file.name}</span>
+                              <span className="text-[8px] font-black uppercase text-gray-400">{item.context}</span>
+                            </div>
+                          </div>
+                          <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedFiles(prev => prev.filter(q => q.id !== item.id)); }} className="text-gray-400 hover:text-red-500 p-2 -mr-2 z-10 relative">
+                            <span className="material-symbols-outlined text-sm">close</span>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      onClick={processBatch}
+                      disabled={isProcessing}
+                      className="w-full bg-emerald-600 text-white py-4 rounded-2xl text-[11px] font-black uppercase active:scale-95 disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-emerald-200 shadow-xl"
+                    >
+                      <span className="material-symbols-outlined text-lg">bolt</span>
+                      {uploadStatus === 'analyzing' ? 'ANALIZANDO GENIUS IA...' : 'INICIAR PROCESAMIENTO'}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Biblioteca de Expedientes */}
+              <div className="mt-6 pt-6 border-t border-gray-100 relative">
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-gray-400">inventory_2</span>
+                    <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Biblioteca de Expedientes</p>
+                  </div>
+                  {(store.processedDocs || []).length > 0 && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); saveStore({ ...store, processedDocs: [] }); }}
+                      className="text-[10px] font-bold text-red-500 bg-red-50 px-3 py-1.5 rounded-lg active:scale-95 transition-all z-10 relative"
+                    >
+                      Vaciar Todo
+                    </button>
+                  )}
+                </div>
+
+                {(store.processedDocs || []).length > 0 ? (
+                  <div className="space-y-3">
+                    {store.processedDocs.slice().reverse().map((doc) => (
+                      <div key={doc.id} className="bg-white p-3 rounded-2xl border-2 border-gray-50 group hover:border-blue-100 transition-all flex items-center justify-between">
+                        <div className="flex gap-3">
+                          <div className={`size-10 min-w-[2.5rem] rounded-xl flex items-center justify-center shadow-sm ${doc.type === 'PLAN_NUTRICIONAL' ? 'bg-blue-600 text-white' : doc.type === 'INBODY' ? 'bg-gray-900 text-white' : 'bg-amber-500 text-white'}`}>
+                            <span className="material-symbols-outlined text-xl font-fill">
+                              {doc.type === 'PLAN_NUTRICIONAL' ? 'restaurant_menu' : doc.type === 'INBODY' ? 'leaderboard' : 'medical_services'}
+                            </span>
+                          </div>
+                          <div className="flex flex-col justify-center">
+                            <p className="text-[11px] font-black text-gray-800 line-clamp-1 pr-1">{doc.name}</p>
+                            <p className="text-[9px] text-gray-400 font-bold uppercase mt-0.5 flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[10px]">calendar_today</span>
+                              {new Date(doc.date).toLocaleDateString()}
+                              <span className="size-1 bg-gray-200 rounded-full mx-1" />
+                              {doc.type.replace('_', ' ')}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex gap-1">
+                          <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedDocReview(doc); }} className="size-8 min-w-[2rem] rounded-xl bg-gray-50 text-gray-400 flex items-center justify-center hover:bg-blue-50 hover:text-blue-600 transition-all z-10 relative" title="Revisar">
+                            <span className="material-symbols-outlined text-lg">visibility</span>
+                          </button>
+                          <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); applyDocumentData(doc.data, true); setShowSettingsModal(false); }} title="Activar" className="size-8 min-w-[2rem] rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all shadow-sm z-10 relative">
+                            <span className="material-symbols-outlined text-lg font-fill">play_circle</span>
+                          </button>
+                          <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); saveStore({ ...store, processedDocs: store.processedDocs.filter(d => d.id !== doc.id) }); }} title="Eliminar" className="size-8 min-w-[2rem] rounded-xl bg-gray-50 text-gray-300 flex items-center justify-center hover:bg-red-50 hover:text-red-500 transition-all z-10 relative">
+                            <span className="material-symbols-outlined text-lg">delete</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-8 border-2 border-dashed border-gray-100 rounded-3xl flex flex-col items-center gap-3 text-center">
+                    <div className="size-14 rounded-full bg-gray-50 flex items-center justify-center">
+                      <span className="material-symbols-outlined text-3xl text-gray-300 font-fill">inventory_2</span>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Biblioteca Vacía</p>
+                      <p className="text-[9px] text-gray-400 font-bold uppercase tracking-tight">Carga documentos arriba para guardarlos aquí</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Cerrar Sesión */}
+              <div className="mt-8 pt-6 border-t border-gray-100">
+                <button
+                  onClick={logout}
+                  className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-red-50/50 text-red-500 text-[11px] font-black uppercase tracking-widest hover:bg-red-50 transition-all border border-red-100 border-dashed"
+                >
+                  <span className="material-symbols-outlined text-lg">logout</span>
+                  Cerrar Sesión
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="text-center text-[10px] text-gray-300 pb-4 pt-2">MN-NutriApp v35.2</div>
+
     </div>
   );
 };
