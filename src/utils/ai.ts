@@ -105,9 +105,11 @@ export const processPdfWithGemini = async (
   docTypeHint?: 'FICHA_MEDICA' | 'PLAN_NUTRICIONAL' | 'INBODY'
 ): Promise<AIResponse> => {
       const effectiveApiKey = apiKey || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
-      const genAI = new GoogleGenerativeAI(effectiveApiKey);
-      console.log(`AI Process: Usando motor estable Gemini (2.0 Flash) - Contexto: ${docTypeHint || 'AUTO'}`);
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash", generationConfig: { temperature: 0 } });
+      if (effectiveApiKey && effectiveApiKey.length > 20) {
+        try {
+          const genAI = new GoogleGenerativeAI(effectiveApiKey);
+          console.log(`AI Process: Usando motor estable Gemini (2.0 Flash) - Contexto: ${docTypeHint || 'AUTO'}`);
+          const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash", generationConfig: { temperature: 0 } });
 
       const currentProfileContext = perfil ? `
 LO QUE YA SABEMOS DEL PACIENTE:
