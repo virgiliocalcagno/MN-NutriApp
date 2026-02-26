@@ -87,6 +87,8 @@ const HomeView: React.FC<{ setView: (v: any) => void }> = ({ setView }) => {
           meal={selectedMeal}
           perfil={store.profile}
           onClose={() => setSelectedMeal(null)}
+          cacheData={store.recipeCache || {}}
+          onCacheSave={(newCache) => saveStore({ ...store, recipeCache: newCache })}
         />
       )}
 
@@ -192,7 +194,9 @@ const RecipeModal: React.FC<{
   meal: { id: string; type: string; description: string };
   perfil: any;
   onClose: () => void;
-}> = ({ meal, perfil, onClose }) => {
+  cacheData: Record<string, any>;
+  onCacheSave: (newCache: Record<string, any>) => void;
+}> = ({ meal, perfil, onClose, cacheData, onCacheSave }) => {
   const [loading, setLoading] = React.useState(true);
   const [details, setDetails] = React.useState<RecipeDetails | null>(null);
 
@@ -202,11 +206,25 @@ const RecipeModal: React.FC<{
     let isMounted = true;
 
     const fetchDetails = async () => {
+      // 1. Check if it exists in cache using the precise description string
+      const cacheKey = btoa(unescape(encodeURIComponent(meal.description))).substring(0, 32);
+      if (cacheData[cacheKey]) {
+        if (isMounted) {
+          setDetails(cacheData[cacheKey]);
+          setLoading(false);
+          console.log("Serving Recipe from Direct Cache:", cacheKey);
+        }
+        return;
+      }
+
+      // 2. Otherwise generate via AI and save
       try {
         const data = await getRecipeDetails(meal.description, perfil, firebaseConfig.geminiApiKey);
         if (isMounted) {
           setDetails(data);
           setLoading(false);
+          // Save to cache globally
+          onCacheSave({ ...cacheData, [cacheKey]: data });
         }
       } catch (e) {
         console.error("Recipe Error:", e);
@@ -232,12 +250,32 @@ const RecipeModal: React.FC<{
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
 
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 size-10 bg-black/20 backdrop-blur-xl border border-white/20 rounded-full flex items-center justify-center text-white active:scale-90 transition-all z-[120] hover:bg-black/40"
-          >
-            <span className="material-symbols-outlined text-xl">close</span>
-          </button>
+          <div className="absolute top-4 right-4 flex gap-2 z-[120]">
+            {!loading && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const cacheKey = btoa(unescape(encodeURIComponent(meal.description))).substring(0, 32);
+                  const newCache = { ...cacheData };
+                  delete newCache[cacheKey];
+                  onCacheSave(newCache);
+                  // Force a re-render/re-fetch by clearing details
+                  setDetails(null);
+                  setLoading(true);
+                }}
+                className="size-10 bg-black/20 backdrop-blur-xl border border-white/20 rounded-full flex items-center justify-center text-white active:scale-90 transition-all hover:bg-black/40"
+                title="Generar nueva variante con IA"
+              >
+                <span className="material-symbols-outlined text-lg">refresh</span>
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="size-10 bg-black/20 backdrop-blur-xl border border-white/20 rounded-full flex items-center justify-center text-white active:scale-90 transition-all hover:bg-black/40"
+            >
+              <span className="material-symbols-outlined text-xl">close</span>
+            </button>
+          </div>
 
           <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-20">
             <div className="flex gap-2 mb-3">

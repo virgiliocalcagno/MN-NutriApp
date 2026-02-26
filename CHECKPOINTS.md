@@ -31,7 +31,8 @@ Este archivo es tu **"Botón de Pánico"**. Aquí guardo los momentos en los que
 | `CP022` | 20/02/2026 | `a1b2c3d` | **MN-NutriApp v34.0**: Inventory & Shopping System (Stitch Design). | ✅ Estable |
 | `CP023` | 20/02/2026 | `1a49dc2` | **MN-NutriApp v34.1**: Standardized Imports & Legacy Cleanup. | ✅ Estable |
 | `CP024` | 23/02/2026 | `9e01951` | **NutriScan "Turbo" v35**: HEIC fix, 12MP support & client-side optimization. | ✅ Estable |
-| `CP025` | 25/02/2026 | `06540fa` | **Biblioteca de Expedientes v35.1**: Carga modular de PDF (InBody/Plan/Médica) y gestión de DocumentRecord. | 🚀 Activo |
+| `CP025` | 25/02/2026 | `06540fa` | **Biblioteca de Expedientes v35.1**: Carga modular de PDF (InBody/Plan/Médica) y gestión de DocumentRecord. | ✅ Estable |
+| `CP026` | 26/02/2026 | `3ba0c7b` | **Fixes IA & Cronología**: Corrección de arrays anidados (Firestore), inferencia YYYY y renderizado correcto de fechas/cintura/agua. | 🚀 Activo |
 
 ---
 > [!IMPORTANT]

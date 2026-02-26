@@ -161,6 +161,7 @@ export interface Store {
         }
     };
     processedDocs: DocumentRecord[]; // Library of historical AI results
+    recipeCache?: Record<string, any>; // Cache for AI-generated recipes to save tokens
 }
 
 export const initialStore: Store = {
@@ -206,5 +207,6 @@ export const initialStore: Store = {
             hydration: true
         }
     },
-    processedDocs: []
+    processedDocs: [],
+    recipeCache: {}
 };

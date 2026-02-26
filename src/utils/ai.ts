@@ -339,6 +339,9 @@ RESPONDE CON JSON PURO:
     "pasos": ["1. Come primero los vegetales", "2. Luego la proteína", "3. Al final los carbohidratos"]
   }
 }
+
+SEMILLA DE VARIACIÓN Y CREATIVIDAD (IGNORAR PARA INGREDIENTES): ${Date.now()}-${Math.random()}
+Genera una variante única y creativa de la preparación de este plato, usando enfoques de cocción o presentación distintos a los que típicamente darías, pero MANTENIENDO LOS INGREDIENTES EXACTOS.
 `;
 
       const result = await model.generateContent(prompt);
