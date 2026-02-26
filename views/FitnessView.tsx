@@ -5,6 +5,12 @@ import { analyzeImageWithGemini, getFitnessAdvice, generateFullRoutine } from '@
 
 const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
   const { store, saveStore } = useStore();
+  
+  // --- Inicialización de Día para evitar ReferenceError ---
+  const dias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+  const todayName = dias[new Date().getDay()];
+  const displayDay = store.selectedDay || todayName;
+
   const [activeVideoUrl, setActiveVideoUrl] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -14,6 +20,16 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
   const [isGeneratingRoutine, setIsGeneratingRoutine] = useState(false);
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
   const [selectedDay, setSelectedDay] = useState<string>(displayDay);
+  const [selectedDifficulty, setSelectedDifficulty] = useState<string>("Media");
+  
+  // UX Refinements: Long Press & Confirmations
+  const [pendingUnmark, setPendingUnmark] = useState<{type: 'goal' | 'diff', id: string} | null>(null);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Persistence: Auto-reset to today when entering the view
+  React.useEffect(() => {
+    setSelectedDay(todayName);
+  }, [todayName]);
 
   const WEEK_DAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 
@@ -105,10 +121,6 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
 
   const normalizeDay = (day: string) => day.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-  const dias = ["DOMINGO", "LUNES", "MARTES", "MIERCOLES", "JUEVES", "VIERNES", "SABADO"];
-  const todayName = dias[new Date().getDay()];
-  const displayDay = store.selectedDay || todayName;
-
   // --- Data Binding for Weekly Plan ---
   const exercisesMap = store.exercises || {};
   const exercisesList = exercisesMap[selectedDay] || [];
@@ -122,10 +134,36 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
     saveStore({ ...store, doneEx: { ...store.doneEx, [selectedDay]: newDone } });
   };
 
-  const toggleGoal = (goalId: string) => {
-    setSelectedGoals(prev =>
-      prev.includes(goalId) ? prev.filter(g => g !== goalId) : [...prev, goalId]
-    );
+  const handleGoalPress = (goalId: string) => {
+    const isSelected = selectedGoals.includes(goalId);
+    if (!isSelected) {
+      // Mark immediately on normal click
+      setSelectedGoals(prev => [...prev, goalId]);
+    }
+  };
+
+  const startLongPress = (type: 'goal' | 'diff', id: string) => {
+    longPressTimerRef.current = setTimeout(() => {
+      setPendingUnmark({ type, id });
+      if (navigator.vibrate) navigator.vibrate(50); // Haptic feedback if available
+    }, 600); // 600ms for safety
+  };
+
+  const clearLongPress = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const confirmUnmark = () => {
+    if (!pendingUnmark) return;
+    if (pendingUnmark.type === 'goal') {
+      setSelectedGoals(prev => prev.filter(g => g !== pendingUnmark.id));
+    } else {
+      setSelectedDifficulty(""); // Allows clearing if confirmed
+    }
+    setPendingUnmark(null);
   };
 
   const handleGenerateAdvice = async () => {
@@ -145,8 +183,9 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
     if (!store.profile) return;
     setIsGeneratingRoutine(true);
     try {
+      const apiKey = (firebaseConfig as any).geminiApiKey || '';
       const g = (selectedGoals.length > 0) ? selectedGoals : (store.profile?.metas_y_objetivos?.objetivos_generales || []);
-      const result = await generateFullRoutine(store.profile, g);
+      const result = await generateFullRoutine(store.profile, apiKey, g, selectedDifficulty);
       if (result && result.routine) {
         saveStore({ 
           ...store, 
@@ -405,8 +444,11 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
                 return (
                   <button
                     key={goal.id}
-                    onClick={() => toggleGoal(goal.id)}
-                    className={`flex flex-col items-center gap-2 p-4 rounded-3xl transition-all border ${isActive
+                    onClick={() => handleGoalPress(goal.id)}
+                    onPointerDown={() => isActive && startLongPress('goal', goal.id)}
+                    onPointerUp={clearLongPress}
+                    onPointerLeave={clearLongPress}
+                    className={`flex flex-col items-center gap-2 p-4 rounded-3xl transition-all border select-none touch-none ${isActive
                       ? 'bg-blue-50/50 border-primary shadow-lg shadow-blue-100/50 scale-105'
                       : 'bg-slate-50/50 border-transparent hover:border-slate-100 hover:bg-white'
                       }`}
@@ -418,6 +460,49 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
                       <p className={`text-[9px] font-black leading-tight transition-colors ${isActive ? 'text-primary' : 'text-slate-800'}`}>
                         {goal.label}
                       </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Intensity Selector */}
+          <div className="bg-white p-6 rounded-[32px] shadow-sm border border-slate-100 mb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="material-symbols-outlined text-amber-500 text-xl">bolt</span>
+              <div>
+                <h3 className="font-black text-slate-800 tracking-tight text-sm">Intensidad del Plan</h3>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-tight">Nivel de carga de los ejercicios</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { id: "Baja", label: "Baja", sub: "Ligera", color: "emerald", icon: "speed" },
+                { id: "Media", label: "Media", sub: "Estándar", color: "amber", icon: "speed" },
+                { id: "Alta", label: "Alta", sub: "Intensa", color: "rose", icon: "speed" }
+              ].map(level => {
+                const isActive = selectedDifficulty === level.id;
+                const colors = {
+                  emerald: isActive ? 'bg-emerald-500 text-white shadow-emerald-200' : 'bg-emerald-50/50 text-emerald-600 border-emerald-100',
+                  amber: isActive ? 'bg-amber-500 text-white shadow-amber-200' : 'bg-amber-50/50 text-amber-600 border-amber-100',
+                  rose: isActive ? 'bg-rose-500 text-white shadow-rose-200' : 'bg-rose-50/50 text-rose-600 border-rose-100'
+                };
+                return (
+                  <button
+                    key={level.id}
+                    onClick={() => !isActive && setSelectedDifficulty(level.id)}
+                    onPointerDown={() => isActive && startLongPress('diff', level.id)}
+                    onPointerUp={clearLongPress}
+                    onPointerLeave={clearLongPress}
+                    className={`flex flex-col items-center gap-1 p-4 rounded-3xl transition-all border select-none touch-none ${colors[level.color as keyof typeof colors]} ${isActive ? 'shadow-lg scale-105' : 'border-transparent hover:border-slate-100'
+                      }`}
+                  >
+                    <span className="material-symbols-outlined text-2xl">{level.icon}</span>
+                    <div className="text-center">
+                      <p className="text-[10px] font-black leading-tight uppercase tracking-widest">{level.label}</p>
+                      <p className={`text-[8px] font-bold ${isActive ? 'text-white/80' : 'text-slate-400'}`}>{level.sub}</p>
                     </div>
                   </button>
                 );
@@ -605,9 +690,15 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
                     </p>
                     <button
                       onClick={handleGenerateRoutine}
-                      className="mt-2 bg-primary text-white px-8 py-4 rounded-3xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:shadow-2xl hover:scale-[1.05] transition-all active:scale-95"
+                      disabled={isGeneratingRoutine}
+                      className={`mt-4 px-10 py-5 rounded-[2rem] text-[11px] font-black uppercase tracking-widest shadow-2xl transition-all active:scale-95 flex items-center gap-3 mx-auto ${
+                        selectedDifficulty === 'Baja' ? 'bg-emerald-500 shadow-emerald-200' :
+                        selectedDifficulty === 'Media' ? 'bg-amber-500 shadow-amber-200' :
+                        'bg-rose-500 shadow-rose-200'
+                      } text-white hover:scale-105 disabled:opacity-50 disabled:animate-pulse`}
                     >
-                      Generar Nuevo Plan Semanal
+                      <span className="material-symbols-outlined text-base">auto_awesome</span>
+                      {isGeneratingRoutine ? 'Diseñando Plan...' : `Generar Plan ${selectedDifficulty}`}
                     </button>
                   </>
                 )}
@@ -617,6 +708,12 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
         </div>
       </main>
 
+      <ConfirmUnmarkModal 
+        isOpen={!!pendingUnmark} 
+        onClose={() => setPendingUnmark(null)} 
+        onConfirm={confirmUnmark}
+        type={pendingUnmark?.type}
+      />
       <VideoModal />
       <HistoryModal
         isOpen={showHistory}
@@ -681,6 +778,50 @@ const HistoryModal: React.FC<{
           >
             <span className="material-symbols-outlined text-lg">undo</span>
             Deshacer Última Toma {history.length > 0 ? `(${history[0].amount} ml)` : ''}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ConfirmUnmarkModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  type?: 'goal' | 'diff';
+}> = ({ isOpen, onClose, onConfirm, type }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[120] flex items-center justify-center p-6 animate-in fade-in duration-300">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={onClose}></div>
+      <div className="relative w-full max-w-sm bg-white rounded-[40px] p-8 space-y-6 animate-in zoom-in-95 duration-500 shadow-2xl text-center">
+        <div className="size-20 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-2 text-rose-500">
+          <span className="material-symbols-outlined text-4xl">warning</span>
+        </div>
+        
+        <div>
+          <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight mb-2">
+            Confirmar Acción
+          </h3>
+          <p className="text-sm text-slate-500 font-bold leading-relaxed px-2">
+            ¿Estás seguro de que deseas desmarcar este {type === 'goal' ? 'foco de entrenamiento' : 'nivel de intensidad'}?
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          <button
+            onClick={onConfirm}
+            className="w-full bg-rose-500 text-white font-black py-4 rounded-3xl text-sm uppercase tracking-widest shadow-xl shadow-rose-100 active:scale-95 transition-all"
+          >
+            Sí, Desmarcar
+          </button>
+          <button
+            onClick={onClose}
+            className="w-full bg-slate-100 text-slate-500 font-black py-4 rounded-3xl text-sm uppercase tracking-widest active:scale-95 transition-all"
+          >
+            Cancelar
           </button>
         </div>
       </div>

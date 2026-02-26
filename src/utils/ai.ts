@@ -440,7 +440,7 @@ FORMATO: Pon solo 3 puntos cortos con un dibujo (emoji), nada más.`;
   }
 }
 
-export async function generateFullRoutine(profile: Profile, apiKey: string, selectedGoals?: string[]): Promise<{ routine: any[], consejo: string }> {
+export async function generateFullRoutine(profile: Profile, apiKey: string, selectedGoals?: string[], difficulty: string = "Media"): Promise<{ routine: any, consejo: string }> {
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
@@ -472,19 +472,26 @@ MISIÓN EXCLUSIVA: Generar una rutina en la pantalla Zona Fit basada en el Profi
 ═══ OBJETIVOS SELECCIONADOS ═══
 - Metas: ${selectedGoals && selectedGoals.length > 0 ? selectedGoals.join(', ') : (mo?.objetivos_generales?.join(', ') || 'Salud General')}
 
+═══ CONFIGURACIÓN DE INTENSIDAD ═══
+- Dificultad Seleccionada: ${difficulty} (Baja / Media / Alta)
+
 LÓGICA DE FUSIÓN (MÚLTIPLES OBJETIVOS):
-1. Prioridad 1: Seguridad Clínica: Independientemente de los objetivos, respeta siempre las alertas de HTA, Litiasis Renal y límites de FCM.
+1. Prioridad 1: Seguridad Clínica: Respeta siempre las alertas de HTA y límites de FCM.
 2. Prioridad 2: Mix de Entrenamiento:
-- Si elige Grasa + Músculo: Intercala días de cardio de baja intensidad con sesiones de fuerza de alta densidad.
-- Si elige Salud Cardio + Movilidad: Prioriza yoga, pilates y caminata controlada.
+- Si elige "Ganancia Muscular": DEBES incluir ejercicios de FUERZA SEGURA (Banda elástica, Flexión en pared, Sentadilla con silla, Elevación de talones). No te limites solo a caminar.
+- Si elige "Pérdida de Grasa": Intercala ráfagas de marcha rápida con ejercicios de resistencia de alta repetición.
 
 CLÁUSULA DE NO MODIFICACIÓN (SEGURIDAD DEL PROYECTO):
 SOLO LECTURA: Tienes prohibido alterar campos de SmartScan, Nutrición o Datos Generales. Tu salida debe ser un objeto nuevo y aislado para la Zona Fit.
-AJUSTE CLÍNICO CRÍTICO: 
-- Si detectas HTA (Hipertensión), medicamentos cardíacos (Olmesartan, Corenter) o si la Edad es > 50 años: ESTÁ ESTRICTAMENTE PROHIBIDO asignar Planchas Isométricas, Flexiones de pecho en suelo, Levantamiento de pesas pesadas por encima de la cabeza, saltos o ejercicios que induzcan la Maniobra de Valsalva. 
-- La rutina para este perfil DEBE ser de INTENSIDAD LIGERA A MODERADA. Asígnale Caminata rápida, Estiramientos Dinámicos, Movilidad articular, Ejercicios con Banda Elástica ligera, Yoga suave, o Flexiones modificadas en pared. NUNCA sobrepasar su límite cardíaco promedio de entrenamiento.
-- Justifica clínicamente tus decisiones en el JSON basándote en esta edad y condiciones.
-- VOLUMEN DENTRO DE LÍMITES SEGUROS: Si la Edad es > 50 años o tiene HTA, la rutina NO DEBE exceder los 4-5 ejercicios por sesión para evitar sobrecarga y fatiga excesiva. Prioriza calidad y seguridad sobre cantidad.
+
+AJUSTE CLÍNICO Y NIVEL DE CARGA: 
+- Nivel ${difficulty}: 
+  - Baja: 1-2 series, repeticiones moderadas (10-12), descansos largos (90s).
+  - Media: 3 series, repeticiones estándar (12-15), descansos de 60s.
+  - Alta: 3-4 series, mayor volumen o tempo lento, descansos de 45s.
+- Si detectas HTA o Edad > 50 años: PROHIBIDO Planchas, Flexiones en suelo, Pesas sobre cabeza, saltos.
+- FUERZA SEGURA PERMITIDA: Caminata, Estiramientos, Banda Elástica, Yoga suave, Flexiones en pared, Sentadilla apoyada.
+- Volumen: Máx 4-5 ejercicios por sesión para perfiles de riesgo. Prioriza calidad y seguridad.
 
 ESTRUCTURA DE SALIDA OBLIGATORIA (JSON EXACTO PARA ZONA FIT):
 {
