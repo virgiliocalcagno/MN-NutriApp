@@ -460,7 +460,14 @@ MISIÓN EXCLUSIVA: Generar la rutina semanal en la pantalla Zona Fit utilizando 
 - IMC Aprox: ${ib?.peso_actual_kg ? (Number(ib.peso_actual_kg) / ((Number(pb?.estatura_cm) || 160) / 100) ** 2).toFixed(1) : 'N/A'}
 - Comorbilidades: ${dc?.comorbilidades?.join(', ') || 'Ninguna'}
 - Medicamentos: ${dc?.medicamentos_actuales?.join(', ') || 'Ninguno'}
+- Alergias / Observaciones: ${dc?.alergias?.join(', ')} / ${dc?.observaciones_medicas?.join(', ')}
 - Meta (Hidratación): ${mo?.agua_objetivo_ml || 2800} ml
+
+═══ PRESCRIPCIÓN MÉDICA DE EJERCICIO ═══
+- FCM (Latidos por min): ${pe?.fcm_latidos_min || 'N/A'}
+- FC promedio entreno: ${pe?.fc_promedio_entrenamiento || 'N/A'}
+- Fuerza: ${pe?.fuerza_dias_semana || '3'} días (${pe?.fuerza_minutos_sesion || '45'} min)
+- Aeróbico: ${pe?.aerobico_dias_semana || '2'} días (${pe?.aerobico_minutos_sesion || '30'} min)
 
 REGLAS DE SEGURIDAD Y PRESCRIPCIÓN CLÍNICA ESTRICTA (PROTECCIÓN VITAL):
 SOLO LECTURA: Accede a diagnósticos, medicamentos y escaneos solo para consulta. PROHIBIDO modificar o borrar datos fuera de la estructura de Zona Fit.
