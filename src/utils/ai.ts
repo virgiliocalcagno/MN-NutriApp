@@ -451,9 +451,9 @@ export async function generateFullRoutine(profile: Profile, apiKey: string): Pro
     const ib = profile.analisis_inbody_actual;
     const pb = profile.perfil_biometrico;
 
-    const prompt = `ROL: Médico Deportólogo y Fisiólogo Clínico.
+    const prompt = `ROL: Fisiólogo del Ejercicio Clínico.
 
-MISIÓN EXCLUSIVA: Generar la rutina semanal en la pantalla Zona Fit utilizando los datos de ProfileView.
+MISIÓN EXCLUSIVA: Generar una rutina en la pantalla Zona Fit basada en el ProfileView y en los ObjetivosSeleccionados (pueden ser uno o varios).
 
 ═══ PERFIL DEL PACIENTE PARA CONSULTA ═══
 - Edad: ${pb?.edad || 'N/A'}, Género: ${pb?.genero || 'N/A'}
@@ -469,8 +469,17 @@ MISIÓN EXCLUSIVA: Generar la rutina semanal en la pantalla Zona Fit utilizando 
 - Fuerza: ${pe?.fuerza_dias_semana || '3'} días
 - Aeróbico: ${pe?.aerobico_dias_semana || '2'} días
 
-REGLAS DE SEGURIDAD Y PRESCRIPCIÓN CLÍNICA ESTRICTA (PROTECCIÓN VITAL):
-SOLO LECTURA: Accede a diagnósticos, medicamentos y escaneos solo para consulta. PROHIBIDO modificar o borrar datos.
+═══ OBJETIVOS SELECCIONADOS ═══
+- Metas: ${mo?.objetivos_generales?.join(', ') || 'Salud General'}
+
+LÓGICA DE FUSIÓN (MÚLTIPLES OBJETIVOS):
+1. Prioridad 1: Seguridad Clínica: Independientemente de los objetivos, respeta siempre las alertas de HTA, Litiasis Renal y límites de FCM.
+2. Prioridad 2: Mix de Entrenamiento:
+- Si elige Grasa + Músculo: Intercala días de cardio de baja intensidad con sesiones de fuerza de alta densidad.
+- Si elige Salud Cardio + Movilidad: Prioriza yoga, pilates y caminata controlada.
+
+CLÁUSULA DE NO MODIFICACIÓN (SEGURIDAD DEL PROYECTO):
+SOLO LECTURA: Tienes prohibido alterar campos de SmartScan, Nutrición o Datos Generales. Tu salida debe ser un objeto nuevo y aislado para la Zona Fit.
 AJUSTE CLÍNICO CRÍTICO: 
 - Si detectas HTA (Hipertensión), medicamentos cardíacos (Olmesartan, Corenter) o si la Edad es > 50 años: ESTÁ ESTRICTAMENTE PROHIBIDO asignar Planchas Isométricas, Flexiones de pecho en suelo, Levantamiento de pesas pesadas por encima de la cabeza, saltos o ejercicios que induzcan la Maniobra de Valsalva. 
 - La rutina para este perfil DEBE ser de INTENSIDAD LIGERA A MODERADA. Asígnale Caminata rápida, Estiramientos Dinámicos, Movilidad articular, Ejercicios con Banda Elástica ligera, Yoga suave, o Flexiones modificadas en pared. NUNCA sobrepasar su límite cardíaco promedio de entrenamiento.
