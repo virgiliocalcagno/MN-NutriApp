@@ -104,11 +104,10 @@ export const processPdfWithGemini = async (
   apiKey?: string,
   docTypeHint?: 'FICHA_MEDICA' | 'PLAN_NUTRICIONAL' | 'INBODY'
 ): Promise<AIResponse> => {
-  if (apiKey && apiKey.length > 20) {
-    try {
-      const genAI = new GoogleGenerativeAI(apiKey);
-      console.log(`AI Process: Usando motor estable para PDF (2.5) - Contexto: ${docTypeHint || 'AUTO'}`);
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash", generationConfig: { temperature: 0 } });
+      const effectiveApiKey = apiKey || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
+      const genAI = new GoogleGenerativeAI(effectiveApiKey);
+      console.log(`AI Process: Usando motor estable Gemini (2.0 Flash) - Contexto: ${docTypeHint || 'AUTO'}`);
+      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash", generationConfig: { temperature: 0 } });
 
       const currentProfileContext = perfil ? `
 LO QUE YA SABEMOS DEL PACIENTE:
@@ -257,10 +256,11 @@ IMPORTANTE:
 export const analyzeImageWithGemini = async (base64Image: string, perfil?: any, apiKey?: string) => {
   try {
     const cleanBase64 = base64Image.replace(/^data:image\/\w+;base64,/, "");
-    if (apiKey && apiKey.length > 20) {
-      const genAI = new GoogleGenerativeAI(apiKey);
-      console.log("AI Scan: Usando 2.5 Flash para imagen");
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const effectiveApiKey = apiKey || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
+    if (effectiveApiKey && effectiveApiKey.length > 20) {
+      const genAI = new GoogleGenerativeAI(effectiveApiKey);
+      console.log("AI Scan: Usando 2.0 Flash para imagen");
+      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
       const prompt = `Dime qué hay en esta foto de comida de forma muy clara y sencilla.
 Para el paciente: ${perfil?.perfil_biometrico?.nombre_completo || 'Usuario'}.
@@ -305,8 +305,8 @@ export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: 
   if (effectiveApiKey && effectiveApiKey.length > 20) {
     try {
       const genAI = new GoogleGenerativeAI(effectiveApiKey);
-      console.log("AI Recipe: Usando motor 2.5 Flash para Alta Cocina");
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      console.log("AI Recipe: Usando motor 2.0 Flash para Alta Cocina");
+      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
       const prompt = `Eres un asistente de cocina que prepara las recetas EXACTAS del plan nutricional del paciente.
 
@@ -410,9 +410,10 @@ MUY IMPORTANTE: Ya has generado una receta para esto llamada "${originalRecipeTi
 
 export async function getFitnessAdvice(profile: Profile, apiKey: string): Promise<string> {
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    console.log("AI Fitness: Usando motor estable 2.5");
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const effectiveApiKey = apiKey || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
+    const genAI = new GoogleGenerativeAI(effectiveApiKey);
+    console.log("AI Fitness: Usando motor estable 2.0 Flash");
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
     const prompt = `Dime 3 consejos cortos y fáciles para que esta persona entrene mejor.
 Usa un lenguaje motivador y súper sencillo.
@@ -442,8 +443,10 @@ FORMATO: Pon solo 3 puntos cortos con un dibujo (emoji), nada más.`;
 
 export async function generateFullRoutine(profile: Profile, apiKey: string, selectedGoals?: string[], difficulty: string = "Media"): Promise<{ routine: any, consejo: string }> {
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const effectiveApiKey = apiKey || (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
+    const genAI = new GoogleGenerativeAI(effectiveApiKey);
+    console.log("AI Routine: Generando plan semanal con 2.0 Flash");
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
     const pe = profile.prescripcion_ejercicio;
     const dc = profile.diagnostico_clinico;
