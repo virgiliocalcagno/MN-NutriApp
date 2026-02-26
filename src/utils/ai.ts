@@ -109,144 +109,9 @@ export const processPdfWithGemini = async (
   perfil: Partial<Profile>,
   pdfPlanBase64?: string,
   pdfEvalBase64?: string,
-  apiKey?: string,
   docTypeHint?: 'FICHA_MEDICA' | 'PLAN_NUTRICIONAL' | 'INBODY'
 ): Promise<AIResponse> => {
-  const effectiveApiKey = getEffectiveApiKey(apiKey);
-  if (effectiveApiKey.length > 20) {
-    try {
-      const genAI = new GoogleGenerativeAI(effectiveApiKey);
-      console.log(`[BUILD_V191] AI Process: Usando motor estable Gemini (2.5 Flash) - Contexto: ${docTypeHint || 'AUTO'}`);
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash", generationConfig: { temperature: 0 } });
-
-      const currentProfileContext = perfil ? `
-LO QUE YA SABEMOS DEL PACIENTE:
-- Nombre: ${perfil.perfil_biometrico?.nombre_completo || 'Desconocido'}
-- Metas: ${perfil.metas_y_objetivos?.objetivos_generales?.join(', ') || 'Ninguna'}
-- Alergias: ${perfil.diagnostico_clinico?.alergias?.join(', ') || 'Ninguna'}
-- Problemas: ${perfil.diagnostico_clinico?.comorbilidades?.join(', ') || 'Ninguna'}
-- Medicinas: ${perfil.diagnostico_clinico?.medicamentos_actuales?.join(', ') || 'Ninguna'}
-- InBody Anterior (Peso): ${perfil.analisis_inbody_actual?.peso_actual_kg || 'N/A'} kg
-` : '';
-
-      const promptText = `Eres un asesor de nutrición muy práctico y amable para la app MN-NutriApp. Tu trabajo es leer el PDF y organizar la información para el paciente de forma clara.
-
-CONTEXTO DE CARGA: ${docTypeHint || 'ANÁLISIS GENERAL'}
-
-LO QUE YA SABEMOS DEL PACIENTE:
-- Metas: ${perfil.metas_y_objetivos?.objetivos_generales?.join(', ') || 'Ninguna'}
-- Alergias: ${perfil.diagnostico_clinico?.alergias?.join(', ') || 'Ninguna'}
-- Problemas de salud: ${perfil.diagnostico_clinico?.comorbilidades?.join(', ') || 'Ninguna'}
-- Pastillas/Suplementos: ${Array.isArray(perfil.diagnostico_clinico?.suplementacion) ? perfil.diagnostico_clinico.suplementacion.join(', ') : perfil.diagnostico_clinico?.suplementacion || 'Ninguno'}
-- Notas: ${perfil.diagnostico_clinico?.observaciones_medicas?.join(', ') || 'Ninguna'}
-
-Tu tarea es extraer la información relevante según el contexto:
-1. Si el contexto es PLAN_NUTRICIONAL (O "ANÁLISIS GENERAL"): Extrae todas las comidas (semana), compras y horarios.
-2. Si el contexto es INBODY: Extrae Score, Peso, SMM (Músculo), PBF (Grasa), Grasa Visceral, Tasa Metabólica y metas de control de peso/grasa/músculo.
-3. Si el contexto es FICHA_MEDICA: Extrae datos clínicos, comorbilidades, medicamentos y notas médicas.
-
-RESPONDE ÚNICAMENTE CON UN JSON PURO CON ESTE FORMATO:
-{
-  "perfilAuto": {
-    "perfil_biometrico": {
-      "nombre_completo": "Nombre real del paciente encontrado en el PDF",
-      "doctor": "Nombre del Doctor (si aparece)",
-      "edad": "...",
-      "estatura_cm": "...",
-      "genero": "..."
-    },
-    "diagnostico_clinico": {
-      "diagnostico_nutricional": "...",
-      "comorbilidades": [],
-      "observaciones_medicas": [],
-      "medicamentos_actuales": [],
-      "suplementacion": [],
-      "alergias": [],
-      "sangre": "..."
-    },
-    "metas_y_objetivos": {
-      "peso_ideal_meta": "...",
-      "control_peso_inmediato": "...",
-      "control_grasa_kg": "...",
-      "control_musculo_kg": "...",
-      "pbf_objetivo_porcentaje": "...",
-      "vet_kcal_diarias": 0,
-      "agua_objetivo_ml": 0,
-      "objetivos_generales": []
-    },
-    "analisis_inbody_actual": {
-      "fecha_test": "...",
-      "peso_actual_kg": "...",
-      "smm_masa_musculo_esqueletica_kg": "...",
-      "pbf_porcentaje_grasa_corporal": "...",
-      "grasa_visceral_nivel": "...",
-      "inbody_score": "...",
-      "tasa_metabolica_basal_kcal": "..."
-    },
-    "prescripcion_ejercicio": {
-      "fcm_latidos_min": "...",
-      "fc_promedio_entrenamiento": "...",
-      "fuerza_dias_semana": "...",
-      "fuerza_minutos_sesion": "...",
-      "aerobico_dias_semana": "...",
-      "aerobico_minutos_sesion": "..."
-    },
-    "historico_antropometrico": [
-      {
-        "fecha": "YYYY-MM-DD",
-        "peso_lbs": "...",
-        "cintura_cm": "...",
-        "cuello_cm": "...",
-        "brazo_der_cm": "...",
-        "brazo_izq_cm": "..."
-      }
-    ]
-  },
-  "semana": { 
-    "LUNES": { 
-        "DESAYUNO": "Descripción REAL extraída del desayuno para el Lunes",
-        "MERIENDA_AM": "Descripción REAL extraída de la merienda",
-        "ALMUERZO": "Descripción REAL extraída del almuerzo",
-        "MERIENDA_PM": "Descripción REAL extraída de la merienda",
-        "CENA": "Descripción REAL extraída de la cena"
-    }
-    // IMPORTANTE: SI EL PDF TIENE MÁS DÍAS (MARTES, MIERCOLES), AGREGALOS AQUÍ. SI SOLO ES UN SOLO MENÚ GENERAL, USA SOLO "LUNES".
-  },
-  "ejercicios": { "LUNES": [ {"n": "Nombre", "i": "3x12"} ] },
-  "compras": [ { "item": "Producto", "cantidad": "Cantidad Literal (ej: 12 unidades, 1 Cartón, 500g)", "nivel": 1, "categoria": "Categoria", "pasillo": "Pasillo" } ],
-  "horarios": { 
-      "DESAYUNO": "08:30 AM",
-      "MERIENDA_AM": "11:00 AM",
-      "ALMUERZO": "01:30 PM",
-      "MERIENDA_PM": "04:30 PM",
-      "CENA": "07:30 PM" 
-  },
-  "tipo_documento": "${docTypeHint || 'AUTO'}"
-}
-
-IMPORTANTE: 
-0. REEMPLAZA LOS EJEMPLOS MUESTRA (como "..." o "Descripción REAL") CON LA INFORMACIÓN EXACTA DEL PDF. Si un dato no existe, pon un string vacío "". ¡NUNCA devuelvas "..."!
-1. NOMBRE DEL PACIENTE: Haz un OCR profundo al encabezado del documento y busca textos grandes (ej: "Virgilio Augusto Calcagno Surun", "Dra. Marlin Núñez"). Coloca este nombre ESTRICTAMENTE en "perfil_biometrico.nombre_completo".
-2. PLAN_NUTRICIONAL: Extrae todo el MENÚ EXACTO en "semana". Si el PDF no tiene una Lista de Compras explícita, DEDÚCELA a partir de las recetas (ej: 1 lata de atún, 1 tortilla integral) y ponla en el array "compras".
-3. HISTORIAL CLÍNICO Y PESO: Revisa cuidadosamente TODAS las tablas de "Datos Generales", "Medidas Antropométricas", "Cronología", "Comorbilidades", "Medicamentos" o "Medidas de cuerpo" que aparezcan en CUALQUIER PDF (incluso en planes nutricionales) y mételas en sus secciones (ej: 'historico_antropometrico' para las filas de cronología de peso por fecha).
-4. INBODY / FICHA MÉDICA: Prioriza extraer las métricas exactas y diagnósticos según su archivo respectivo.
-5. METAS Y LÍQUIDOS: Busca explícitamente frases como "Cálculo de Líquidos" o "Agua" y extrae estrictamente el número en mililitros para 'agua_objetivo_ml' (ej: 2800). Captura TODAS las recomendaciones, "Notas" al final del PDF, y metas (ej: "Retomar ejercicio", "Bajo Indice Glucemico", "Aumentar masa") estrictamente dentro de 'objetivos_generales' separadas como un array de strings.
-6. TABLAS DE MEDIDAS (HISTÓRICO): ¡EXTREMADAMENTE IMPORTANTE! Cuando proceses las tablas por fecha, extrae *todas* las columnas disponibles (Cintura, Cuello, Brazo Der, Brazo Izq) por fecha y ponlas juntas con el 'peso_lbs' en los objetos de 'historico_antropometrico'. No dejes los campos de centímetros vacíos si la tabla los provee.
-7. FECHAS DE HISTORIAL: Las fechas de historial DEBEN ser en formato exacto "YYYY-MM-DD" (ejemplo: "2024-11-24"). Si el documento dice "Nov/24", infiere que es el año 2024. Si dice "Agosto/25", infiere 2025. ¡Nunca dejes meses sueltos sin el AÑO correcto!`;
-
-      const parts: any[] = [{ text: promptText }];
-      if (pdfPlanBase64) parts.push({ inlineData: { mimeType: "application/pdf", data: pdfPlanBase64.replace(/^data:application\/pdf;base64,/, "") } });
-      if (pdfEvalBase64) parts.push({ inlineData: { mimeType: "application/pdf", data: pdfEvalBase64.replace(/^data:application\/pdf;base64,/, "") } });
-
-      const result = await model.generateContent(parts);
-      const responseText = result.response.text();
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) return normalizeCompras(JSON.parse(jsonMatch[0]) as AIResponse);
-      throw new Error("Formato inválido");
-    } catch (e: any) {
-      console.warn("Gemini falló, intentando Fallback...", e?.message || e?.status || e);
-    }
-  }
+  console.log(`[BUILD_V191] AI Process: Delegando a Cloud Function - Contexto: ${docTypeHint || 'AUTO'}`);
 
   try {
     const cleanPlan = pdfPlanBase64?.replace(/^data:application\/pdf;base64,/, "");
@@ -263,40 +128,10 @@ IMPORTANTE:
   }
 };
 
-export const analyzeImageWithGemini = async (base64Image: string, perfil?: any, apiKey?: string) => {
+export const analyzeImageWithGemini = async (base64Image: string, perfil?: any) => {
   try {
     const cleanBase64 = base64Image.replace(/^data:image\/\w+;base64,/, "");
-    const effectiveApiKey = getEffectiveApiKey(apiKey);
-    if (effectiveApiKey.length > 20) {
-      const genAI = new GoogleGenerativeAI(effectiveApiKey);
-      console.log("[BUILD_V191] AI Scan: Usando 2.5 Flash para imagen");
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
-      const prompt = `Dime qué hay en esta foto de comida de forma muy clara y sencilla.
-Para el paciente: ${perfil?.perfil_biometrico?.nombre_completo || 'Usuario'}.
-
-Tu tarea:
-1. ¿Qué plato es? Sé descriptivo.
-2. ¿Le conviene comer esto? Di VERDE (sí), AMARILLO (con cuidado) o ROJO (mejor evitar).
-3. Explica por qué le conviene o no, pero en palabras normales, sin mucha ciencia.
-4. Dame un consejo útil y rápido sobre este plato.
-5. Calcula cuántas calorías y macros tiene (aprox).
-
-RESPONDE SOLO CON ESTE JSON:
-{
-  "platos": ["Nombre de la comida"],
-  "semaforo": "VERDE | AMARILLO | ROJO",
-  "analisis": "Explicación sencilla...",
-  "bioHack": "Consejo práctico...",
-  "macros": { "p": "30g", "c": "20g", "f": "15g" },
-  "totalCalorias": 350
-}`;
-
-      const result = await model.generateContent([{ inlineData: { mimeType: "image/jpeg", data: cleanBase64 } }, { text: prompt }]);
-      const text = result.response.text();
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) return JSON.parse(jsonMatch[0]);
-    }
+    console.log("[BUILD_V191] AI Scan: Delegando a Cloud Function");
 
     const response = await fetch('https://analizarcomida-m2aywfcl2q-uc.a.run.app', {
       method: 'POST',
@@ -381,7 +216,7 @@ export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: 
   };
 };
 
-export async function getFitnessAdvice(profile: Profile, apiKey: string): Promise<string> {
+export async function getFitnessAdvice(profile: Profile): Promise<string> {
   try {
     console.log("[BUILD_V191] AI Fitness: Solicitando al Cloud Function (Consejo)...");
     const response = await fetch('https://us-central1-mn-nutriapp.cloudfunctions.net/obtenerConsejoFitness', {
@@ -397,7 +232,7 @@ export async function getFitnessAdvice(profile: Profile, apiKey: string): Promis
   }
 }
 
-export async function generateFullRoutine(profile: Profile, apiKey: string, selectedGoals?: string[], difficulty: string = "Media"): Promise<{ routine: any, consejo: string }> {
+export async function generateFullRoutine(profile: Profile, selectedGoals?: string[], difficulty: string = "Media"): Promise<{ routine: any, consejo: string }> {
   try {
     console.log("[BUILD_V191] AI Routine: Solicitando al Cloud Function (Rutina)...");
     const response = await fetch('https://us-central1-mn-nutriapp.cloudfunctions.net/generarRutinaFit', {

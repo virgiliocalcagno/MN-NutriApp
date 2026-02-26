@@ -177,15 +177,11 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
   const handleGenerateAdvice = async () => {
     if (!store.profile) return;
     setIsGeneratingAdvice(true);
-    const apiKey = (firebaseConfig as any).geminiApiKey || '';
-    if (!apiKey) {
-      console.warn("⚠️ Advertencia: VITE_GEMINI_API_KEY no detectada en firebaseConfig. Intentando fallbacks...");
-    }
     try {
-      const advice = await getFitnessAdvice(store.profile, apiKey);
+      const advice = await getFitnessAdvice(store.profile);
       setAiAdvice(advice);
     } catch (error) {
-      console.error(error);
+      console.error("Error al obtener consejo:", error);
     } finally {
       setIsGeneratingAdvice(false);
     }
@@ -194,13 +190,9 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
   const handleGenerateRoutine = async () => {
     if (!store.profile) return;
     setIsGeneratingRoutine(true);
-    const apiKey = (firebaseConfig as any).geminiApiKey || '';
-    if (!apiKey) {
-      console.warn("⚠️ Advertencia: VITE_GEMINI_API_KEY no detectada en firebaseConfig (403 probable). Intentando fallbacks...");
-    }
     try {
       const g = (selectedGoals.length > 0) ? selectedGoals : (store.profile?.metas_y_objetivos?.objetivos_generales || []);
-      const result = await generateFullRoutine(store.profile, apiKey, g, selectedDifficulty);
+      const result = await generateFullRoutine(store.profile, g, selectedDifficulty);
       if (result && result.routine) {
         saveStore({
           ...store,

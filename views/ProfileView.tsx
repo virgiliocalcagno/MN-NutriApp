@@ -244,8 +244,7 @@ const ProfileView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
           reader.readAsDataURL(item.file);
         });
 
-        const activeKey = (firebaseConfig as any).geminiApiKey;
-        const data = await processPdfWithGemini(store.profile, base64, undefined, activeKey, item.context);
+        const data = await processPdfWithGemini(store.profile, base64, undefined, item.context);
 
         if (data) {
           const doc: DocumentRecord = {
