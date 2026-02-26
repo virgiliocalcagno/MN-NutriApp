@@ -5,7 +5,7 @@ import { analyzeImageWithGemini, getFitnessAdvice, generateFullRoutine } from '@
 
 const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
   const { store, saveStore } = useStore();
-  
+
   // --- Inicialización de Día para evitar ReferenceError ---
   const dias = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
   const todayName = dias[new Date().getDay()];
@@ -18,12 +18,22 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
   const [aiAdvice, setAiAdvice] = useState<string | null>(store.fitnessAdvice || null);
   const [isGeneratingAdvice, setIsGeneratingAdvice] = useState(false);
   const [isGeneratingRoutine, setIsGeneratingRoutine] = useState(false);
-  const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
+  const selectedGoals = store.fitnessGoals || [];
+  const selectedDifficulty = store.fitnessDifficulty || "Media";
+
+  const setSelectedGoals = (goals: string[] | ((prev: string[]) => string[])) => {
+    const newGoals = typeof goals === 'function' ? goals(selectedGoals) : goals;
+    saveStore({ ...store, fitnessGoals: newGoals });
+  };
+
+  const setSelectedDifficulty = (diff: string) => {
+    saveStore({ ...store, fitnessDifficulty: diff });
+  };
+
   const [selectedDay, setSelectedDay] = useState<string>(displayDay);
-  const [selectedDifficulty, setSelectedDifficulty] = useState<string>("Media");
-  
+
   // UX Refinements: Long Press & Confirmations
-  const [pendingUnmark, setPendingUnmark] = useState<{type: 'goal' | 'diff', id: string} | null>(null);
+  const [pendingUnmark, setPendingUnmark] = useState<{ type: 'goal' | 'diff', id: string } | null>(null);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Persistence: Auto-reset to today when entering the view
@@ -135,10 +145,8 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
   };
 
   const handleGoalPress = (goalId: string) => {
-    const isSelected = selectedGoals.includes(goalId);
-    if (!isSelected) {
-      // Mark immediately on normal click
-      setSelectedGoals(prev => [...prev, goalId]);
+    if (!selectedGoals.includes(goalId)) {
+      setSelectedGoals([...selectedGoals, goalId]);
     }
   };
 
@@ -194,11 +202,11 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
       const g = (selectedGoals.length > 0) ? selectedGoals : (store.profile?.metas_y_objetivos?.objetivos_generales || []);
       const result = await generateFullRoutine(store.profile, apiKey, g, selectedDifficulty);
       if (result && result.routine) {
-        saveStore({ 
-          ...store, 
+        saveStore({
+          ...store,
           exercises: result.routine, // Objeto { Lunes: [], Martes: [], ... }
           doneEx: {}, // Limpiar progreso anterior al generar nuevo plan
-          fitnessAdvice: result.consejo 
+          fitnessAdvice: result.consejo
         });
         setAiAdvice(result.consejo);
       }
@@ -526,11 +534,10 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
                 <button
                   key={day}
                   onClick={() => setSelectedDay(day)}
-                  className={`flex-1 min-w-[50px] py-3 rounded-2xl flex flex-col items-center gap-1 transition-all ${
-                    isActive 
-                    ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-105 z-10' 
+                  className={`flex-1 min-w-[50px] py-3 rounded-2xl flex flex-col items-center gap-1 transition-all ${isActive
+                    ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-105 z-10'
                     : 'text-slate-400 hover:bg-slate-50'
-                  }`}
+                    }`}
                 >
                   <span className={`text-[8px] font-black uppercase tracking-tighter ${isActive ? 'text-white/60' : 'text-slate-300'}`}>
                     {day.substring(0, 3)}
@@ -619,7 +626,7 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
 
             {exercisesList.length > 0 ? exercisesList.map((ex: any, idx: number) => {
               const isCompleted = completedList.includes(idx);
-              
+
               // Mapeo dinámico de categorías a iconos
               const catMap: Record<string, { icon: string, color: string }> = {
                 "Grasa": { icon: "local_fire_department", color: "text-orange-500" },
@@ -689,7 +696,7 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
                 ) : (
                   <>
                     <div className="size-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-2">
-                       <span className="material-symbols-outlined text-4xl text-slate-200">bedtime</span>
+                      <span className="material-symbols-outlined text-4xl text-slate-200">bedtime</span>
                     </div>
                     <p className="text-sm font-black text-slate-500 uppercase tracking-tighter">Descanso Activo</p>
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest max-w-[200px] mx-auto leading-normal">
@@ -698,11 +705,10 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
                     <button
                       onClick={handleGenerateRoutine}
                       disabled={isGeneratingRoutine}
-                      className={`mt-4 px-10 py-5 rounded-[2rem] text-[11px] font-black uppercase tracking-widest shadow-2xl transition-all active:scale-95 flex items-center gap-3 mx-auto ${
-                        selectedDifficulty === 'Baja' ? 'bg-emerald-500 shadow-emerald-200' :
+                      className={`mt-4 px-10 py-5 rounded-[2rem] text-[11px] font-black uppercase tracking-widest shadow-2xl transition-all active:scale-95 flex items-center gap-3 mx-auto ${selectedDifficulty === 'Baja' ? 'bg-emerald-500 shadow-emerald-200' :
                         selectedDifficulty === 'Media' ? 'bg-amber-500 shadow-amber-200' :
-                        'bg-rose-500 shadow-rose-200'
-                      } text-white hover:scale-105 disabled:opacity-50 disabled:animate-pulse`}
+                          'bg-rose-500 shadow-rose-200'
+                        } text-white hover:scale-105 disabled:opacity-50 disabled:animate-pulse`}
                     >
                       <span className="material-symbols-outlined text-base">auto_awesome</span>
                       {isGeneratingRoutine ? 'Diseñando Plan...' : `Generar Plan ${selectedDifficulty}`}
@@ -715,9 +721,9 @@ const FitnessView: React.FC<{ setView?: (v: any) => void }> = ({ setView }) => {
         </div>
       </main>
 
-      <ConfirmUnmarkModal 
-        isOpen={!!pendingUnmark} 
-        onClose={() => setPendingUnmark(null)} 
+      <ConfirmUnmarkModal
+        isOpen={!!pendingUnmark}
+        onClose={() => setPendingUnmark(null)}
         onConfirm={confirmUnmark}
         type={pendingUnmark?.type}
       />
@@ -807,7 +813,7 @@ const ConfirmUnmarkModal: React.FC<{
         <div className="size-20 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-2 text-rose-500">
           <span className="material-symbols-outlined text-4xl">warning</span>
         </div>
-        
+
         <div>
           <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight mb-2">
             Confirmar Acción

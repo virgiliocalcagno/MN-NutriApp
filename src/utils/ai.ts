@@ -60,10 +60,10 @@ const INGREDIENT_TO_PRODUCT: Record<string, string> = {
 };
 
 const getEffectiveApiKey = (apiKey?: string): string => {
-  const key = apiKey || 
-              (import.meta as any).env?.VITE_GEMINI_API_KEY || 
-              (process as any).env?.GEMINI_API_KEY || 
-              '';
+  const key = apiKey ||
+    (import.meta as any).env?.VITE_GEMINI_API_KEY ||
+    (process as any).env?.GEMINI_API_KEY ||
+    '';
   return key.trim();
 };
 
@@ -103,7 +103,7 @@ const normalizeCompras = (data: AIResponse): AIResponse => {
   return { ...data, compras: deduped as any };
 };
 
-const CLOUD_FUNCTION_URL = 'https://us-central1-mn-nutriapp.cloudfunctions.net/procesarNutricion';
+const CLOUD_FUNCTION_URL = 'https://procesarnutricion-m2aywfcl2q-uc.a.run.app';
 
 export const processPdfWithGemini = async (
   perfil: Partial<Profile>,
@@ -298,7 +298,7 @@ RESPONDE SOLO CON ESTE JSON:
       if (jsonMatch) return JSON.parse(jsonMatch[0]);
     }
 
-    const response = await fetch('https://us-central1-mn-nutriapp.cloudfunctions.net/analizarComida', {
+    const response = await fetch('https://analizarcomida-m2aywfcl2q-uc.a.run.app', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ imagenBase64: cleanBase64, perfilPaciente: perfil })
@@ -311,54 +311,17 @@ RESPONDE SOLO CON ESTE JSON:
 };
 
 export const getRecipeDetails = async (mealDesc: string, perfil?: any, apiKey?: string, isVariant: boolean = false, originalRecipeTitle?: string): Promise<RecipeDetails> => {
-  const effectiveApiKey = getEffectiveApiKey(apiKey);
-  if (effectiveApiKey.length > 20) {
-    try {
-      const genAI = new GoogleGenerativeAI(effectiveApiKey);
-      console.log("[BUILD_V191] AI Recipe: Usando motor 2.5 Flash para Alta Cocina");
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+  try {
+    console.log("[BUILD_V191] AI Recipe: Solicitando al Cloud Function (Alta Cocina)...");
+    const response = await fetch('https://us-central1-mn-nutriapp.cloudfunctions.net/obtenerReceta', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mealDesc, perfil, isVariant, originalRecipeTitle })
+    });
+    const resultJson = await response.json();
+    const text = resultJson.text;
 
-      const prompt = `Eres un asistente de cocina que prepara las recetas EXACTAS del plan nutricional del paciente.
-
-PLATO DEL MENÚ: "${mealDesc}"
-PACIENTE: ${perfil?.perfil_biometrico?.nombre_completo || 'Usuario'}
-
-═══ REGLAS ESTRICTAS ═══
-
-1. FIDELIDAD TOTAL: Usa ÚNICAMENTE los ingredientes que aparecen en la descripción del plato. NO inventes, NO agregues, NO sustituyas ingredientes.
-2. NOMBRE REAL: El título debe ser el nombre original del plato tal como está escrito en el plan. NO lo renombres con nombres de alta cocina.
-3. CANTIDADES EXACTAS: Respeta las cantidades indicadas (120g, 2 unidades, 1 cdita, etc.). Si dice "vegetales libres", puedes sugerir opciones pero aclarando que son a elección.
-4. PREPARACIÓN PRÁCTICA: Pasos simples y reales de cocina casera. Nada de "sous-vide", "coulis", "emulsiones", ni técnicas de restaurante.
-5. Si dice "vegetales libres" o similar, listados como "Vegetales a elección (lechuga, tomate, pepino, etc.)" — NO los pongas como ingredientes fijos con cantidades.
-
-RESPONDE CON JSON PURO:
-{
-  "titulo": "Nombre original del plato tal cual",
-  "foto_prompt": "simple home cooked [main ingredient] plate, clean background, natural light",
-  "tiempo": "20 min",
-  "dificultad": "Baja",
-  "kcal": 350,
-  "nutrientes": { "proteina": "30g", "grasas": "8g", "carbos": "40g" },
-  "ingredientes_lista": ["Ingrediente exacto con cantidad del plan"],
-  "pasos_preparacion": [
-    { "titulo": "Paso simple", "descripcion": "Instrucción práctica de cocina casera..." }
-  ],
-  "bio_hack": {
-    "titulo": "CONSEJO NUTRICIONAL",
-    "explicacion": "Un consejo práctico sobre cómo aprovechar este plato.",
-    "pasos": ["1. Come primero los vegetales", "2. Luego la proteína", "3. Al final los carbohidratos"]
-  }
-}
-${isVariant ? `
-SEMILLA DE VARIACIÓN Y CREATIVIDAD (IGNORAR PARA INGREDIENTES): ${Date.now()}-${Math.random()}
-MUY IMPORTANTE: Ya has generado una receta para esto llamada "${originalRecipeTitle}". Para esta petición, GENERA UNA VARIANTE ÚNICA Y CREATIVA de la preparación (diferentes métodos de cocción, emplatado o bio-hacks al original), MANTENIENDO SIEMPRE LOS INGREDIENTES Y MACROS EXACTOS.
-` : ''}
-`;
-
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
-
+    if (text) {
       // Sanitización profunda del JSON
       const jsonStart = text.indexOf('{');
       const jsonEnd = text.lastIndexOf('}') + 1;
@@ -398,9 +361,9 @@ MUY IMPORTANTE: Ya has generado una receta para esto llamada "${originalRecipeTi
           console.error("JSON Parse Exception:", innerParseError, text);
         }
       }
-    } catch (e) {
-      console.error("Gemini Error Crítico:", e);
     }
+  } catch (e) {
+    console.error("Gemini Cloud Function Error:", e);
   }
 
   return {
@@ -420,31 +383,14 @@ MUY IMPORTANTE: Ya has generado una receta para esto llamada "${originalRecipeTi
 
 export async function getFitnessAdvice(profile: Profile, apiKey: string): Promise<string> {
   try {
-    const effectiveApiKey = getEffectiveApiKey(apiKey);
-    const genAI = new GoogleGenerativeAI(effectiveApiKey);
-    console.log("[BUILD_V191] AI Fitness: Usando motor estable 2.5 Flash");
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
-    const prompt = `Dime 3 consejos cortos y fáciles para que esta persona entrene mejor.
-Usa un lenguaje motivador y súper sencillo.
-
-PERFIL:
-- Metas: ${profile.metas_y_objetivos?.objetivos_generales?.join(', ') || 'General'}
-- Salud: ${profile.diagnostico_clinico?.comorbilidades?.join(', ') || 'Normal'}
-- Edad: ${profile.perfil_biometrico?.edad}, Genero: ${profile.perfil_biometrico?.genero}
-- Peso InBody: ${profile.analisis_inbody_actual?.peso_actual_kg || 'N/A'} kg
-- Meta Peso: ${profile.metas_y_objetivos?.peso_ideal_meta || 'No definida'}
-
-REGLAS:
-1. Si tiene comorbilidades (presión alta, etc): Dile que vaya suave y respire.
-2. Si quiere músculo: Dile que descanse bien entre series.
-3. Si quiere bajar de peso: Dile que mueva peso y haga algo de cardio.
-4. No uses palabras raras.
-
-FORMATO: Pon solo 3 puntos cortos con un dibujo (emoji), nada más.`;
-
-    const result = await model.generateContent(prompt);
-    return result.response.text();
+    console.log("[BUILD_V191] AI Fitness: Solicitando al Cloud Function (Consejo)...");
+    const response = await fetch('https://us-central1-mn-nutriapp.cloudfunctions.net/obtenerConsejoFitness', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ profile })
+    });
+    const data = await response.json();
+    return data.advice || "• Mantente activo.\n• Hidrátate.\n• Disfruta el proceso.";
   } catch (error) {
     console.error("Fitness Advice AI Error:", error);
     return "• Prioriza el descanso activo.\n• Mantén una hidratación constante.\n• Escucha a tu cuerpo durante el esfuerzo.";
@@ -453,93 +399,14 @@ FORMATO: Pon solo 3 puntos cortos con un dibujo (emoji), nada más.`;
 
 export async function generateFullRoutine(profile: Profile, apiKey: string, selectedGoals?: string[], difficulty: string = "Media"): Promise<{ routine: any, consejo: string }> {
   try {
-    const effectiveApiKey = getEffectiveApiKey(apiKey);
-    const genAI = new GoogleGenerativeAI(effectiveApiKey);
-    console.log("[BUILD_V191] AI Routine: Generando plan semanal con 2.5 Flash");
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
-    const pe = profile.prescripcion_ejercicio;
-    const dc = profile.diagnostico_clinico;
-    const mo = profile.metas_y_objetivos;
-    const ib = profile.analisis_inbody_actual;
-    const pb = profile.perfil_biometrico;
-
-    const prompt = `ROL: Fisiólogo del Ejercicio Clínico.
-
-MISIÓN EXCLUSIVA: Generar una rutina en la pantalla Zona Fit basada en el ProfileView y en los ObjetivosSeleccionados (pueden ser uno o varios).
-
-═══ PERFIL DEL PACIENTE PARA CONSULTA ═══
-- Edad: ${pb?.edad || 'N/A'}, Género: ${pb?.genero || 'N/A'}
-- IMC Aprox: ${ib?.peso_actual_kg ? (Number(ib.peso_actual_kg) / ((Number(pb?.estatura_cm) || 160) / 100) ** 2).toFixed(1) : 'N/A'}
-- Comorbilidades: ${dc?.comorbilidades?.join(', ') || 'Ninguna'}
-- Medicamentos: ${dc?.medicamentos_actuales?.join(', ') || 'Ninguno'}
-- Alergias / Observaciones: ${dc?.alergias?.join(', ')} / ${dc?.observaciones_medicas?.join(', ')}
-- Meta (Hidratación): ${mo?.agua_objetivo_ml || 2800} ml
-
-═══ PRESCRIPCIÓN MÉDICA DE EJERCICIO ═══
-- FCM (Latidos por min): ${pe?.fcm_latidos_min || 'N/A'}
-- FC promedio entreno: ${pe?.fc_promedio_entrenamiento || 'N/A'}
-- Fuerza: ${pe?.fuerza_dias_semana || '3'} días
-- Aeróbico: ${pe?.aerobico_dias_semana || '2'} días
-
-═══ OBJETIVOS SELECCIONADOS ═══
-- Metas: ${selectedGoals && selectedGoals.length > 0 ? selectedGoals.join(', ') : (mo?.objetivos_generales?.join(', ') || 'Salud General')}
-
-═══ CONFIGURACIÓN DE INTENSIDAD ═══
-- Dificultad Seleccionada: ${difficulty} (Baja / Media / Alta)
-
-LÓGICA DE FUSIÓN (MÚLTIPLES OBJETIVOS):
-1. Prioridad 1: Seguridad Clínica: Respeta siempre las alertas de HTA y límites de FCM.
-2. Prioridad 2: Mix de Entrenamiento:
-- Si elige "Ganancia Muscular": DEBES incluir ejercicios de FUERZA SEGURA (Banda elástica, Flexión en pared, Sentadilla con silla, Elevación de talones). No te limites solo a caminar.
-- Si elige "Pérdida de Grasa": Intercala ráfagas de marcha rápida con ejercicios de resistencia de alta repetición.
-
-CLÁUSULA DE NO MODIFICACIÓN (SEGURIDAD DEL PROYECTO):
-SOLO LECTURA: Tienes prohibido alterar campos de SmartScan, Nutrición o Datos Generales. Tu salida debe ser un objeto nuevo y aislado para la Zona Fit.
-
-AJUSTE CLÍNICO Y NIVEL DE CARGA: 
-- Nivel ${difficulty}: 
-  - Baja: 1-2 series, repeticiones moderadas (10-12), descansos largos (90s).
-  - Media: 3 series, repeticiones estándar (12-15), descansos de 60s.
-  - Alta: 3-4 series, mayor volumen o tempo lento, descansos de 45s.
-- Si detectas HTA o Edad > 50 años: PROHIBIDO Planchas, Flexiones en suelo, Pesas sobre cabeza, saltos.
-- FUERZA SEGURA PERMITIDA: Caminata, Estiramientos, Banda Elástica, Yoga suave, Flexiones en pared, Sentadilla apoyada.
-- Volumen: Máx 4-5 ejercicios por sesión para perfiles de riesgo. Prioriza calidad y seguridad.
-
-ESTRUCTURA DE SALIDA OBLIGATORIA (JSON EXACTO PARA ZONA FIT):
-{
-  "zona_fit_response": {
-    "metadata": {
-      "user_id": "ID_DEL_USUARIO",
-      "timestamp": "YYYY-MM-DD",
-      "profile_status": "Lectura_Exitosa"
-    },
-    "entrenamiento_semanal": {
-      "justificacion_clinica": "Justificación global del plan de 7 días según edad y HTA",
-      "intensidad_segura": "Moderada o Ligera (LPM)",
-      "objetivos_logrados": ["Grasa", "Cardio"]
-    },
-    "plan_semanal": {
-      "Lunes": { "tipo": "Fuerza / Cardio / Descanso", "ejercicios": [{ "id": "ex_001", "nombre": "Ejemplo", "categoria": "Músculo", "series": 3, "repeticiones": 12, "objetivo": "Fuerza", "video_url": "..." }] },
-      "Martes": { "tipo": "...", "ejercicios": [] },
-      "Miércoles": { "tipo": "...", "ejercicios": [] },
-      "Jueves": { "tipo": "...", "ejercicios": [] },
-      "Viernes": { "tipo": "...", "ejercicios": [] },
-      "Sábado": { "tipo": "...", "ejercicios": [] },
-      "Domingo": { "tipo": "...", "ejercicios": [] }
-    },
-    "alertas_seguridad": {
-      "hidratacion_requerida_ml": 2800,
-      "restriccion_impacto": "Nota sobre el impacto",
-      "nota_medicamento": "Aviso sobre medicamentos"
-    }
-  }
-}
-
-ESTILO: Minimalista, clínico y moderno. NO uses markdown fuera del JSON. Devuelve SÓLO el objeto JSON.`;
-
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    console.log("[BUILD_V191] AI Routine: Solicitando al Cloud Function (Rutina)...");
+    const response = await fetch('https://us-central1-mn-nutriapp.cloudfunctions.net/generarRutinaFit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ profile, selectedGoals, difficulty })
+    });
+    const data = await response.json();
+    const text = data.text;
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
