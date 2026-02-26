@@ -462,9 +462,12 @@ MISIÓN EXCLUSIVA: Generar la rutina semanal en la pantalla Zona Fit utilizando 
 - Medicamentos: ${dc?.medicamentos_actuales?.join(', ') || 'Ninguno'}
 - Meta (Hidratación): ${mo?.agua_objetivo_ml || 2800} ml
 
-REGLAS DE SEGURIDAD (PROTECCIÓN DEL PROYECTO):
+REGLAS DE SEGURIDAD Y PRESCRIPCIÓN CLÍNICA ESTRICTA (PROTECCIÓN VITAL):
 SOLO LECTURA: Accede a diagnósticos, medicamentos y escaneos solo para consulta. PROHIBIDO modificar o borrar datos fuera de la estructura de Zona Fit.
-AJUSTE CLÍNICO: Si detectas HTA o medicamentos cardíacos en el perfil, limita la intensidad a la zona de 117-134 LPM. Si el IMC es alto (>29), prohíbe saltos o ejercicios de alto impacto.
+AJUSTE CLÍNICO CRÍTICO: 
+- Si detectas HTA (Hipertensión), medicamentos cardíacos (Olmesartan, Corenter) o si la Edad es > 50 años: ESTÁ ESTRICTAMENTE PROHIBIDO asignar Planchas Isométricas, Flexiones de pecho en suelo, Levantamiento de pesas pesadas por encima de la cabeza o ejercicios que induzcan la Maniobra de Valsalva. 
+- La rutina para este perfil DEBE ser de INTENSIDAD LIGERA A MODERADA (117-134 LPM máximo). Asígnale Caminata rápida, Estiramientos Dinámicos, Movilidad articular, Ejercicios con Banda Elástica ligera o Yoga suave para Principiantes. NUNCA sobrepasar su límite cardíaco.
+- Si el IMC es alto (>29): Prohibidos saltos o ejercicios de alto impacto en rodillas (zancadas profundas).
 
 ESTRUCTURA DE SALIDA (JSON PURO PARA ZONA FIT):
 {
